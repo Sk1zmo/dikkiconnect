@@ -16,9 +16,12 @@ import {
 } from '@/components/ui'
 import { JobCard } from '@/components/domain/Cards'
 import { EmptyBoxArt } from '@/components/viz/Illustrations'
-import { PARCEL_JOBS } from '@/lib/data'
+import { TRAVELERS, jobFromParcel } from '@/lib/data'
 import { inr } from '@/lib/format'
 import { useLoaded } from '@/lib/hooks'
+import { useApp, useOpenJobs } from '@/lib/store'
+
+const ME = TRAVELERS[0]
 
 type SortKey = 'payout' | 'detour' | 'expiry'
 
@@ -33,10 +36,15 @@ export default function TravelerJobs() {
   const [hideFragile, setHideFragile] = useState(false)
   const [accepting, setAccepting] = useState<string | null>(null)
 
-  const { loading } = useLoaded(PARCEL_JOBS, 1000)
+  // Live feed: every parcel a hub has taken in that no driver has claimed yet.
+  const openParcels = useOpenJobs()
+  const { advanceParcel } = useApp()
+  const { loading } = useLoaded(openParcels, 800)
+
+  const jobs = useMemo(() => openParcels.map(jobFromParcel), [openParcels])
 
   const visible = useMemo(() => {
-    let list = PARCEL_JOBS.filter((j) => j.detourKm <= maxDetour && j.payout >= minPayout)
+    let list = jobs.filter((j) => j.detourKm <= maxDetour && j.payout >= minPayout)
     if (hideFragile) list = list.filter((j) => !j.fragile)
 
     return [...list].sort((a, b) => {
@@ -44,17 +52,22 @@ export default function TravelerJobs() {
       if (sort === 'detour') return a.detourKm - b.detourKm
       return new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime()
     })
-  }, [sort, maxDetour, minPayout, hideFragile])
+  }, [jobs, sort, maxDetour, minPayout, hideFragile])
 
   const totalPayout = visible.reduce((sum, j) => sum + j.payout, 0)
 
-  const accept = (id: string) => {
-    setAccepting(id)
+  const accept = (jobId: string) => {
+    const job = visible.find((j) => j.id === jobId)
+    if (!job) return
+    setAccepting(jobId)
     setTimeout(() => {
       setAccepting(null)
+      // Claims the parcel for this driver — it leaves every other driver's feed
+      // and shows as "assigned" on the hub's shelf immediately.
+      advanceParcel(job.parcelId, 'assigned', { actor: ME.name, travelerId: ME.id })
       toast.success('Added to manifest', 'Scan the QR at the hub to take custody.')
       navigate('/traveler/scan')
-    }, 1000)
+    }, 900)
   }
 
   return (

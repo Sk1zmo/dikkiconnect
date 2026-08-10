@@ -4,7 +4,8 @@ import { ArrowDownToLine, ArrowUpFromLine, Keyboard, UserCheck, X } from 'lucide
 import { Screen } from '@/components/layout/Screen'
 import { Button, Field, IconButton, Segmented, Sheet, useToast } from '@/components/ui'
 import { ScannerViewfinder } from '@/components/viz/Scanner'
-import { HUB_INVENTORY, categoryById } from '@/lib/data'
+import { categoryById } from '@/lib/data'
+import { useAwaitingIntake, useHubInventory } from '@/lib/store'
 
 type Mode = 'intake' | 'release' | 'receiver'
 
@@ -31,8 +32,13 @@ export default function HubScan() {
   const [manualOpen, setManualOpen] = useState(false)
   const [manualId, setManualId] = useState('')
 
-  const item = HUB_INVENTORY[0]
-  const cat = categoryById('documents')
+  // Scan the next parcel this hub is actually expecting; fall back to whatever
+  // is on the shelves so the scanner is never a dead end.
+  const awaiting = useAwaitingIntake()
+  const held = useHubInventory()
+  const target = (mode === 'intake' ? awaiting[0] : held[0]) ?? awaiting[0] ?? held[0]
+  const item = { parcelId: target?.id ?? 'DKC-4796', shelf: 'A-04' }
+  const cat = categoryById(target?.category ?? 'documents')
 
   return (
     <Screen tone="dark">

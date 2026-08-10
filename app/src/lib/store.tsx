@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import { NOTIFICATIONS, PARCELS, quote, resolveHub, type PriceBreakdown } from './data'
-import type { NotificationItem, Parcel, ParcelSize, Role } from './types'
+import type { NotificationItem, Parcel, ParcelSize, ParcelStatus, Role } from './types'
 import { useLocalStorage } from './hooks'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -78,15 +78,26 @@ interface AppState {
   resetDraft: () => void
   price: PriceBreakdown
 
-  /* parcels */
+  /* parcels — one shared ledger across all four portals */
   parcels: Parcel[]
   lastBookedId: string | null
   commitBooking: () => string
+  /**
+   * Advance a parcel along the custody chain. Every portal calls this, which is
+   * what makes the roles a single system: a hub intake is immediately visible
+   * to the sender's tracker and removes the parcel from the driver's job feed.
+   */
+  advanceParcel: (
+    id: string,
+    to: ParcelStatus,
+    detail?: { actor?: string; location?: string; photos?: number; travelerId?: string },
+  ) => void
 
   /* wallet */
   balance: number
   addMoney: (amount: number) => void
   spend: (amount: number) => void
+  earn: (amount: number, label: string, sub?: string) => void
 
   /* notifications */
   notifications: NotificationItem[]
@@ -106,10 +117,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [phone, setPhone] = useState('9845067890')
 
   const [draft, setDraft] = useState<BookingDraft>(EMPTY_DRAFT)
-  const [parcels, setParcels] = useState<Parcel[]>(PARCELS)
+
+  // Persisted, so the app behaves like an app: book a parcel, close the tab,
+  // reopen as the hub manager, and it is still sitting in the intake queue.
+  const [parcels, setParcels] = useLocalStorage<Parcel[]>('dikkiconnect.parcels', PARCELS)
   const [lastBookedId, setLastBookedId] = useState<string | null>(null)
-  const [balance, setBalance] = useState(1240)
-  const [notifications, setNotifications] = useState<NotificationItem[]>(NOTIFICATIONS)
+  const [balance, setBalance] = useLocalStorage('dikkiconnect.balance', 1240)
+  const [notifications, setNotifications] = useLocalStorage<NotificationItem[]>(
+    'dikkiconnect.notifications',
+    NOTIFICATIONS,
+  )
 
   const patchDraft = useCallback((patch: Partial<BookingDraft>) => {
     setDraft((d) => ({ ...d, ...patch }))
@@ -223,7 +240,65 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ])
 
     return id
-  }, [draft, price.total])
+  }, [draft, price.total, setParcels, setBalance, setNotifications])
+
+  /* ── Custody chain ─────────────────────────────────────────────────────
+     Marks every timeline node up to `to` as done, stamping the one that just
+     completed. Portals only ever declare the new status; the ledger owns how
+     the parcel's history is written.                                        */
+  const advanceParcel = useCallback<AppState['advanceParcel']>(
+    (id, to, detail = {}) => {
+      const now = new Date().toISOString()
+
+      setParcels((list) =>
+        list.map((p) => {
+          if (p.id !== id) return p
+
+          const target = p.timeline.findIndex((e) => e.status === to)
+          if (target === -1) return p
+
+          return {
+            ...p,
+            status: to,
+            travelerId: detail.travelerId ?? p.travelerId,
+            timeline: p.timeline.map((e, i) =>
+              i > target
+                ? e
+                : {
+                    ...e,
+                    done: true,
+                    at: e.at ?? (i === target ? now : now),
+                    ...(i === target
+                      ? {
+                          actor: detail.actor ?? e.actor,
+                          location: detail.location ?? e.location,
+                          photos: detail.photos ?? e.photos,
+                          otpVerified: to !== 'assigned' ? true : e.otpVerified,
+                        }
+                      : {}),
+                  },
+            ),
+          }
+        }),
+      )
+
+      const COPY: Partial<Record<ParcelStatus, { title: string; body: string }>> = {
+        at_origin_hub: { title: 'Parcel received at hub', body: `${id} is logged and waiting for a traveler.` },
+        assigned: { title: 'Traveler assigned', body: `${id} has been picked up by a verified traveler.` },
+        in_transit: { title: 'On the way', body: `${id} has left the origin hub.` },
+        at_destination_hub: { title: 'Ready for pickup', body: `${id} has arrived. Receiver OTP sent.` },
+        delivered: { title: 'Delivered', body: `${id} was collected. Delivery loop closed.` },
+      }
+      const copy = COPY[to]
+      if (copy) {
+        setNotifications((n) => [
+          { id: `n-${id}-${to}`, ...copy, at: now, read: false, kind: 'parcel' as const, href: `/sender/track/${id}` },
+          ...n,
+        ])
+      }
+    },
+    [setParcels, setNotifications],
+  )
 
   const value = useMemo<AppState>(
     () => ({
@@ -252,10 +327,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
       parcels,
       lastBookedId,
       commitBooking,
+      advanceParcel,
 
       balance,
       addMoney: (a: number) => setBalance((b) => b + a),
       spend: (a: number) => setBalance((b) => Math.max(0, b - a)),
+      earn: (a: number, label: string, sub?: string) => {
+        setBalance((b) => b + a)
+        setNotifications((n) => [
+          {
+            id: `n-earn-${Date.now()}`,
+            title: label,
+            body: sub ?? `₹${a} credited to your wallet.`,
+            at: new Date().toISOString(),
+            read: false,
+            kind: 'payment' as const,
+            href: '/wallet',
+          },
+          ...n,
+        ])
+      },
 
       notifications,
       unread: notifications.filter((n) => !n.read).length,
@@ -277,12 +368,78 @@ export function AppProvider({ children }: { children: ReactNode }) {
       parcels,
       lastBookedId,
       commitBooking,
+      advanceParcel,
       balance,
+      setBalance,
       notifications,
+      setNotifications,
     ],
   )
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Cross-portal selectors. Each portal sees the same ledger through its own
+   lens, so work done in one shows up in the others without any sync step.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Parcels physically sitting on a hub's shelves, oldest first. */
+export function useHubInventory(hubId?: string) {
+  const { parcels } = useApp()
+  return useMemo(
+    () =>
+      parcels
+        .filter(
+          (p) =>
+            (p.status === 'at_origin_hub' || p.status === 'assigned') &&
+            (!hubId || p.originHubId === hubId),
+        )
+        .sort((a, b) => +new Date(a.bookedAt) - +new Date(b.bookedAt)),
+    [parcels, hubId],
+  )
+}
+
+/** Booked but not yet dropped — the hub's expected-intake queue. */
+export function useAwaitingIntake(hubId?: string) {
+  const { parcels } = useApp()
+  return useMemo(
+    () => parcels.filter((p) => p.status === 'booked' && (!hubId || p.originHubId === hubId)),
+    [parcels, hubId],
+  )
+}
+
+/** Parcels awaiting collection by their receiver. */
+export function useAwaitingPickup(hubId?: string) {
+  const { parcels } = useApp()
+  return useMemo(
+    () =>
+      parcels.filter(
+        (p) => p.status === 'at_destination_hub' && (!hubId || p.destinationHubId === hubId),
+      ),
+    [parcels, hubId],
+  )
+}
+
+/** Unassigned parcels a driver can pick up — the live job feed. */
+export function useOpenJobs() {
+  const { parcels } = useApp()
+  return useMemo(
+    () => parcels.filter((p) => p.status === 'at_origin_hub' && !p.travelerId),
+    [parcels],
+  )
+}
+
+/** Parcels currently in a driver's custody — their manifest. */
+export function useManifest(travelerId?: string) {
+  const { parcels } = useApp()
+  return useMemo(
+    () =>
+      parcels.filter(
+        (p) => p.status === 'in_transit' && (!travelerId || p.travelerId === travelerId),
+      ),
+    [parcels, travelerId],
+  )
 }
 
 export function useApp() {

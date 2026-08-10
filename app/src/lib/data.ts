@@ -809,6 +809,35 @@ export function quote(input: {
   }
 }
 
+/**
+ * Turns a real parcel sitting at a hub into the job card a driver sees.
+ * Payout is the driver's share of the fare the sender actually paid, so the
+ * two sides of the marketplace always reconcile.
+ */
+export function jobFromParcel(p: Parcel): ParcelJob {
+  const from = hubById(p.originHubId)
+  const to = hubById(p.destinationHubId)
+  const detourKm = Number(((from?.distanceKm ?? 2) + (to?.distanceKm ?? 2)).toFixed(1))
+
+  return {
+    id: `JOB-${p.id.replace(/\D/g, '').slice(-4)}`,
+    parcelId: p.id,
+    fromHubId: p.originHubId,
+    toHubId: p.destinationHubId,
+    size: p.size,
+    weightKg: p.weightKg,
+    payout: Math.round(p.price * 0.62),
+    detourKm,
+    // Holds for 45 minutes from intake, per the matching rules.
+    expiresAt: new Date(
+      new Date(p.timeline.find((e) => e.status === 'at_origin_hub')?.at ?? p.bookedAt).getTime() +
+        45 * 60_000,
+    ).toISOString(),
+    category: p.category,
+    fragile: p.fragile,
+  }
+}
+
 /** Deterministic 6-digit OTP so demo flows are reproducible. */
 export function otpFor(seed: string) {
   let h = 7

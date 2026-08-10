@@ -18,6 +18,7 @@ import {
 import { PhotoCapture } from '@/components/viz/Scanner'
 import { SuccessBurst, SuccessMark } from '@/components/viz/Illustrations'
 import { HUB_HANDLING_FEE, categoryById } from '@/lib/data'
+import { useApp } from '@/lib/store'
 import { inr, kg } from '@/lib/format'
 
 const STEPS = ['Weigh', 'Photos', 'OTP', 'Done']
@@ -32,16 +33,22 @@ export default function HubIntake() {
   const navigate = useNavigate()
   const toast = useToast()
 
+  const { parcels, advanceParcel, earn } = useApp()
+
+  // Work against the real parcel where one exists, so weight, category and the
+  // declared value on screen are the sender's actual booking.
+  const parcel = parcels.find((p) => p.id === id)
+
   const [step, setStep] = useState(0)
-  const [weight, setWeight] = useState(2.5)
+  const [weight, setWeight] = useState(parcel?.weightKg ?? 2.5)
   const [shelf, setShelf] = useState('A-04')
   const [shots, setShots] = useState(0)
   const [code, setCode] = useState('')
   const [error, setError] = useState(false)
   const [verifying, setVerifying] = useState(false)
 
-  const declared = 2.4
-  const cat = categoryById('electronics')
+  const declared = parcel?.weightKg ?? 2.4
+  const cat = categoryById(parcel?.category ?? 'electronics')
   const discrepancy = Math.abs(weight - declared) > 0.5
 
   const verify = (value: string) => {
@@ -55,6 +62,15 @@ export default function HubIntake() {
         setCode('')
         toast.error('Incorrect OTP', 'Ask the sender to read it out again.')
         return
+      }
+      // Move the shared ledger — the sender's tracker and the driver's job
+      // feed both update from this single call.
+      if (id) {
+        advanceParcel(id, 'at_origin_hub', {
+          location: `Shelf ${shelf}`,
+          photos: shots,
+        })
+        earn(HUB_HANDLING_FEE, 'Handling fee credited', `${id} · intake complete`)
       }
       setStep(3)
       toast.success('Custody accepted', `${id} logged to shelf ${shelf}`)

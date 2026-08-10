@@ -36,8 +36,10 @@ export default function BookPayment() {
   const pay = () => {
     setProcessing(true)
     setTimeout(() => {
-      // 1-in-6 simulated decline so the failure UI is reachable.
-      if (Math.random() < 0.16) {
+      // The decline path is reachable deterministically — a wallet payment that
+      // exceeds the balance fails, exactly as the real gateway would respond.
+      // (It used to fire at random, which made bookings unreliable to demo.)
+      if (draft.paymentMethod === 'wallet' && walletShort) {
         setProcessing(false)
         setFailed(true)
         return

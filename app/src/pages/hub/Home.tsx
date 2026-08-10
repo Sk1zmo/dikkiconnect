@@ -25,7 +25,8 @@ import {
   Stat,
 } from '@/components/ui'
 import { InventoryRow } from '@/components/domain/Cards'
-import { HUBS, HUB_INVENTORY } from '@/lib/data'
+import { HUBS } from '@/lib/data'
+import { useAwaitingIntake, useHubInventory } from '@/lib/store'
 import { compactInr, inr, isStale } from '@/lib/format'
 import { useCountUp, useLoaded } from '@/lib/hooks'
 
@@ -40,10 +41,18 @@ const ACTIONS = [
 
 export default function HubHome() {
   const navigate = useNavigate()
-  const { loading } = useLoaded(HUB_INVENTORY, 1000)
+  // Live shelves: whatever senders booked and this hub has taken in.
+  const shelved = useHubInventory()
+  const awaiting = useAwaitingIntake()
+  const { loading } = useLoaded(shelved, 800)
 
-  const held = HUB_INVENTORY.filter((i) => i.state !== 'lost')
-  const aging = HUB_INVENTORY.filter((i) => isStale(i.intakeAt))
+  const held = shelved.map((p) => ({
+    parcelId: p.id,
+    shelf: `A-${String((p.id.charCodeAt(p.id.length - 1) % 12) + 1).padStart(2, '0')}`,
+    intakeAt: p.timeline.find((e) => e.status === 'at_origin_hub')?.at ?? p.bookedAt,
+    state: (p.travelerId ? 'assigned' : 'waiting') as 'assigned' | 'waiting',
+  }))
+  const aging = held.filter((i) => isStale(i.intakeAt))
   const revenue = useCountUp(1840, 1100)
   const loadPct = Math.round((HUB.held / HUB.capacity) * 100)
 
@@ -130,6 +139,27 @@ export default function HubHome() {
               </p>
             </div>
             <ChevronRight size={17} className="shrink-0 text-warn-600" />
+          </Card>
+        )}
+
+        {/* Parcels senders have booked into this hub but not yet dropped */}
+        {awaiting.length > 0 && !loading && (
+          <Card
+            to="/hub/scan"
+            className="mb-5 flex items-center gap-3.5 border-brand-100 bg-brand-50"
+          >
+            <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-500/15 text-brand-600">
+              <ArrowDownToLine size={19} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13.5px] font-bold text-brand-800">
+                {awaiting.length} parcel{awaiting.length > 1 ? 's' : ''} expected today
+              </p>
+              <p className="mt-0.5 text-[12px] text-brand-700/85">
+                Booked by senders · scan to weigh, photograph and take custody
+              </p>
+            </div>
+            <ChevronRight size={17} className="shrink-0 text-brand-600" />
           </Card>
         )}
 

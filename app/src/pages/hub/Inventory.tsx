@@ -12,42 +12,64 @@ import {
 } from '@/components/ui'
 import { InventoryRow } from '@/components/domain/Cards'
 import { EmptyBoxArt } from '@/components/viz/Illustrations'
-import { HUB_INVENTORY } from '@/lib/data'
 import { isStale } from '@/lib/format'
 import { useDebounced, useLoaded } from '@/lib/hooks'
+import { useHubInventory } from '@/lib/store'
+import type { HubInventoryItem } from '@/lib/types'
 
-type Filter = 'all' | 'waiting' | 'assigned' | 'delayed' | 'lost'
+type Filter = 'all' | 'waiting' | 'assigned' | 'delayed'
+
+/** Shelf slots are assigned deterministically from the parcel ID. */
+function shelfFor(parcelId: string) {
+  let h = 0
+  for (let i = 0; i < parcelId.length; i++) h = (h * 31 + parcelId.charCodeAt(i)) % 9973
+  return `${'ABCD'[h % 4]}-${String((h % 12) + 1).padStart(2, '0')}`
+}
 
 export default function HubInventory() {
   const navigate = useNavigate()
   const [filter, setFilter] = useState<Filter>('all')
   const [query, setQuery] = useState('')
   const debounced = useDebounced(query, 200)
-  const { loading } = useLoaded(HUB_INVENTORY, 900)
+
+  // Live ledger, not a fixture: whatever senders booked and this hub took in.
+  const held = useHubInventory()
+  const { loading } = useLoaded(held, 700)
+
+  const items: HubInventoryItem[] = useMemo(
+    () =>
+      held.map((p) => ({
+        parcelId: p.id,
+        shelf: shelfFor(p.id),
+        intakeAt: p.timeline.find((e) => e.status === 'at_origin_hub')?.at ?? p.bookedAt,
+        state: p.travelerId ? 'assigned' : isStale(p.bookedAt) ? 'delayed' : 'waiting',
+        assignedTravelerId: p.travelerId,
+      })),
+    [held],
+  )
 
   const counts = useMemo(
     () => ({
-      all: HUB_INVENTORY.length,
-      waiting: HUB_INVENTORY.filter((i) => i.state === 'waiting').length,
-      assigned: HUB_INVENTORY.filter((i) => i.state === 'assigned').length,
-      delayed: HUB_INVENTORY.filter((i) => i.state === 'delayed').length,
-      lost: HUB_INVENTORY.filter((i) => i.state === 'lost').length,
+      all: items.length,
+      waiting: items.filter((i) => i.state === 'waiting').length,
+      assigned: items.filter((i) => i.state === 'assigned').length,
+      delayed: items.filter((i) => i.state === 'delayed').length,
     }),
-    [],
+    [items],
   )
 
   const visible = useMemo(() => {
-    let list = HUB_INVENTORY
+    let list = items
     if (filter !== 'all') list = list.filter((i) => i.state === filter)
     const q = debounced.trim().toLowerCase()
     if (q)
       list = list.filter(
         (i) => i.parcelId.toLowerCase().includes(q) || i.shelf.toLowerCase().includes(q),
       )
-    return [...list].sort((a, b) => new Date(a.intakeAt).getTime() - new Date(b.intakeAt).getTime())
-  }, [filter, debounced])
+    return list
+  }, [items, filter, debounced])
 
-  const aging = HUB_INVENTORY.filter((i) => isStale(i.intakeAt)).length
+  const aging = items.filter((i) => isStale(i.intakeAt)).length
 
   return (
     <Screen>
@@ -72,7 +94,6 @@ export default function HubInventory() {
             { value: 'waiting', label: 'Waiting', count: counts.waiting },
             { value: 'assigned', label: 'Assigned', count: counts.assigned },
             { value: 'delayed', label: 'Delayed', count: counts.delayed },
-            { value: 'lost', label: 'Lost', count: counts.lost },
           ]}
         />
       </div>
