@@ -1,0 +1,41 @@
+import type { CapacitorConfig } from '@capacitor/cli'
+
+/**
+ * Android wrapper for the DikkiConnect PWA.
+ *
+ * The web build in `dist/` is bundled into the APK, so the app runs offline and
+ * does not point at a server. Build order is always:
+ *   npm run build   →  npx cap sync android  →  gradlew assembleDebug
+ * (`npm run android:apk` does all three.)
+ *
+ * `androidScheme: 'https'` is required: on the default `http` scheme Android
+ * treats the WebView origin as insecure and silently disables localStorage,
+ * geolocation and the camera — all of which this app uses.
+ */
+const config: CapacitorConfig = {
+  appId: 'in.dikkiconnect.app',
+  appName: 'DikkiConnect',
+  webDir: 'dist',
+  server: {
+    androidScheme: 'https',
+  },
+  android: {
+    // The app is light-surfaced; keep the WebView background matching so there
+    // is no white flash on rotate or resume.
+    backgroundColor: '#F7F8FC',
+  },
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 900,
+      backgroundColor: '#0B0E15',
+      androidScaleType: 'CENTER_CROP',
+      showSpinner: false,
+    },
+    StatusBar: {
+      style: 'DARK',
+      backgroundColor: '#0B0E15',
+    },
+  },
+}
+
+export default config

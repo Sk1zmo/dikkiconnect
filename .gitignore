@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+dist-single/
+build/
+*.tsbuildinfo
+
+# Native build artefacts (the Android *project* is committed; its output is not)
+app/android/app/build/
+app/android/build/
+app/android/.gradle/
+app/android/local.properties
+app/android/app/src/main/assets/public/
+app/android/app/src/main/res/xml/config.xml
+app/ios/App/App/public/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Env & secrets — never commit these
+.env
+.env.*
+!.env.example
+
+# Tooling
+.vercel/
+.vercel
+preview.log
+*.log
+npm-debug.log*
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Packaged demo output
+app/demo-out/

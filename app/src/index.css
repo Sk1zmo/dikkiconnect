@@ -1,0 +1,753 @@
+@import 'tailwindcss';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DIKKI DESIGN SYSTEM
+   Premium blue · mobile-first · Airbnb/Uber-grade surface treatment
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* ── Brand blue ramp ───────────────────────────────────────────────────── */
+  --color-brand-50: #f0f5ff;
+  --color-brand-100: #dfeaff;
+  --color-brand-200: #c2d7ff;
+  --color-brand-300: #96b8ff;
+  --color-brand-400: #628fff;
+  --color-brand-500: #3a68f5;
+  --color-brand-600: #1650e0;  /* primary */
+  --color-brand-700: #103fc0;
+  --color-brand-800: #0e339a;
+  --color-brand-900: #0d2b76;
+  --color-brand-950: #091a4a;
+
+  /* ── Neutral / ink ramp (cool-tinted to sit under blue) ────────────────── */
+  --color-ink-50: #f7f8fc;
+  --color-ink-100: #eef1f8;
+  --color-ink-200: #e2e7f2;
+  --color-ink-300: #cbd3e4;
+  --color-ink-400: #97a3bd;
+  --color-ink-500: #6b7896;
+  --color-ink-600: #4d5a78;
+  --color-ink-700: #384463;
+  --color-ink-800: #232e49;
+  --color-ink-900: #131b2e;
+  --color-ink-950: #080d1a;
+
+  /* ── Semantic ──────────────────────────────────────────────────────────── */
+  --color-success-50: #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+
+  --color-warn-50: #fffbeb;
+  --color-warn-100: #fef3c7;
+  --color-warn-500: #f59e0b;
+  --color-warn-600: #d97706;
+  --color-warn-700: #b45309;
+
+  --color-danger-50: #fef2f2;
+  --color-danger-100: #fee2e2;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+
+  --color-accent-50: #f5f3ff;
+  --color-accent-100: #ede9fe;
+  --color-accent-500: #8b5cf6;
+  --color-accent-600: #7c3aed;
+
+  /* ── Action ────────────────────────────────────────────────────────────
+     Committed actions are near-black, not blue. Blue stays the brand: nav
+     state, links, highlights, status. Black carries weight, blue carries
+     identity — so a CTA never competes with the brand for attention.       */
+  --color-action: #0b0e15;
+  --color-action-hover: #1d2331;
+
+  /* ── Dusk ──────────────────────────────────────────────────────────────
+     Hero skies. Deep navy overhead falling to ember at the horizon.        */
+  --color-dusk-950: #04091a;
+  --color-dusk-900: #071231;
+  --color-dusk-800: #0c1f4f;
+  --color-dusk-700: #163370;
+  --color-dusk-600: #2a4a8c;
+  --color-dusk-500: #55609b;
+  --color-ember-700: #a34f33;
+  --color-ember-600: #d0663c;
+  --color-ember-500: #f08750;
+  --color-ember-400: #ffa563;
+  --color-ember-300: #ffc588;
+  --color-ember-200: #ffdfb4;
+
+  /* ── Type ──────────────────────────────────────────────────────────────── */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Plus Jakarta Sans', 'Inter', sans-serif;
+
+  /* ── Radii ─────────────────────────────────────────────────────────────── */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-2xl: 30px;
+
+  /* ── Elevation — soft, layered, never harsh ────────────────────────────── */
+  --shadow-e1: 0 1px 2px rgba(16, 26, 56, 0.05), 0 1px 3px rgba(16, 26, 56, 0.04);
+  --shadow-e2: 0 2px 6px rgba(16, 26, 56, 0.06), 0 6px 16px rgba(16, 26, 56, 0.05);
+  --shadow-e3: 0 4px 12px rgba(16, 26, 56, 0.08), 0 16px 40px rgba(16, 26, 56, 0.08);
+  --shadow-e4: 0 8px 24px rgba(16, 26, 56, 0.12), 0 24px 64px rgba(16, 26, 56, 0.12);
+  --shadow-brand: 0 4px 14px rgba(22, 80, 224, 0.28), 0 12px 32px rgba(22, 80, 224, 0.18);
+  --shadow-brand-sm: 0 2px 8px rgba(22, 80, 224, 0.22);
+  --shadow-action: 0 4px 14px rgba(11, 14, 21, 0.26), 0 14px 34px rgba(11, 14, 21, 0.18);
+  --shadow-sheet: 0 -8px 40px rgba(4, 9, 26, 0.22);
+
+  /* ── Motion — one shared easing vocabulary ─────────────────────────────── */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ═══ Base ═════════════════════════════════════════════════════════════════
+   These live in @layer base deliberately. Unlayered CSS outranks every
+   layered rule, so an unlayered `button { color: inherit }` would silently
+   beat `text-brand-700` on the element itself. Keeping the reset in the base
+   layer lets utilities win, which is the whole point of using them.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv11', 'ss01';
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color: var(--color-ink-900);
+    background: #0b1020;
+    overscroll-behavior-y: none;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+
+  button {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input,
+  textarea {
+    outline: none;
+  }
+
+  /* Hide number spinners */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+}
+
+/* ═══ Device frame — the phone canvas the app lives inside ═════════════════ */
+
+#root {
+  min-height: 100dvh;
+}
+
+.device-stage {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(1200px 800px at 20% 0%, rgba(22, 80, 224, 0.16), transparent 60%),
+    radial-gradient(900px 700px at 85% 100%, rgba(58, 104, 245, 0.12), transparent 55%),
+    #0b1020;
+}
+
+.device-shell {
+  width: 100%;
+  max-width: 430px;
+  height: 100dvh;
+  background: var(--color-ink-50);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 640px) {
+  .device-shell {
+    height: min(932px, calc(100dvh - 48px));
+    border-radius: 44px;
+    box-shadow:
+      0 0 0 10px #10131f,
+      0 0 0 12px #262b3d,
+      0 40px 90px rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* The scrollable page area inside the shell */
+.device-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.device-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* ═══ Scrollbars (desktop / admin) ═════════════════════════════════════════ */
+
+.scroll-slim::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scroll-slim::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-slim::-webkit-scrollbar-thumb {
+  background: var(--color-ink-300);
+  border-radius: 99px;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ═══ Skeleton shimmer ═════════════════════════════════════════════════════ */
+
+@keyframes dikkiconnect-shimmer {
+  0% {
+    background-position: -180% 0;
+  }
+  100% {
+    background-position: 180% 0;
+  }
+}
+
+.skeleton {
+  position: relative;
+  background: linear-gradient(
+    100deg,
+    var(--color-ink-100) 8%,
+    var(--color-ink-200) 22%,
+    var(--color-ink-100) 36%
+  );
+  background-size: 220% 100%;
+  animation: dikkiconnect-shimmer 1.6s var(--ease-smooth) infinite;
+}
+
+.skeleton-on-brand {
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.1) 8%,
+    rgba(255, 255, 255, 0.22) 22%,
+    rgba(255, 255, 255, 0.1) 36%
+  );
+  background-size: 220% 100%;
+  animation: dikkiconnect-shimmer 1.6s var(--ease-smooth) infinite;
+}
+
+/* ═══ Entrance animations ══════════════════════════════════════════════════ */
+
+@keyframes dikkiconnect-fade-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes dikkiconnect-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dikkiconnect-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes dikkiconnect-pop {
+  0% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.anim-fade-up {
+  animation: dikkiconnect-fade-up 0.5s var(--ease-out-expo) both;
+}
+.anim-fade-in {
+  animation: dikkiconnect-fade-in 0.45s var(--ease-smooth) both;
+}
+.anim-scale-in {
+  animation: dikkiconnect-scale-in 0.4s var(--ease-out-expo) both;
+}
+.anim-pop {
+  animation: dikkiconnect-pop 0.55s var(--ease-spring) both;
+}
+
+/* Stagger utility — children animate in sequence */
+.stagger > * {
+  animation: dikkiconnect-fade-up 0.5s var(--ease-out-expo) both;
+}
+.stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.stagger > *:nth-child(2) { animation-delay: 0.07s; }
+.stagger > *:nth-child(3) { animation-delay: 0.12s; }
+.stagger > *:nth-child(4) { animation-delay: 0.17s; }
+.stagger > *:nth-child(5) { animation-delay: 0.22s; }
+.stagger > *:nth-child(6) { animation-delay: 0.27s; }
+.stagger > *:nth-child(7) { animation-delay: 0.32s; }
+.stagger > *:nth-child(8) { animation-delay: 0.37s; }
+.stagger > *:nth-child(9) { animation-delay: 0.42s; }
+.stagger > *:nth-child(10) { animation-delay: 0.47s; }
+
+/* ═══ Ambient / live indicators ════════════════════════════════════════════ */
+
+@keyframes dikkiconnect-ping {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  80%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+.anim-ping {
+  animation: dikkiconnect-ping 1.8s var(--ease-smooth) infinite;
+}
+
+@keyframes dikkiconnect-breathe {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.12);
+  }
+}
+.anim-breathe {
+  animation: dikkiconnect-breathe 2s var(--ease-smooth) infinite;
+}
+
+@keyframes dikkiconnect-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.anim-spin {
+  animation: dikkiconnect-spin 0.8s linear infinite;
+}
+
+@keyframes dikkiconnect-dash {
+  to {
+    stroke-dashoffset: -1000;
+  }
+}
+.anim-route-flow {
+  animation: dikkiconnect-dash 22s linear infinite;
+}
+
+@keyframes dikkiconnect-scanline {
+  0% {
+    top: 4%;
+  }
+  50% {
+    top: 92%;
+  }
+  100% {
+    top: 4%;
+  }
+}
+.anim-scanline {
+  animation: dikkiconnect-scanline 2.4s var(--ease-smooth) infinite;
+}
+
+@keyframes dikkiconnect-progress-indeterminate {
+  0% {
+    transform: translateX(-100%) scaleX(0.35);
+  }
+  50% {
+    transform: translateX(20%) scaleX(0.6);
+  }
+  100% {
+    transform: translateX(240%) scaleX(0.35);
+  }
+}
+.anim-progress {
+  animation: dikkiconnect-progress-indeterminate 1.5s var(--ease-smooth) infinite;
+  transform-origin: left;
+}
+
+@keyframes dikkiconnect-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+.anim-bob {
+  animation: dikkiconnect-bob 3.2s var(--ease-smooth) infinite;
+}
+
+/* Inside an SVG, a CSS transform REPLACES the element's transform attribute and
+   defaults its origin to the viewBox corner. Scoping the box to the shape keeps
+   scale/translate animations centred on the mark they belong to. Position still
+   has to come from a parent <g transform>, never the animated element itself. */
+svg .anim-bob,
+svg .anim-ping,
+svg .anim-breathe {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Burst, not rain: pieces launch up and out, then fall — so the arc peaks
+   partway through instead of dropping in a straight line. */
+@keyframes dikkiconnect-confetti-fall {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.6);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+    transform: translate3d(calc(var(--dx, 0px) * 0.28), var(--rise, -50px), 0)
+      rotate(calc(var(--rot, 540deg) * 0.18)) scale(1);
+  }
+  100% {
+    transform: translate3d(var(--dx, 0px), 400px, 0) rotate(var(--rot, 540deg)) scale(0.9);
+    opacity: 0;
+  }
+}
+.anim-confetti {
+  animation: dikkiconnect-confetti-fall 1.6s var(--ease-smooth) forwards;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCENE MOTION
+   Long, offset loops with their own periods, so no two layers ever tick in
+   step and the frame reads as alive rather than as a looping GIF.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes dikkiconnect-drift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(var(--dx, 6px), var(--dy, 0px), 0); }
+}
+.anim-drift { animation: dikkiconnect-drift var(--dur, 14s) var(--ease-smooth) infinite; }
+
+@keyframes dikkiconnect-twinkle {
+  0%, 100% { opacity: var(--o, 0.5); }
+  50%      { opacity: calc(var(--o, 0.5) * 0.2); }
+}
+.anim-twinkle { animation: dikkiconnect-twinkle var(--dur, 4s) var(--ease-smooth) infinite; }
+
+@keyframes dikkiconnect-glow {
+  0%, 100% { opacity: 0.82; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.07); }
+}
+.anim-glow { animation: dikkiconnect-glow 6s var(--ease-smooth) infinite; }
+
+/* Plane resets far off-frame, so the loop never snaps in view */
+@keyframes dikkiconnect-fly {
+  0%   { transform: translate3d(-60px, 18px, 0); opacity: 0; }
+  10%  { opacity: 0.9; }
+  86%  { opacity: 0.9; }
+  100% { transform: translate3d(170px, -30px, 0); opacity: 0; }
+}
+.anim-fly { animation: dikkiconnect-fly 24s linear infinite; }
+
+/* Lane dashes rushing toward the viewer */
+@keyframes dikkiconnect-rush {
+  0%   { transform: translate3d(0, -40px, 0) scale(0.7); opacity: 0; }
+  15%  { opacity: 0.55; }
+  85%  { opacity: 0.55; }
+  100% { transform: translate3d(0, 210px, 0) scale(1.5); opacity: 0; }
+}
+.anim-rush { animation: dikkiconnect-rush var(--dur, 3.4s) linear infinite; }
+
+@keyframes dikkiconnect-flicker {
+  0%, 100% { opacity: 0.5; }
+  45%      { opacity: 0.68; }
+  72%      { opacity: 0.44; }
+}
+.anim-flicker { animation: dikkiconnect-flicker 5s var(--ease-smooth) infinite; }
+
+@keyframes dikkiconnect-roll { to { transform: rotate(360deg); } }
+.anim-roll { animation: dikkiconnect-roll var(--dur, 1.8s) linear infinite; }
+
+/* Stroke reveal for timelines, ticks and route lines */
+@keyframes dikkiconnect-draw { to { stroke-dashoffset: 0; } }
+.anim-draw {
+  stroke-dasharray: var(--len, 100);
+  stroke-dashoffset: var(--len, 100);
+  animation: dikkiconnect-draw var(--dur, 0.8s) var(--ease-out-expo) var(--delay, 0s) forwards;
+}
+
+svg .anim-drift,
+svg .anim-glow,
+svg .anim-roll,
+svg .anim-rush {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TACTILE FEEDBACK
+   Squash on press, overshoot on release, a light sweep on dark CTAs. The
+   overshoot is what makes a tap feel answered rather than merely registered.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes dikkiconnect-sheen {
+  from { transform: translateX(-130%) skewX(-18deg); }
+  to   { transform: translateX(240%) skewX(-18deg); }
+}
+.sheen { position: relative; overflow: hidden; isolation: isolate; }
+.sheen::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  transform: translateX(-130%) skewX(-18deg);
+  pointer-events: none;
+}
+.sheen:hover::after { animation: dikkiconnect-sheen 0.9s var(--ease-smooth); }
+
+/* Springy press — replaces the flat `pressable` scale on primary surfaces */
+.springy {
+  transition: transform 0.42s var(--ease-spring), box-shadow 0.25s var(--ease-smooth);
+}
+.springy:active { transform: scale(0.955); transition-duration: 0.09s; }
+
+.springy-sm {
+  transition: transform 0.42s var(--ease-spring);
+}
+.springy-sm:active { transform: scale(0.9); transition-duration: 0.09s; }
+
+/* Celebratory pop with a real overshoot, for success marks and rewards */
+@keyframes dikkiconnect-boing {
+  0%   { transform: scale(0.3) rotate(-8deg); opacity: 0; }
+  55%  { transform: scale(1.14) rotate(3deg); opacity: 1; }
+  75%  { transform: scale(0.95) rotate(-1.5deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+.anim-boing { animation: dikkiconnect-boing 0.72s var(--ease-smooth) both; }
+
+/* Attention nudge — a wobble that stops, never a loop that nags */
+@keyframes dikkiconnect-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-6deg); }
+  50%      { transform: rotate(5deg); }
+  75%      { transform: rotate(-3deg); }
+}
+.anim-wiggle { animation: dikkiconnect-wiggle 0.6s var(--ease-smooth) both; }
+
+/* Value counters and balances landing */
+@keyframes dikkiconnect-rise {
+  0%   { transform: translate3d(0, 60%, 0); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+.anim-rise { animation: dikkiconnect-rise 0.55s var(--ease-out-expo) both; }
+
+/* ═══ Surfaces ═════════════════════════════════════════════════════════════ */
+
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+.glass-dark {
+  background: rgba(9, 26, 74, 0.42);
+  backdrop-filter: saturate(160%) blur(16px);
+  -webkit-backdrop-filter: saturate(160%) blur(16px);
+}
+
+.brand-gradient {
+  background: linear-gradient(152deg, #2f63f0 0%, #1650e0 46%, #0e339a 100%);
+}
+
+/* Deep dusk field — the in-app echo of the hero sky. Used on role headers so
+   the product feels continuous with the launch screen. */
+.dusk-gradient {
+  background: linear-gradient(158deg, #163370 0%, #0c1f4f 52%, #071231 100%);
+}
+
+/* The hero sky itself: night overhead, ember at the horizon. */
+.hero-sky {
+  background: linear-gradient(
+    180deg,
+    #04091a 0%,
+    #071231 18%,
+    #0c1f4f 34%,
+    #23386f 50%,
+    #5b4a7a 64%,
+    #a35f5c 76%,
+    #e08a52 88%,
+    #ffb46a 100%
+  );
+}
+
+.brand-gradient-soft {
+  background: linear-gradient(140deg, #f0f5ff 0%, #dfeaff 100%);
+}
+
+/* Fine grain + mesh so large blue fields never look flat */
+.brand-mesh {
+  position: relative;
+  isolation: isolate;
+}
+.brand-mesh::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(60% 70% at 12% 8%, rgba(255, 255, 255, 0.22), transparent 62%),
+    radial-gradient(48% 58% at 92% 24%, rgba(120, 170, 255, 0.34), transparent 60%),
+    radial-gradient(70% 80% at 70% 108%, rgba(9, 26, 74, 0.55), transparent 62%);
+  pointer-events: none;
+}
+
+.hairline {
+  box-shadow: inset 0 -1px 0 var(--color-ink-200);
+}
+
+/* ═══ Interaction ══════════════════════════════════════════════════════════ */
+
+.pressable {
+  transition:
+    transform 0.16s var(--ease-out-expo),
+    box-shadow 0.2s var(--ease-smooth),
+    background-color 0.16s var(--ease-smooth),
+    opacity 0.16s var(--ease-smooth);
+}
+.pressable:active {
+  transform: scale(0.972);
+}
+
+.pressable-sm:active {
+  transform: scale(0.94);
+}
+
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(22, 80, 224, 0.28);
+}
+
+/* ═══ Text helpers ═════════════════════════════════════════════════════════ */
+
+.text-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.028em;
+  line-height: 1.1;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ═══ Safe areas ═══════════════════════════════════════════════════════════ */
+
+/* `pt-safe` / `pb-safe` set the inset ALONE — use them where that is all you
+   want (the tab bar). They cannot be combined with Tailwind's `pb-4`: both
+   write the same property and this rule is unlayered, so it silently wins and
+   the spacing collapses to the inset. Where you need inset *plus* padding, use
+   the composed variants below. */
+.pt-safe {
+  padding-top: max(env(safe-area-inset-top), 12px);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.pt-safe-3 {
+  padding-top: calc(max(env(safe-area-inset-top), 8px) + 0.75rem);
+}
+.pb-safe-4 {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+}
+.pb-safe-5 {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 1.25rem);
+}
+.pb-safe-6 {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem);
+}
+
+/* ═══ Reduced motion ═══════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
