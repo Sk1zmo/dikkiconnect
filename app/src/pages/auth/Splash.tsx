@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight, Box, ShieldCheck, Zap } from 'lucide-react'
 import { Logo } from '@/components/brand/Logo'
-import { HeroScene } from '@/components/viz/HeroScene'
+import { HeroImage } from '@/components/viz/HeroImage'
 import { FeatureRow, HeroHeadline, HeroSheet } from '@/components/ui'
 import { Screen } from '@/components/layout/Screen'
 import { useApp } from '@/lib/store'
@@ -37,7 +37,9 @@ export default function Splash() {
     <Screen tone="dark" className="relative overflow-hidden">
       {/* Hero fills the whole shell; the sheet sits on top of it */}
       <div className="absolute inset-0">
-        <HeroScene />
+        <HeroImage />
+        {/* Scrim so the wordmark and headline stay legible over any photo */}
+        <div className="absolute inset-0 bg-gradient-to-b from-dusk-950/85 via-dusk-950/35 to-transparent" />
       </div>
 
       <div className="relative flex min-h-0 flex-1 flex-col">

@@ -4,7 +4,7 @@ import { ArrowRight, Phone } from 'lucide-react'
 import { Screen, TopBar } from '@/components/layout/Screen'
 import { Button, Divider, Field, Note } from '@/components/ui'
 import { LogoTile } from '@/components/brand/Logo'
-import { HeroScene } from '@/components/viz/HeroScene'
+import { HeroImage } from '@/components/viz/HeroImage'
 import { cn } from '@/lib/cn'
 
 /** Phone-first auth. Per PRD §8.1 there is no password anywhere in DikkiConnect. */
@@ -34,16 +34,7 @@ export default function Login() {
           automatically — no code change needed. Until then the scene stands in,
           so the screen never shows a broken image. */}
       <div className="relative h-[210px] shrink-0 overflow-hidden bg-dusk-900">
-        <HeroScene align="xMidYMin" className="absolute inset-0" />
-        <img
-          src="/login-hero.jpg"
-          alt=""
-          aria-hidden
-          className="absolute inset-0 size-full object-cover"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none'
-          }}
-        />
+        <HeroImage focus="top" sceneAlign="xMidYMin" className="absolute inset-0" />
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white to-transparent" />
         <TopBar back backTo="/" floating tone="dark" className="pt-safe" />
       </div>
