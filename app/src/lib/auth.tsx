@@ -42,14 +42,18 @@ export const OTP_RESEND_SECONDS = 30
 
 export type RequestResult =
   | { ok: true; channel: 'email'; delivered: boolean; to?: string; reason?: string }
-  | { ok: false; reason: 'bad-identifier' | 'too-soon' | 'offline'; retryInSeconds?: number }
+  | {
+      ok: false
+      reason: 'bad-identifier' | 'too-soon' | 'offline' | 'no-api'
+      retryInSeconds?: number
+    }
 
 export type VerifyResult =
   | { ok: true; isNewUser: false }
   | { ok: true; isNewUser: true; ticket: string }
   | {
       ok: false
-      reason: 'no-challenge' | 'expired' | 'locked' | 'wrong' | 'offline'
+      reason: 'no-challenge' | 'expired' | 'locked' | 'wrong' | 'offline' | 'no-api'
       attemptsLeft: number
     }
 
@@ -66,18 +70,37 @@ export const normalisePhone = (raw: string) => raw.replace(/\D/g, '').slice(-10)
  */
 const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN as string | undefined) ?? ''
 
-async function api<T>(path: string, body?: unknown): Promise<T | null> {
+/** Distinguishes the two ways this can fail, because they need different fixes. */
+export type ApiFailure = 'network' | 'no-api'
+
+async function api<T>(path: string, body?: unknown): Promise<T | ApiFailure> {
+  let res: Response
   try {
-    const res = await fetch(`${API_ORIGIN}${path}`, {
+    res = await fetch(`${API_ORIGIN}${path}`, {
       method: body ? 'POST' : 'GET',
       headers: body ? { 'Content-Type': 'application/json' } : undefined,
       body: body ? JSON.stringify(body) : undefined,
     })
+  } catch {
+    // Genuinely could not reach it: offline, DNS, or a CORS preflight refused.
+    return 'network'
+  }
+
+  /* A deployment without the serverless functions answers /api/* with the SPA
+     fallback — HTML, status 200. Parsing that as JSON throws, and reporting it
+     as "check your connection" sends people to debug a network that is fine.
+     Content-type tells us which of the two happened. */
+  const type = res.headers.get('content-type') ?? ''
+  if (!type.includes('application/json')) return 'no-api'
+
+  try {
     return (await res.json()) as T
   } catch {
-    return null
+    return 'no-api'
   }
 }
+
+const failed = (r: unknown): r is ApiFailure => r === 'network' || r === 'no-api'
 
 interface AuthState {
   account: Account | null
@@ -123,7 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       reason?: string
     }>('/api/auth/request-code', { identifier })
 
-    if (!res) return { ok: false, reason: 'offline' }
+    if (failed(res)) return { ok: false, reason: res === 'no-api' ? 'no-api' : 'offline' }
     if (res.error === 'too-soon') {
       return { ok: false, reason: 'too-soon', retryInSeconds: res.retryInSeconds }
     }
@@ -150,7 +173,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         account?: Account
       }>('/api/auth/verify-code', { identifier, code })
 
-      if (!res) return { ok: false, reason: 'offline', attemptsLeft: 0 }
+      if (failed(res)) {
+        return { ok: false, reason: res === 'no-api' ? 'no-api' : 'offline', attemptsLeft: 0 }
+      }
       if (!res.ok) {
         return {
           ok: false,
@@ -177,7 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         details,
       )
       setLoading(false)
-      if (!res?.ok || !res.account || !res.token) return null
+      if (failed(res) || !res?.ok || !res.account || !res.token) return null
       setToken(res.token)
       setAccount(res.account)
       return res.account

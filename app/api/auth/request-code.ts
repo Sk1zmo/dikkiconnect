@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { withCors } from '../_lib/http.js'
 import {
   OTP_TTL_SECONDS,
   findAccount,
@@ -20,7 +21,7 @@ import { mailConfigured, otpEmail, sendMail } from '../_lib/mail.js'
  * account either. That check happens after verification, so this endpoint
  * cannot be used to enumerate who has signed up.
  */
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method-not-allowed' })
 
   const id = parseIdentifier(String(req.body?.identifier ?? ''))
@@ -81,3 +82,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     expiresAt: issued.expiresAt,
   })
 }
+
+export default withCors(handler)

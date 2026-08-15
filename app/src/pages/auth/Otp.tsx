@@ -58,6 +58,8 @@ export default function Otp() {
       } else if (result.reason === 'no-challenge') {
         setError('No code is active for this address. Ask for a new one.')
         restart(0)
+      } else if (result.reason === 'no-api') {
+        setError('This build has no sign-in server attached. Reinstall the latest APK.')
       } else if (result.reason === 'offline') {
         setError('Could not reach DikkiConnect. Check your connection.')
       } else {

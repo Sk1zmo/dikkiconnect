@@ -2,5 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    {
+      "//": "SPA fallback for client routes. The negative lookahead is load-bearing: without it this rule also swallows /api/*, and every serverless call quietly receives the index page instead of JSON — which surfaces in the app as a network error rather than as anything you could debug.",
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ]
 }

@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { withCors } from '../_lib/http.js'
 import {
   createAccount,
   createSession,
@@ -19,7 +20,7 @@ const TICKET_TTL_MS = 10 * 60_000
  * minutes, this refuses. Otherwise anybody could POST an address and mint an
  * account for it.
  */
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method-not-allowed' })
 
   const { ticket, name, email, phone, role } = req.body ?? {}
@@ -77,3 +78,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   return res.status(200).json({ ok: true, token, account })
 }
+
+export default withCors(handler)

@@ -120,6 +120,10 @@ export default function Login() {
       if (!result.ok) {
         if (result.reason === 'too-soon') {
           setError(`A code was just sent. Try again in ${result.retryInSeconds ?? 30}s.`)
+        } else if (result.reason === 'no-api') {
+          setError(
+            'This build has no sign-in server attached. Open the app at its current address, or reinstall the latest APK.',
+          )
         } else if (result.reason === 'offline') {
           setError('Could not reach DikkiConnect. Check your connection and try again.')
         } else {

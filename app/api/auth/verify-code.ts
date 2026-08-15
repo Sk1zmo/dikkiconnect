@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { withCors } from '../_lib/http.js'
 import { createSession, mask, parseIdentifier, record, verifyChallenge } from '../_lib/auth.js'
 
 /**
@@ -13,7 +14,7 @@ import { createSession, mask, parseIdentifier, record, verifyChallenge } from '.
  * identifier was verified, without which /api/auth/signup refuses to create
  * anything.
  */
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method-not-allowed' })
 
   const id = parseIdentifier(String(req.body?.identifier ?? ''))
@@ -48,3 +49,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ticket: Buffer.from(`${id.kind}:${id.value}:${Date.now()}`).toString('base64url'),
   })
 }
+
+export default withCors(handler)

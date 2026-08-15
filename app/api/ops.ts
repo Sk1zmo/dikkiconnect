@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { withCors } from './_lib/http.js'
 import { readEvents } from './_lib/auth.js'
 import { K, kvList, storageBackend, storageDurable } from './_lib/store.js'
 import { mailConfigured } from './_lib/mail.js'
@@ -14,7 +15,7 @@ import { mailConfigured } from './_lib/mail.js'
  * Identifiers in the event log are masked at write time, so even with the key
  * this never discloses a full address or number.
  */
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req: VercelRequest, res: VercelResponse) {
   const expected = process.env.OPS_KEY
   if (!expected) {
     return res.status(503).json({
@@ -67,3 +68,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     events,
   })
 }
+
+export default withCors(handler)
