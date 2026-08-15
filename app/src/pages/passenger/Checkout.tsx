@@ -48,7 +48,7 @@ export default function RideCheckout() {
     setTimeout(() => {
       // Decrements the driver's seat count on the shared ledger, so the ride
       // shows as filling up in their portal and to every other passenger.
-      bookSeats(trip.id, seats)
+      bookSeats(trip.id, seats, subtotal)
       if (method === 'wallet') spend(total)
       toast.success('Seat confirmed', `${seats} seat${seats > 1 ? 's' : ''} on ${trip.id}`)
       navigate(`/passenger/boarding/${trip.id}`, { replace: true })

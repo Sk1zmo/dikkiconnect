@@ -5,6 +5,7 @@ import {
   TRAVELERS,
   TRIPS,
   newTimeline,
+  otpFor,
   quote,
   resolveHub,
   type PriceBreakdown,
@@ -15,6 +16,7 @@ import type {
   Parcel,
   ParcelSize,
   ParcelStatus,
+  RideBooking,
   Role,
   Traveler,
   Trip,
@@ -120,8 +122,13 @@ interface AppState {
   /** Driver taps "Start trip" on the day — moves published → running. */
   startTrip: (id: string) => void
   cancelTrip: (id: string) => void
-  /** A passenger takes seats on a trip. */
-  bookSeats: (tripId: string, seats: number) => void
+  /** A passenger takes seats on a trip. Returns the booking id. */
+  bookSeats: (tripId: string, seats: number, fare: number, boardingPoint?: string) => string
+
+  /* ride bookings — the passenger side of the same trips */
+  rideBookings: RideBooking[]
+  advanceRide: (id: string, to: RideBooking['status']) => void
+  cancelRide: (id: string) => void
 
   /* wallet */
   balance: number
@@ -140,6 +147,7 @@ const AppContext = createContext<AppState | null>(null)
 
 let bookingCounter = 4870
 let tripCounter = 9060
+let rideCounter = 3120
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useLocalStorage<Role>('dikkiconnect.role', 'sender')
@@ -156,6 +164,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [parcels, setParcels] = useLocalStorage<Parcel[]>('dikkiconnect.parcels', PARCELS)
   const [lastBookedId, setLastBookedId] = useState<string | null>(null)
   const [trips, setTrips] = useLocalStorage<Trip[]>('dikkiconnect.trips', TRIPS)
+  const [rideBookings, setRideBookings] = useLocalStorage<RideBooking[]>(
+    'dikkiconnect.rides',
+    [],
+  )
   const [balance, setBalance] = useLocalStorage('dikkiconnect.balance', 1240)
   const [notifications, setNotifications] = useLocalStorage<NotificationItem[]>(
     'dikkiconnect.notifications',
@@ -327,14 +339,57 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [setTrips],
   )
 
-  const bookSeats = useCallback(
-    (tripId: string, seats: number) =>
+  const bookSeats = useCallback<AppState['bookSeats']>(
+    (tripId, seats, fare, boardingPoint = 'Silk Board junction') => {
+      const id = `RDE-${++rideCounter}`
       setTrips((list) =>
         list.map((t) =>
           t.id === tripId ? { ...t, seatsLeft: Math.max(0, t.seatsLeft - seats) } : t,
         ),
+      )
+      setRideBookings((list) => [
+        {
+          id,
+          tripId,
+          seats,
+          fare,
+          boardingPoint,
+          // The code the driver checks at the kerb, derived from the booking so
+          // it is stable across reloads.
+          boardingOtp: otpFor(id + 'board'),
+          status: 'upcoming',
+        },
+        ...list,
+      ])
+      setNotifications((n) => [
+        {
+          id: `n-${id}`,
+          title: 'Seat confirmed',
+          body: `${seats} seat${seats > 1 ? 's' : ''} booked. Your boarding OTP is ready.`,
+          at: new Date().toISOString(),
+          read: false,
+          kind: 'ride' as const,
+          href: `/passenger/boarding/${tripId}`,
+        },
+        ...n,
+      ])
+      return id
+    },
+    [setTrips, setRideBookings, setNotifications],
+  )
+
+  const advanceRide = useCallback<AppState['advanceRide']>(
+    (id, to) =>
+      setRideBookings((list) => list.map((r) => (r.id === id ? { ...r, status: to } : r))),
+    [setRideBookings],
+  )
+
+  const cancelRide = useCallback<AppState['cancelRide']>(
+    (id) =>
+      setRideBookings((list) =>
+        list.map((r) => (r.id === id ? { ...r, status: 'cancelled' } : r)),
       ),
-    [setTrips],
+    [setRideBookings],
   )
 
   const value = useMemo<AppState>(
@@ -369,6 +424,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       startTrip,
       cancelTrip,
       bookSeats,
+
+      rideBookings,
+      advanceRide,
+      cancelRide,
 
       balance,
       addMoney: (a: number) => setBalance((b) => b + a),
@@ -416,6 +475,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       startTrip,
       cancelTrip,
       bookSeats,
+      rideBookings,
+      advanceRide,
+      cancelRide,
       balance,
       setBalance,
       notifications,
@@ -550,6 +612,43 @@ export function useMe(): Traveler {
       phone: account?.phone ?? TRAVELERS[0].phone,
     }),
     [account],
+  )
+}
+
+/**
+ * The passenger's rides, split by whether they are still ahead of them.
+ * A ride is "past" once it is completed or cancelled, or once its trip has
+ * already arrived — otherwise a booked seat would sit in Upcoming forever.
+ */
+export function useMyRides() {
+  const { rideBookings, trips } = useApp()
+  return useMemo(() => {
+    const withTrip = rideBookings
+      .map((r) => ({ ride: r, trip: trips.find((t) => t.id === r.tripId) }))
+      .filter((x): x is { ride: RideBooking; trip: Trip } => Boolean(x.trip))
+
+    const done = (x: { ride: RideBooking; trip: Trip }) =>
+      x.ride.status === 'completed' ||
+      x.ride.status === 'cancelled' ||
+      new Date(x.trip.arriveAt).getTime() < Date.now()
+
+    return {
+      upcoming: withTrip
+        .filter((x) => !done(x))
+        .sort((a, b) => +new Date(a.trip.departAt) - +new Date(b.trip.departAt)),
+      past: withTrip
+        .filter(done)
+        .sort((a, b) => +new Date(b.trip.departAt) - +new Date(a.trip.departAt)),
+    }
+  }, [rideBookings, trips])
+}
+
+/** One ride booking for a given trip, if the passenger has one. */
+export function useRideForTrip(tripId?: string) {
+  const { rideBookings } = useApp()
+  return useMemo(
+    () => rideBookings.find((r) => r.tripId === tripId && r.status !== 'cancelled'),
+    [rideBookings, tripId],
   )
 }
 

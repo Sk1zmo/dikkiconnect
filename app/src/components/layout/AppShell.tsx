@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
-import { AnimatePresence } from 'framer-motion'
+import { Outlet, useLocation, useNavigationType } from 'react-router-dom'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { WifiOff } from 'lucide-react'
 import { ScreenLoader } from '@/components/ui'
 import { BottomNav } from './BottomNav'
@@ -29,10 +29,35 @@ export function DeviceShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="device-stage">
       <div className="device-shell">
+        <RouteProgress />
         <OfflineBanner />
         {children}
       </div>
     </div>
+  )
+}
+
+/**
+ * A hairline that runs across the top while a route's chunk resolves. Two
+ * hundred milliseconds of nothing reads as a dropped tap; two hundred
+ * milliseconds of a moving line reads as loading.
+ */
+function RouteProgress() {
+  const changing = useRouteChanging()
+  const reduced = useReducedMotion()
+  if (reduced) return null
+  return (
+    <AnimatePresence>
+      {changing && (
+        <motion.span
+          key="route-progress"
+          className="absolute inset-x-0 top-0 z-100 h-[2.5px] origin-left bg-gradient-to-r from-brand-500 via-brand-600 to-accent-500"
+          initial={{ scaleX: 0, opacity: 1 }}
+          animate={{ scaleX: 1, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }}
+          exit={{ opacity: 0, transition: { duration: 0.18 } }}
+        />
+      )}
+    </AnimatePresence>
   )
 }
 
@@ -53,7 +78,7 @@ export function RoleLayout({ role }: { role: Role }) {
       <div className="relative flex min-h-0 flex-1 flex-col">
         <Suspense fallback={<ScreenLoader />}>
           <AnimatePresence mode="wait" initial={false}>
-            <RouteFrame key={location.pathname}>
+            <RouteFrame key={location.pathname} variant="tab">
               <Outlet />
             </RouteFrame>
           </AnimatePresence>
@@ -71,7 +96,7 @@ export function FlowLayout() {
     <div className="relative flex min-h-0 flex-1 flex-col">
       <Suspense fallback={<ScreenLoader />}>
         <AnimatePresence mode="wait" initial={false}>
-          <RouteFrame key={location.pathname}>
+          <RouteFrame key={location.pathname} variant="flow">
             <Outlet />
           </RouteFrame>
         </AnimatePresence>
@@ -80,9 +105,55 @@ export function FlowLayout() {
   )
 }
 
-/** Keeps the animated wrapper out of AppShell so keys stay stable. */
-function RouteFrame({ children }: { children: React.ReactNode }) {
-  return <div className="flex h-full min-h-0 flex-col">{children}</div>
+/**
+ * Route transitions.
+ *
+ * Two different gestures, because the two layouts mean different things.
+ * Switching tabs is lateral movement between peers, so it gets a quick lift
+ * and fade — anything more literal turns a one-tap switch into a wait. Moving
+ * through a flow is directional, so it slides: forward pushes in from the
+ * right, Back pulls in from the left, which is the only cue that tells you
+ * whether you advanced or retreated.
+ *
+ * Exits are deliberately faster than entrances (a third of the duration). The
+ * screen you are leaving has nothing left to say, and the asymmetry is what
+ * keeps the whole thing feeling quick rather than animated-at.
+ */
+function RouteFrame({
+  children,
+  variant,
+}: {
+  children: React.ReactNode
+  variant: 'tab' | 'flow'
+}) {
+  const navigationType = useNavigationType()
+  const reduced = useReducedMotion()
+
+  if (reduced) return <div className="flex h-full min-h-0 flex-col">{children}</div>
+
+  const back = navigationType === 'POP'
+  const slide = variant === 'flow' ? (back ? -26 : 26) : 0
+
+  return (
+    <motion.div
+      className="flex h-full min-h-0 flex-col"
+      initial={{ opacity: 0, x: slide, y: variant === 'tab' ? 8 : 0 }}
+      animate={{
+        opacity: 1,
+        x: 0,
+        y: 0,
+        transition: { duration: 0.26, ease: [0.16, 1, 0.3, 1] },
+      }}
+      exit={{
+        opacity: 0,
+        x: -slide * 0.55,
+        y: variant === 'tab' ? -4 : 0,
+        transition: { duration: 0.11, ease: [0.4, 0, 1, 1] },
+      }}
+    >
+      {children}
+    </motion.div>
+  )
 }
 
 /** Scrolls a freshly-mounted route back to the top. */

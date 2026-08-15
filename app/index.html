@@ -24,14 +24,20 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="DikkiConnect" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- One family, varied by weight and tracking — the way Airbnb and Uber
-         handle type. Figtree carries the whole UI; the display sizes just run
-         heavier and tighter. -->
+    <!-- Inter is served from our own origin, not Google's.
+         Two reasons, and the second is the important one:
+           · no render-blocking request to a third party on first paint;
+           · the APK bundles these files, so the app renders in its real
+             typeface offline. A webfont loaded over the network silently
+             degrades to system sans the moment the phone loses signal, which
+             is exactly when a delivery app gets used.
+         One variable file covers 400–900, so weight costs nothing extra. -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      href="/fonts/inter-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
     />
   </head>
   <body>

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui'
 import { LiveMap } from '@/components/viz/Map'
 import { cityName, otpFor, travelerById } from '@/lib/data'
+import { useRideForTrip } from '@/lib/store'
 import { useTrip } from '@/lib/store'
 import { inr, time } from '@/lib/format'
 import { useCountdown } from '@/lib/hooks'
@@ -32,6 +33,7 @@ export default function RideTracking() {
   const { label } = useCountdown(2 * 3600 + 48 * 60)
 
   const trip = useTrip(id)
+  const ride = useRideForTrip(id)
   if (!trip) return <Navigate to="/passenger" replace />
 
   const driver = travelerById(trip.travelerId)!
@@ -138,7 +140,7 @@ export default function RideTracking() {
               Boarding OTP
             </p>
             <p className="tabular mt-1 text-[24px] font-extrabold tracking-[0.18em] text-brand-700">
-              {otpFor(trip.id + 'board')}
+              {ride?.boardingOtp ?? otpFor(trip.id + 'board')}
             </p>
           </div>
 

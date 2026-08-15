@@ -13,9 +13,10 @@ import {
 import { Screen } from '@/components/layout/Screen'
 import { Badge, Button, IconButton, Sheet, useToast } from '@/components/ui'
 import { LiveMap } from '@/components/viz/Map'
-import { PARCEL_JOBS, categoryById, hubShort } from '@/lib/data'
+import { categoryById, hubShort, jobFromParcel } from '@/lib/data'
 import { inr, kg } from '@/lib/format'
 import { useCountdown } from '@/lib/hooks'
+import { useManifest, useMe } from '@/lib/store'
 
 const STEPS = [
   { in: '400 m', instruction: 'Turn right onto Hosur Road', icon: CornerUpRight },
@@ -31,7 +32,9 @@ export default function TravelerNavigation() {
   const [sosOpen, setSosOpen] = useState(false)
   const { label } = useCountdown(3 * 3600 + 12 * 60)
 
-  const manifest = PARCEL_JOBS.slice(0, 3)
+  // Exactly what is in this driver's boot right now — nothing more.
+  const me = useMe()
+  const manifest = useManifest(me.id).map(jobFromParcel)
   const step = STEPS[0]
   const StepIcon = step.icon
 
@@ -159,7 +162,7 @@ export default function TravelerNavigation() {
                     {j.parcelId}
                   </p>
                   <p className="mt-0.5 truncate text-[11.5px] text-ink-500">
-                    {cat.label} · {kg(j.weightKg)} → {hubShort(j.toHubId)}
+                    {cat.label} · {kg(j.weightKg)} → {j.toLabel}
                   </p>
                 </div>
                 <div className="shrink-0 text-right">

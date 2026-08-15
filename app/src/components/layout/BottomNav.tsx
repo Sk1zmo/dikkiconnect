@@ -3,18 +3,18 @@ import { motion } from 'framer-motion'
 import {
   Archive,
   CalendarCheck,
-  ClipboardList,
-  Home,
-  LayoutGrid,
-  MapPin,
-  MessageCircle,
+  ClipboardText,
+  House,
+  MagnifyingGlass,
   Package,
+  MapPinLine,
   QrCode,
-  Search,
+  SquaresFour,
+  ChatCircleDots,
   User,
   Wallet,
-  type LucideIcon,
-} from 'lucide-react'
+  type Icon as PhosphorIcon,
+} from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 import type { Role } from '@/lib/types'
 import { useApp } from '@/lib/store'
@@ -22,46 +22,51 @@ import { useApp } from '@/lib/store'
 export interface NavTab {
   to: string
   label: string
-  icon: LucideIcon
+  icon: PhosphorIcon
   end?: boolean
   badge?: 'unread'
 }
 
 export const ROLE_TABS: Record<Role, NavTab[]> = {
   sender: [
-    { to: '/sender', label: 'Home', icon: Home, end: true },
+    { to: '/sender', label: 'Home', icon: House, end: true },
     { to: '/sender/bookings', label: 'Bookings', icon: Package },
-    { to: '/sender/track', label: 'Track', icon: MapPin },
+    { to: '/sender/track', label: 'Track', icon: MapPinLine },
     { to: '/wallet', label: 'Wallet', icon: Wallet },
     { to: '/profile', label: 'Profile', icon: User },
   ],
   traveler: [
-    { to: '/traveler', label: 'Dashboard', icon: LayoutGrid, end: true },
+    { to: '/traveler', label: 'Dashboard', icon: SquaresFour, end: true },
     { to: '/traveler/trips', label: 'Trips', icon: CalendarCheck },
     { to: '/traveler/scan', label: 'Scan', icon: QrCode },
     { to: '/wallet', label: 'Earnings', icon: Wallet },
     { to: '/profile', label: 'Profile', icon: User },
   ],
   passenger: [
-    { to: '/passenger', label: 'Search', icon: Search, end: true },
+    { to: '/passenger', label: 'Search', icon: MagnifyingGlass, end: true },
     { to: '/passenger/bookings', label: 'Rides', icon: CalendarCheck },
-    { to: '/passenger/messages', label: 'Messages', icon: MessageCircle, badge: 'unread' },
+    { to: '/passenger/messages', label: 'Messages', icon: ChatCircleDots, badge: 'unread' },
     { to: '/wallet', label: 'Wallet', icon: Wallet },
     { to: '/profile', label: 'Profile', icon: User },
   ],
   hub: [
-    { to: '/hub', label: 'Dashboard', icon: LayoutGrid, end: true },
+    { to: '/hub', label: 'Dashboard', icon: SquaresFour, end: true },
     { to: '/hub/inventory', label: 'Inventory', icon: Archive },
     { to: '/hub/scan', label: 'Scan', icon: QrCode },
-    { to: '/hub/history', label: 'History', icon: ClipboardList },
+    { to: '/hub/history', label: 'History', icon: ClipboardText },
     { to: '/profile', label: 'Profile', icon: User },
   ],
 }
 
 /**
- * Floating tab bar. The active tab gets a tonal pill, a filled-weight icon and
- * a spring-animated indicator that slides between positions — the detail that
- * separates a premium bar from a default one.
+ * Floating tab bar.
+ *
+ * The selected tab swaps to a genuinely filled glyph rather than tinting an
+ * outline — that solid-vs-outline contrast is what makes a bar read as native
+ * (it is what Instagram, Airbnb and Uber all do) and no amount of colour on a
+ * stroked icon substitutes for it. On top of that: a tonal pill that springs
+ * between positions, and an icon that overshoots on selection so the tap feels
+ * answered rather than merely registered.
  */
 export function BottomNav({ role }: { role: Role }) {
   const tabs = ROLE_TABS[role]
@@ -101,18 +106,16 @@ export function BottomNav({ role }: { role: Role }) {
                 <motion.span
                   className="relative"
                   initial={false}
-                  /* Icon lifts and overshoots on selection — the tap feels answered */
                   animate={{ scale: isActive ? 1 : 0.92, y: isActive ? -1 : 0 }}
                   transition={{ type: 'spring', stiffness: 600, damping: 16, mass: 0.6 }}
                 >
                   <Icon
-                    size={21}
-                    strokeWidth={isActive ? 2.4 : 1.9}
+                    size={22}
+                    weight={isActive ? 'fill' : 'regular'}
                     className={cn(
                       'transition-colors duration-200',
                       isActive ? 'text-brand-600' : 'text-ink-400',
                     )}
-                    fill={isActive ? 'rgba(22,80,224,0.14)' : 'transparent'}
                   />
                   {badge === 'unread' && unread > 0 && (
                     <span className="absolute -top-1 -right-1.5 grid h-[15px] min-w-[15px] place-items-center rounded-full bg-danger-500 px-1 text-[9px] font-bold text-white ring-2 ring-white">

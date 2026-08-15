@@ -14,27 +14,29 @@ import {
   Stars,
 } from '@/components/ui'
 import { EmptyRoadArt } from '@/components/viz/Illustrations'
-import { TRIPS, cityName, otpFor, travelerById } from '@/lib/data'
+import { cityName, travelerById } from '@/lib/data'
 import { dayDate, inr, time } from '@/lib/format'
 import { useLoaded } from '@/lib/hooks'
+import { useMyRides } from '@/lib/store'
 
 type Tab = 'upcoming' | 'past'
-
-const UPCOMING = TRIPS.slice(0, 2)
-const PAST = TRIPS.slice(2, 4)
 
 export default function PassengerBookings() {
   const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('upcoming')
-  const { loading } = useLoaded(TRIPS, 950)
 
-  const list = tab === 'upcoming' ? UPCOMING : PAST
+  // Every row here is a seat this passenger actually paid for — the list is
+  // empty until they book one, and it survives a reload.
+  const rides = useMyRides()
+  const { loading } = useLoaded(rides.upcoming, 900)
+
+  const list = tab === 'upcoming' ? rides.upcoming : rides.past
 
   return (
     <Screen>
       <LargeTitle
         title="My rides"
-        subtitle={`${UPCOMING.length} upcoming · ${PAST.length} completed`}
+        subtitle={`${rides.upcoming.length} upcoming · ${rides.past.length} completed`}
         className="pt-safe"
         action={
           <IconButton
@@ -50,7 +52,7 @@ export default function PassengerBookings() {
           value={tab}
           onChange={setTab}
           options={[
-            { value: 'upcoming', label: 'Upcoming', badge: UPCOMING.length },
+            { value: 'upcoming', label: 'Upcoming', badge: rides.upcoming.length },
             { value: 'past', label: 'Past' },
           ]}
         />
@@ -75,18 +77,33 @@ export default function PassengerBookings() {
           </Card>
         ) : (
           <div className="stagger flex flex-col gap-3">
-            {list.map((t) => {
+            {list.map(({ ride, trip: t }) => {
               const driver = travelerById(t.travelerId)!
               const upcoming = tab === 'upcoming'
               return (
-                <Card key={t.id} padded={false} className="overflow-hidden">
+                <Card key={ride.id} padded={false} className="overflow-hidden">
                   <div className="flex items-center gap-2 border-b border-ink-100 bg-ink-50/70 px-4 py-2.5">
                     <Calendar size={13} className="shrink-0 text-ink-400" />
                     <span className="text-[11.5px] font-bold text-ink-600">
                       {dayDate(t.departAt)}
                     </span>
-                    <Badge tone={upcoming ? 'brand' : 'success'} size="sm" dot className="ml-auto">
-                      {upcoming ? 'Confirmed' : 'Completed'}
+                    <Badge
+                      tone={
+                        ride.status === 'cancelled'
+                          ? 'neutral'
+                          : upcoming
+                            ? 'brand'
+                            : 'success'
+                      }
+                      size="sm"
+                      dot
+                      className="ml-auto"
+                    >
+                      {ride.status === 'cancelled'
+                        ? 'Cancelled'
+                        : upcoming
+                          ? `Confirmed · ${ride.seats} seat${ride.seats > 1 ? 's' : ''}`
+                          : 'Completed'}
                     </Badge>
                   </div>
 
@@ -112,7 +129,7 @@ export default function PassengerBookings() {
                         </p>
                       </div>
                       <p className="tabular shrink-0 text-[15px] font-extrabold text-ink-900">
-                        {inr(Math.round(t.farePerSeat * 1.06))}
+                        {inr(ride.fare)}
                       </p>
                     </div>
 
@@ -133,7 +150,7 @@ export default function PassengerBookings() {
                     <div className="flex items-center gap-3 border-t border-ink-100 bg-brand-50/50 px-4 py-3">
                       <span className="text-[11.5px] font-bold text-brand-700/70">Boarding OTP</span>
                       <span className="tabular ml-auto text-[16px] font-extrabold tracking-[0.15em] text-brand-700">
-                        {otpFor(t.id + 'board')}
+                        {ride.boardingOtp}
                       </span>
                     </div>
                   ) : (

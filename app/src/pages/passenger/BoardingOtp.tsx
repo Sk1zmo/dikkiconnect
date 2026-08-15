@@ -14,6 +14,7 @@ import {
 } from '@/components/ui'
 import { Confetti } from '@/components/viz/Illustrations'
 import { cityName, otpFor, travelerById } from '@/lib/data'
+import { useRideForTrip } from '@/lib/store'
 import { useTrip } from '@/lib/store'
 import { dayDate, inr, phone as fmtPhone, time } from '@/lib/format'
 
@@ -23,10 +24,13 @@ export default function BoardingOtp() {
   const navigate = useNavigate()
 
   const trip = useTrip(id)
+  const ride = useRideForTrip(id)
   if (!trip) return <Navigate to="/passenger" replace />
 
   const driver = travelerById(trip.travelerId)!
-  const otp = otpFor(trip.id + 'board')
+  // The code issued when this passenger paid — not one derived from the trip,
+  // so two passengers on the same car get two different codes.
+  const otp = ride?.boardingOtp ?? otpFor(trip.id + 'board')
 
   return (
     <Screen>

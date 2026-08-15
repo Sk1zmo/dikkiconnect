@@ -4,8 +4,9 @@ import { CheckCircle2, Keyboard, Package, X } from 'lucide-react'
 import { Screen } from '@/components/layout/Screen'
 import { Button, Field, IconButton, Segmented, Sheet, useToast } from '@/components/ui'
 import { ScannerViewfinder } from '@/components/viz/Scanner'
-import { PARCEL_JOBS, categoryById } from '@/lib/data'
+import { categoryById, jobFromParcel } from '@/lib/data'
 import { kg } from '@/lib/format'
+import { useApp, useManifest, useMe, useOpenJobs } from '@/lib/store'
 
 type Mode = 'pickup' | 'dropoff'
 
@@ -21,10 +22,23 @@ export default function TravelerScan() {
   const [manualOpen, setManualOpen] = useState(false)
   const [manualId, setManualId] = useState('')
 
-  const job = PARCEL_JOBS[1]
-  const cat = categoryById(job.category)
+  // Pickup scans the parcel this driver has claimed but not collected; drop-off
+  // scans whatever is currently in their boot. Both come from the ledger, so
+  // the scanner never identifies a parcel that does not exist.
+  const me = useMe()
+  const { parcels } = useApp()
+  const claimed = parcels.find((p) => p.travelerId === me.id && p.status === 'assigned')
+  const carrying = useManifest(me.id)[0]
+  const openFallback = useOpenJobs()[0]
+  const parcel = (mode === 'pickup' ? (claimed ?? openFallback) : (carrying ?? claimed)) ?? null
+  const job = parcel ? jobFromParcel(parcel) : null
+  const cat = categoryById(job?.category ?? 'documents')
 
   const onDetect = () => {
+    if (!job) {
+      toast.error('Nothing to scan', 'Accept a job first, then scan it at pickup.')
+      return
+    }
     setDetected(true)
     toast.success('Parcel identified', job.parcelId)
   }
@@ -97,10 +111,11 @@ export default function TravelerScan() {
           </span>
           <div className="min-w-0 flex-1">
             <p className="tabular truncate text-[15px] font-extrabold text-ink-900">
-              {job.parcelId}
+              {job?.parcelId ?? '—'}
             </p>
             <p className="mt-0.5 truncate text-[12.5px] text-ink-500">
-              {cat.label} · size {job.size} · {kg(job.weightKg)}
+              {cat.label}
+              {job ? ` · size ${job.size} · ${kg(job.weightKg)}` : ''}
             </p>
           </div>
           <span className="shrink-0 rounded-full bg-success-50 px-2.5 py-1 text-[11px] font-bold text-success-700">
@@ -112,8 +127,12 @@ export default function TravelerScan() {
           <Package size={16} className="mt-px shrink-0 text-brand-600" />
           <p className="text-[12.5px] leading-[1.5] text-brand-800">
             {mode === 'pickup'
-              ? 'The hub manager will read out a 6-digit OTP. Entering it moves custody — and liability — to you.'
-              : 'The hub manager enters the OTP shown on your screen. That closes your leg of the journey.'}
+              ? job?.mode === 'p2p'
+                ? 'The sender will read out a 6-digit OTP. Entering it moves custody — and liability — to you.'
+                : 'The hub manager will read out a 6-digit OTP. Entering it moves custody — and liability — to you.'
+              : job?.mode === 'p2p'
+                ? 'The receiver reads out their OTP at the door. Entering it closes the delivery and releases your payout.'
+                : 'The hub manager enters the OTP shown on your screen. That closes your leg of the journey.'}
           </p>
         </div>
       </Sheet>
