@@ -55,7 +55,9 @@ export default function Ops() {
       setLoading(true)
       setError(undefined)
       try {
-        const res = await fetch(`/api/ops?key=${encodeURIComponent(k)}`)
+        const res = await fetch(
+          `${import.meta.env.VITE_API_ORIGIN ?? ''}/api/ops?key=${encodeURIComponent(k)}`,
+        )
         const json = await res.json()
         if (!res.ok) {
           setFeed(null)

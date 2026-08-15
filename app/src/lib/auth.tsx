@@ -55,9 +55,20 @@ export type VerifyResult =
 
 export const normalisePhone = (raw: string) => raw.replace(/\D/g, '').slice(-10)
 
+/**
+ * Where the API lives.
+ *
+ * On the web this is the same origin and the empty string is correct. Inside
+ * the APK it is not: Capacitor serves the bundled app from https://localhost,
+ * so a relative /api/… resolves to a host that does not exist and every sign-in
+ * fails with a network error. The Android build is compiled with
+ * VITE_API_ORIGIN pointing at the deployment.
+ */
+const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN as string | undefined) ?? ''
+
 async function api<T>(path: string, body?: unknown): Promise<T | null> {
   try {
-    const res = await fetch(path, {
+    const res = await fetch(`${API_ORIGIN}${path}`, {
       method: body ? 'POST' : 'GET',
       headers: body ? { 'Content-Type': 'application/json' } : undefined,
       body: body ? JSON.stringify(body) : undefined,
