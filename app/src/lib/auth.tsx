@@ -2,293 +2,216 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react'
 import { useLocalStorage } from './hooks'
-import { sendOtpSms, smsConfigured, type SmsResult } from './sms'
 import type { KycTier, Role } from './types'
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Accounts and OTP.
+   Accounts and verification — client side.
 
-   Every account here is a real record keyed by mobile number: sign up once,
-   sign in from then on, and your parcels, rides and wallet follow the number.
-   There are no shared demo logins.
+   This file used to generate the code itself. It no longer knows how. Codes
+   are issued, hashed, counted and compared by the API; the only copy that
+   leaves the server goes to the user's inbox. Everything here does is ask, and
+   report what the server said.
 
-   The OTP is a genuine one — generated per request, six digits, single-use,
-   five-minute expiry, five attempts, thirty-second resend cooldown.
+   That is the difference between a verification step and a piece of theatre:
+   the check now happens somewhere the person being checked cannot reach.
 
-   Delivery goes through `sms.ts`, which posts to whatever endpoint the build
-   is configured with. When one is set the code arrives by real SMS; when it
-   is not, the verification screen shows the code in-app and says why. The
-   code, and every rule around it, is identical either way — only the last
-   hop changes.
+   What is kept locally is a session token and the account record the server
+   returned, so a reload does not force a fresh code.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface Account {
   id: string
   name: string
-  phone: string
   email: string
-  /** Roles this person has used. The first one is where they land on sign-in. */
+  phone: string
   roles: Role[]
   createdAt: string
   kycTier: KycTier
   avatarTone: number
 }
 
-/** A live verification challenge. One per number at a time. */
-interface Challenge {
-  phone: string
-  code: string
-  issuedAt: number
-  expiresAt: number
-  attempts: number
-}
-
-export type VerifyResult =
-  | { ok: true; isNewUser: boolean }
-  | { ok: false; reason: 'no-challenge' | 'expired' | 'locked' | 'wrong'; attemptsLeft: number }
-
 export const OTP_TTL_MS = 5 * 60_000
 export const OTP_MAX_ATTEMPTS = 5
 export const OTP_RESEND_SECONDS = 30
 
-/** Cryptographically random six digits — not Math.random(). */
-function generateCode() {
-  const buf = new Uint32Array(1)
-  crypto.getRandomValues(buf)
-  return String(buf[0] % 1_000_000).padStart(6, '0')
-}
+export type RequestResult =
+  | { ok: true; channel: 'email'; delivered: boolean; to?: string; reason?: string }
+  | { ok: false; reason: 'bad-identifier' | 'too-soon' | 'offline'; retryInSeconds?: number }
+
+export type VerifyResult =
+  | { ok: true; isNewUser: false }
+  | { ok: true; isNewUser: true; ticket: string }
+  | {
+      ok: false
+      reason: 'no-challenge' | 'expired' | 'locked' | 'wrong' | 'offline'
+      attemptsLeft: number
+    }
 
 export const normalisePhone = (raw: string) => raw.replace(/\D/g, '').slice(-10)
 
+async function api<T>(path: string, body?: unknown): Promise<T | null> {
+  try {
+    const res = await fetch(path, {
+      method: body ? 'POST' : 'GET',
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    })
+    return (await res.json()) as T
+  } catch {
+    return null
+  }
+}
+
 interface AuthState {
-  /** The signed-in account, or null. */
   account: Account | null
   authed: boolean
-  accounts: Account[]
+  /** True until the stored session has been checked. */
+  loading: boolean
 
-  /** Issue a fresh code for a number. Returns the code so the UI can show it. */
-  requestOtp: (phone: string) => { code: string; expiresAt: number }
-  /** Outcome of the last delivery attempt — drives what the UI tells the user. */
-  delivery: SmsResult | null
-  /** Is an SMS gateway configured for this build? */
-  smsEnabled: boolean
-  /** The code currently outstanding, for the in-app delivery panel. */
-  pendingCode: (phone: string) => string | null
-  /** Attempts left on the outstanding challenge. */
-  attemptsLeft: (phone: string) => number
-  /**
-   * Check a code. On success an existing account is signed in immediately;
-   * a new number is left for `completeSignup` to finish.
-   */
-  verifyOtp: (phone: string, code: string) => VerifyResult
-  /** Create the account for a number that has just passed verification. */
-  completeSignup: (details: { phone: string; name: string; email: string; role: Role }) => Account
-  /** Has this number already verified but not yet finished signing up? */
-  isVerifiedPending: (phone: string) => boolean
+  requestCode: (identifier: string) => Promise<RequestResult>
+  verifyCode: (identifier: string, code: string) => Promise<VerifyResult>
+  completeSignup: (details: {
+    ticket: string
+    name: string
+    email: string
+    phone: string
+    role: Role
+  }) => Promise<Account | null>
 
-  updateAccount: (patch: Partial<Omit<Account, 'id' | 'phone'>>) => void
+  updateAccount: (patch: Partial<Omit<Account, 'id'>>) => void
   addRole: (role: Role) => void
   signOut: () => void
-  /** Wipes accounts and every ledger — the reset button in Settings. */
-  deleteAccount: () => void
 }
 
 const AuthContext = createContext<AuthState | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [accounts, setAccounts] = useLocalStorage<Account[]>('dikkiconnect.accounts', [])
-  const [sessionPhone, setSessionPhone] = useLocalStorage<string | null>(
-    'dikkiconnect.session',
-    null,
-  )
+  const [token, setToken] = useLocalStorage<string | null>('dikkiconnect.token', null)
+  const [account, setAccount] = useLocalStorage<Account | null>('dikkiconnect.account', null)
+  const [loading, setLoading] = useState(false)
 
-  // Challenges live in memory only. A reload drops them, which is the correct
-  // behaviour — the user simply requests a new code.
-  const [challenge, setChallenge] = useState<Challenge | null>(null)
-  const [verifiedPhone, setVerifiedPhone] = useState<string | null>(null)
-  const [delivery, setDelivery] = useState<SmsResult | null>(null)
+  // A token without an account (cleared cache, older build) is not a session.
+  useEffect(() => {
+    if (token && !account) setToken(null)
+  }, [token, account, setToken])
 
-  const account = useMemo(
-    () => accounts.find((a) => a.phone === sessionPhone) ?? null,
-    [accounts, sessionPhone],
-  )
+  const requestCode = useCallback<AuthState['requestCode']>(async (identifier) => {
+    const res = await api<{
+      ok?: boolean
+      error?: string
+      retryInSeconds?: number
+      channel?: 'email'
+      delivered?: boolean
+      to?: string
+      reason?: string
+    }>('/api/auth/request-code', { identifier })
 
-  const requestOtp = useCallback<AuthState['requestOtp']>((rawPhone) => {
-    const phone = normalisePhone(rawPhone)
-    const now = Date.now()
-    const next: Challenge = {
-      phone,
-      code: generateCode(),
-      issuedAt: now,
-      expiresAt: now + OTP_TTL_MS,
-      attempts: 0,
+    if (!res) return { ok: false, reason: 'offline' }
+    if (res.error === 'too-soon') {
+      return { ok: false, reason: 'too-soon', retryInSeconds: res.retryInSeconds }
     }
-    setChallenge(next)
+    if (!res.ok) return { ok: false, reason: 'bad-identifier' }
 
-    // Fire-and-forget: the challenge is live the moment it is generated, so a
-    // slow gateway must never hold up the verification screen.
-    setDelivery(null)
-    void sendOtpSms(phone, next.code).then(setDelivery)
-
-    return { code: next.code, expiresAt: next.expiresAt }
+    return {
+      ok: true,
+      channel: 'email',
+      delivered: Boolean(res.delivered),
+      to: res.to,
+      reason: res.reason,
+    }
   }, [])
 
-  const pendingCode = useCallback<AuthState['pendingCode']>(
-    (rawPhone) => {
-      const phone = normalisePhone(rawPhone)
-      if (!challenge || challenge.phone !== phone) return null
-      if (Date.now() > challenge.expiresAt) return null
-      return challenge.code
+  const verifyCode = useCallback<AuthState['verifyCode']>(
+    async (identifier, code) => {
+      const res = await api<{
+        ok?: boolean
+        reason?: VerifyResult extends { reason: infer R } ? R : never
+        attemptsLeft?: number
+        isNewUser?: boolean
+        ticket?: string
+        token?: string
+        account?: Account
+      }>('/api/auth/verify-code', { identifier, code })
+
+      if (!res) return { ok: false, reason: 'offline', attemptsLeft: 0 }
+      if (!res.ok) {
+        return {
+          ok: false,
+          reason: (res.reason ?? 'wrong') as 'wrong',
+          attemptsLeft: res.attemptsLeft ?? 0,
+        }
+      }
+      if (res.isNewUser) return { ok: true, isNewUser: true, ticket: res.ticket ?? '' }
+
+      if (res.token && res.account) {
+        setToken(res.token)
+        setAccount(res.account)
+      }
+      return { ok: true, isNewUser: false }
     },
-    [challenge],
-  )
-
-  const attemptsLeft = useCallback<AuthState['attemptsLeft']>(
-    (rawPhone) => {
-      const phone = normalisePhone(rawPhone)
-      if (!challenge || challenge.phone !== phone) return OTP_MAX_ATTEMPTS
-      return Math.max(0, OTP_MAX_ATTEMPTS - challenge.attempts)
-    },
-    [challenge],
-  )
-
-  const verifyOtp = useCallback<AuthState['verifyOtp']>(
-    (rawPhone, code) => {
-      const phone = normalisePhone(rawPhone)
-
-      if (!challenge || challenge.phone !== phone) {
-        return { ok: false, reason: 'no-challenge', attemptsLeft: 0 }
-      }
-      if (Date.now() > challenge.expiresAt) {
-        setChallenge(null)
-        return { ok: false, reason: 'expired', attemptsLeft: 0 }
-      }
-      if (challenge.attempts >= OTP_MAX_ATTEMPTS) {
-        return { ok: false, reason: 'locked', attemptsLeft: 0 }
-      }
-
-      if (code !== challenge.code) {
-        const attempts = challenge.attempts + 1
-        setChallenge({ ...challenge, attempts })
-        const left = Math.max(0, OTP_MAX_ATTEMPTS - attempts)
-        return { ok: false, reason: left === 0 ? 'locked' : 'wrong', attemptsLeft: left }
-      }
-
-      // Correct — burn the challenge so the code cannot be replayed.
-      setChallenge(null)
-      const existing = accounts.find((a) => a.phone === phone)
-      if (existing) {
-        setSessionPhone(phone)
-        setVerifiedPhone(null)
-        return { ok: true, isNewUser: false }
-      }
-      setVerifiedPhone(phone)
-      return { ok: true, isNewUser: true }
-    },
-    [challenge, accounts, setSessionPhone],
+    [setToken, setAccount],
   )
 
   const completeSignup = useCallback<AuthState['completeSignup']>(
-    ({ phone: rawPhone, name, email, role }) => {
-      const phone = normalisePhone(rawPhone)
-      const created: Account = {
-        id: `usr-${phone}`,
-        name: name.trim(),
-        email: email.trim(),
-        phone,
-        roles: [role],
-        createdAt: new Date().toISOString(),
-        kycTier: 'none',
-        avatarTone: phone.charCodeAt(9) % 6,
-      }
-      setAccounts((list) => [created, ...list.filter((a) => a.phone !== phone)])
-      setSessionPhone(phone)
-      setVerifiedPhone(null)
-      return created
+    async (details) => {
+      setLoading(true)
+      const res = await api<{ ok?: boolean; token?: string; account?: Account }>(
+        '/api/auth/signup',
+        details,
+      )
+      setLoading(false)
+      if (!res?.ok || !res.account || !res.token) return null
+      setToken(res.token)
+      setAccount(res.account)
+      return res.account
     },
-    [setAccounts, setSessionPhone],
-  )
-
-  const isVerifiedPending = useCallback<AuthState['isVerifiedPending']>(
-    (rawPhone) => verifiedPhone === normalisePhone(rawPhone),
-    [verifiedPhone],
+    [setToken, setAccount],
   )
 
   const updateAccount = useCallback<AuthState['updateAccount']>(
-    (patch) => {
-      if (!sessionPhone) return
-      setAccounts((list) =>
-        list.map((a) => (a.phone === sessionPhone ? { ...a, ...patch } : a)),
-      )
-    },
-    [sessionPhone, setAccounts],
+    (patch) => setAccount((a) => (a ? { ...a, ...patch } : a)),
+    [setAccount],
   )
 
   const addRole = useCallback<AuthState['addRole']>(
-    (role) => {
-      if (!sessionPhone) return
-      setAccounts((list) =>
-        list.map((a) =>
-          a.phone === sessionPhone && !a.roles.includes(role)
-            ? { ...a, roles: [...a.roles, role] }
-            : a,
-        ),
-      )
-    },
-    [sessionPhone, setAccounts],
+    (role) =>
+      setAccount((a) => (a && !a.roles.includes(role) ? { ...a, roles: [...a.roles, role] } : a)),
+    [setAccount],
   )
 
   const signOut = useCallback(() => {
-    setSessionPhone(null)
-    setChallenge(null)
-    setVerifiedPhone(null)
-  }, [setSessionPhone])
-
-  const deleteAccount = useCallback(() => {
-    const phone = sessionPhone
-    setAccounts((list) => list.filter((a) => a.phone !== phone))
-    setSessionPhone(null)
-    setChallenge(null)
-    setVerifiedPhone(null)
-  }, [sessionPhone, setAccounts, setSessionPhone])
+    setToken(null)
+    setAccount(null)
+  }, [setToken, setAccount])
 
   const value = useMemo<AuthState>(
     () => ({
       account,
-      authed: account !== null,
-      accounts,
-      requestOtp,
-      delivery,
-      smsEnabled: smsConfigured(),
-      pendingCode,
-      attemptsLeft,
-      verifyOtp,
+      authed: Boolean(account && token),
+      loading,
+      requestCode,
+      verifyCode,
       completeSignup,
-      isVerifiedPending,
       updateAccount,
       addRole,
       signOut,
-      deleteAccount,
     }),
     [
       account,
-      accounts,
-      requestOtp,
-      delivery,
-      pendingCode,
-      attemptsLeft,
-      verifyOtp,
+      token,
+      loading,
+      requestCode,
+      verifyCode,
       completeSignup,
-      isVerifiedPending,
       updateAccount,
       addRole,
       signOut,
-      deleteAccount,
     ],
   )
 

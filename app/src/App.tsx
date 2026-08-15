@@ -1,4 +1,4 @@
-import { lazy } from 'react'
+import { lazy, Suspense } from 'react'
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { AppProvider, useApp } from '@/lib/store'
 import { AuthProvider, useAuth } from '@/lib/auth'
@@ -69,7 +69,22 @@ const HelpCenter = lazy(() => import('@/pages/common/HelpCenter'))
 const PaymentMethods = lazy(() => import('@/pages/common/PaymentMethods'))
 const NotFound = lazy(() => import('@/pages/common/NotFound'))
 
+/* Operations — a desktop view, outside the phone shell and outside the auth
+   gate, because it authenticates with its own server-side key. */
+const Ops = lazy(() => import('@/pages/common/Ops'))
+
 export default function App() {
+  // Ops renders full-width: it is read on a laptop, not a phone.
+  if (location.pathname.startsWith('/ops')) {
+    return (
+      <Suspense fallback={null}>
+        <Routes>
+          <Route path="/ops" element={<Ops />} />
+        </Routes>
+      </Suspense>
+    )
+  }
+
   return (
     <AuthProvider>
       <AppProvider>

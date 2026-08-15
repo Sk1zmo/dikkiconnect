@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, ChevronsRight, UserRound } from 'lucide-react'
+import { ChevronDown, ChevronsRight } from 'lucide-react'
 import { Screen, TopBar } from '@/components/layout/Screen'
 import { Sheet } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
@@ -58,7 +58,7 @@ const POLICY = [
  */
 export default function Login() {
   const navigate = useNavigate()
-  const { requestOtp, accounts } = useAuth()
+  const { requestCode } = useAuth()
 
   const [value, setValue] = useState('')
   const [email, setEmail] = useState<string | null>(null)
@@ -76,7 +76,6 @@ export default function Login() {
   const valid = isEmail
     ? /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim())
     : complete
-  const returning = accounts.find((a) => a.phone === digits)
   const showDial = !isEmail && complete
 
   const submit = () => {
@@ -108,12 +107,40 @@ export default function Login() {
 
     setError(undefined)
     setSending(true)
-    // Issue the code before navigating, so the verify screen always has a live
-    // challenge to check against.
-    requestOtp(digits)
-    const qs = new URLSearchParams({ phone: digits })
-    if (email) qs.set('email', email)
-    setTimeout(() => navigate(`/auth/otp?${qs.toString()}`), 600)
+
+    /* The identifier the server keys on is whatever gets the code to a person:
+       an email if we have one, otherwise the number — and for a number the
+       server looks up the address on file. Asking here rather than on the next
+       screen means a rejection is shown against the field that caused it. */
+    void (async () => {
+      const identifier = email ?? digits
+      const result = await requestCode(identifier)
+      setSending(false)
+
+      if (!result.ok) {
+        if (result.reason === 'too-soon') {
+          setError(`A code was just sent. Try again in ${result.retryInSeconds ?? 30}s.`)
+        } else if (result.reason === 'offline') {
+          setError('Could not reach DikkiConnect. Check your connection and try again.')
+        } else {
+          setError('That doesn’t look like a valid number or email.')
+        }
+        return
+      }
+
+      if (!result.delivered) {
+        setError(
+          result.reason === 'no-email-for-number'
+            ? 'We have no email on file for that number. Sign in with your email address instead.'
+            : 'We couldn’t send the code just now. Try again in a moment.',
+        )
+        return
+      }
+
+      const qs = new URLSearchParams({ id: identifier })
+      if (result.to) qs.set('to', result.to)
+      navigate(`/auth/otp?${qs.toString()}`)
+    })()
   }
 
   return (
@@ -207,17 +234,6 @@ export default function Login() {
               <p className="anim-fade-in mt-2 text-[12.5px] font-semibold text-brand-700">
                 {notice}
               </p>
-            )}
-
-            {returning && !error && (
-              <div className="anim-fade-in mt-2.5 flex items-center gap-2.5 rounded-(--radius-md) border border-success-100 bg-success-50 px-3 py-2">
-                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-success-500/15 text-success-600">
-                  <UserRound size={14} />
-                </span>
-                <p className="min-w-0 truncate text-[12.5px] font-semibold text-success-800">
-                  Welcome back, {returning.name.split(' ')[0]}
-                </p>
-              </div>
             )}
 
             <button

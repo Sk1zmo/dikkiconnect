@@ -24,20 +24,25 @@ export default function Signup() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const toast = useToast()
-  const { completeSignup, isVerifiedPending } = useAuth()
+  const { completeSignup } = useAuth()
   const { setRole } = useApp()
 
-  const phone = params.get('phone') ?? ''
+  const ticket = params.get('ticket') ?? ''
+  const identifier = params.get('id') ?? ''
+  const identifierIsEmail = identifier.includes('@')
+  const phone = identifierIsEmail ? '' : identifier
 
   const [name, setName] = useState('')
-  const [email, setEmail] = useState(params.get('email') ?? '')
+  const [email, setEmail] = useState(identifierIsEmail ? identifier : '')
   const [role, setChosenRole] = useState<Role>('sender')
   const [errors, setErrors] = useState<{ name?: string; email?: string }>({})
   const [creating, setCreating] = useState(false)
 
-  // Nobody reaches account creation without passing verification first.
+  /* The ticket is the server's proof that this identifier just passed
+     verification. Without one the signup endpoint refuses anyway — this only
+     saves the user a pointless form. */
   useEffect(() => {
-    if (!phone || !isVerifiedPending(phone)) navigate('/auth/login', { replace: true })
+    if (!ticket || !identifier) navigate('/auth/login', { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -49,12 +54,17 @@ export default function Signup() {
     if (Object.keys(next).length) return
 
     setCreating(true)
-    setTimeout(() => {
-      completeSignup({ phone, name, email, role })
+    void (async () => {
+      const account = await completeSignup({ ticket, name, email, phone, role })
+      setCreating(false)
+      if (!account) {
+        setErrors({ name: 'Could not create the account. Ask for a new code and try again.' })
+        return
+      }
       setRole(role)
-      toast.success('Account created', `Welcome to DikkiConnect, ${name.trim().split(' ')[0]}.`)
+      toast.success('Account created', `Welcome to DikkiConnect, ${account.name.split(' ')[0]}.`)
       navigate('/auth/role', { replace: true })
-    }, 900)
+    })()
   }
 
   return (
@@ -66,8 +76,10 @@ export default function Signup() {
           Almost there
         </h1>
         <p className="mt-2 text-[14px] leading-[1.55] text-ink-500">
-          <span className="font-bold text-ink-800">{maskPhone(phone)}</span> is verified. Tell us who
-          you are — this name appears on your parcels and rides.
+          <span className="font-bold text-ink-800">
+            {identifierIsEmail ? identifier : maskPhone(phone)}
+          </span>{' '}
+          is verified. Tell us who you are — this name appears on your parcels and rides.
         </p>
 
         <div className="mt-7 flex flex-col gap-4">
