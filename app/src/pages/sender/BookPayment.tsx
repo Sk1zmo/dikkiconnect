@@ -16,7 +16,7 @@ import {
 import { inr } from '@/lib/format'
 import { useApp } from '@/lib/store'
 import { useFakeProgress } from '@/lib/hooks'
-import { BOOK_STEPS } from './BookRoute'
+import { bookSteps } from './BookRoute'
 
 const UPI_APPS = ['Google Pay', 'PhonePe', 'Paytm', 'BHIM']
 
@@ -100,7 +100,7 @@ export default function BookPayment() {
       <TopBar back title="Payment" subtitle="Step 5 of 5" />
 
       <div className="shrink-0 px-5 pb-4">
-        <Stepper steps={BOOK_STEPS} current={4} />
+        <Stepper steps={bookSteps(draft.mode)} current={4} />
       </div>
 
       <ScreenBody>

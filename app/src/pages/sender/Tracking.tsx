@@ -29,7 +29,7 @@ import {
 } from '@/components/ui'
 import { Timeline, TimelineSkeleton } from '@/components/viz/Timeline'
 import { LiveMap } from '@/components/viz/Map'
-import { categoryById, hubById, otpFor, travelerById } from '@/lib/data'
+import { categoryById, cityName, hubById, otpFor, travelerById } from '@/lib/data'
 import { inr, kg, time } from '@/lib/format'
 import { useApp } from '@/lib/store'
 import { useLoaded } from '@/lib/hooks'
@@ -51,8 +51,16 @@ export default function Tracking() {
 
   const traveler = travelerById(parcel.travelerId)
   const cat = categoryById(parcel.category)
+  const isP2P = parcel.mode === 'p2p'
   const originHub = hubById(parcel.originHubId)
   const destHub = hubById(parcel.destinationHubId)
+  // P2P moves door to door, so the "from → to" line names the addresses.
+  const fromLabel = isP2P
+    ? (parcel.pickupAddress ?? cityName(parcel.fromCityId))
+    : (originHub?.name.split('·').pop()?.trim() ?? '—')
+  const toLabel = isP2P
+    ? (parcel.dropAddress ?? cityName(parcel.toCityId))
+    : (destHub?.name.split('·').pop()?.trim() ?? '—')
   const live = parcel.status === 'in_transit'
   const canCancel = ['booked', 'at_origin_hub'].includes(parcel.status)
   const doneCount = parcel.timeline.filter((e) => e.done).length
@@ -110,8 +118,7 @@ export default function Tracking() {
                 </button>
               </div>
               <p className="mt-1 text-[12.5px] text-ink-500">
-                {originHub?.name.split('·').pop()?.trim()} →{' '}
-                {destHub?.name.split('·').pop()?.trim()}
+                {fromLabel} → {toLabel}
               </p>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -185,7 +192,7 @@ export default function Tracking() {
           <Note tone="success" icon={<ShieldCheck size={15} />} className="mt-3" title="Ready for pickup">
             {parcel.receiverName} has been sent OTP{' '}
             <span className="font-mono font-extrabold">{otpFor(parcel.id + 'recv')}</span> — they
-            show it at {destHub?.name.split('·').pop()?.trim()} to collect.
+            show it {isP2P ? 'to the traveler at the door' : `at ${toLabel}`} to collect.
           </Note>
         )}
 
@@ -245,12 +252,16 @@ export default function Tracking() {
         <KeyValue label="Receiver" value={parcel.receiverName} />
         <KeyValue label="Receiver mobile" value={`+91 ${parcel.receiverPhone}`} />
         <div className="my-2 h-px bg-ink-100" />
-        <KeyValue label="Origin hub" value={originHub?.name.split('·').pop()?.trim() ?? '—'} />
-        <KeyValue label="Destination hub" value={destHub?.name.split('·').pop()?.trim() ?? '—'} />
+        <KeyValue label={isP2P ? 'Collected from' : 'Origin hub'} value={fromLabel} />
+        <KeyValue label={isP2P ? 'Delivered to' : 'Destination hub'} value={toLabel} />
         <div className="my-2 h-px bg-ink-100" />
         <KeyValue label="Amount paid" value={inr(parcel.price)} strong />
         {parcel.notes && (
-          <Note tone="neutral" className="mt-4" title="Your note to the hub">
+          <Note
+            tone="neutral"
+            className="mt-4"
+            title={isP2P ? 'Your note to the traveler' : 'Your note to the hub'}
+          >
             {parcel.notes}
           </Note>
         )}
@@ -274,7 +285,7 @@ export default function Tracking() {
         title="Cancel this booking?"
         body={
           <>
-            {inr(parcel.price)} will be refunded to your DikkiConnect wallet immediately. Your hub slot is
+            {inr(parcel.price)} will be refunded to your DikkiConnect wallet immediately. Your slot is
             released.
           </>
         }

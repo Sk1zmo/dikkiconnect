@@ -19,7 +19,7 @@ import { DECLARED_VALUE_CAP, PARCEL_CATEGORIES, PARCEL_SIZES, PROHIBITED_ITEMS }
 import { inr, kg } from '@/lib/format'
 import { useApp } from '@/lib/store'
 import { cn } from '@/lib/cn'
-import { BOOK_STEPS } from './BookRoute'
+import { bookSteps } from './BookRoute'
 
 /** Step 2 — what is in the box. Enforces the PRD's declared-value cap. */
 export default function BookParcel() {
@@ -37,7 +37,7 @@ export default function BookParcel() {
       <TopBar back title="Parcel details" subtitle="Step 2 of 5" />
 
       <div className="shrink-0 px-5 pb-4">
-        <Stepper steps={BOOK_STEPS} current={1} />
+        <Stepper steps={bookSteps(draft.mode)} current={1} />
       </div>
 
       <ScreenBody>

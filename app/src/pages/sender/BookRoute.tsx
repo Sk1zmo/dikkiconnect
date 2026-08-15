@@ -18,6 +18,10 @@ import { useApp } from '@/lib/store'
 import { cn } from '@/lib/cn'
 
 export const BOOK_STEPS = ['Route', 'Parcel', 'Hubs', 'Review', 'Pay']
+/** Same flow, but step 3 collects door addresses rather than hubs. */
+export const BOOK_STEPS_P2P = ['Route', 'Parcel', 'Pickup', 'Review', 'Pay']
+export const bookSteps = (mode: 'hub' | 'p2p') =>
+  mode === 'p2p' ? BOOK_STEPS_P2P : BOOK_STEPS
 
 const RECENT_ROUTES = [
   { from: 'blr', to: 'mys' },

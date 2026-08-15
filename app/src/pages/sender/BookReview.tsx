@@ -20,7 +20,7 @@ import { categoryById, cityName, resolveHub } from '@/lib/data'
 import { inr, kg } from '@/lib/format'
 import { useApp } from '@/lib/store'
 import { useLoaded } from '@/lib/hooks'
-import { BOOK_STEPS } from './BookRoute'
+import { bookSteps } from './BookRoute'
 
 const PROMOS = ['MYSORE20', 'FIRSTDROP', 'DIKKI10']
 
@@ -59,7 +59,7 @@ export default function BookReview() {
       <TopBar back title="Review & confirm" subtitle="Step 4 of 5" />
 
       <div className="shrink-0 px-5 pb-4">
-        <Stepper steps={BOOK_STEPS} current={3} />
+        <Stepper steps={bookSteps(draft.mode)} current={3} />
       </div>
 
       <ScreenBody>

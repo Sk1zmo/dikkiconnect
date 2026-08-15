@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Clock, MapPin, QrCode, Share2 } from 'lucide-react'
+import { Clock, Home, MapPin, QrCode, Share2 } from 'lucide-react'
 import { Screen, ScreenBody } from '@/components/layout/Screen'
 import { ActionBar, Button, Card, KeyValue, Note, OtpDisplay } from '@/components/ui'
 import { Confetti, SuccessBurst, SuccessMark } from '@/components/viz/Illustrations'
@@ -24,8 +24,11 @@ export default function BookConfirmed() {
 
   if (!parcel) return <Navigate to="/sender" replace />
 
+  const isP2P = parcel.mode === 'p2p'
   const hub = hubById(parcel.originHubId)
-  const otp = otpFor(parcel.id)
+  // Hub mode: the hub manager keys this in at intake. P2P: the traveler keys
+  // it in at your door. Different checkpoint, different code.
+  const otp = isP2P ? otpFor(parcel.id + 'pick') : otpFor(parcel.id)
 
   const done = (to: string) => {
     resetDraft()
@@ -52,7 +55,9 @@ export default function BookConfirmed() {
               Booking confirmed
             </h1>
             <p className="mt-2 text-[14px] leading-relaxed text-ink-500">
-              Drop your parcel at the hub within 24 hours and show the OTP below.
+              {isP2P
+                ? 'A verified traveler on your route will collect it from your address. Show them the OTP below.'
+                : 'Drop your parcel at the hub within 24 hours and show the OTP below.'}
             </p>
             <p className="tabular mt-3 inline-block rounded-full bg-ink-100 px-3.5 py-1.5 text-[13px] font-extrabold text-ink-800">
               {parcel.id}
@@ -62,29 +67,50 @@ export default function BookConfirmed() {
 
         {/* Drop-off OTP */}
         <Card className="border-brand-100 bg-brand-50/60">
-          <OtpDisplay code={otp} label="Show this at the counter" />
+          <OtpDisplay
+            code={otp}
+            label={isP2P ? 'Show this to the traveler' : 'Show this at the counter'}
+          />
           <Note tone="brand" className="mt-4">
-            The hub manager types this in to confirm they received exactly this parcel from you. It
-            is the first of four custody checkpoints.
+            {isP2P
+              ? 'The traveler types this in to confirm they collected exactly this parcel from you. It is the first of two custody checkpoints — the receiver’s OTP closes the second.'
+              : 'The hub manager types this in to confirm they received exactly this parcel from you. It is the first of four custody checkpoints.'}
           </Note>
         </Card>
 
-        {/* Where to drop */}
+        {/* Where it moves from */}
         <Card className="mt-3">
           <div className="flex items-start gap-3">
             <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-50 text-brand-600">
-              <MapPin size={18} />
+              {isP2P ? <Home size={18} /> : <MapPin size={18} />}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[14.5px] font-bold text-ink-900">
-                {hub?.name.split('·').pop()?.trim()}
+              <p className="text-[11px] font-bold tracking-wide text-ink-400 uppercase">
+                {isP2P ? 'Collected from' : 'Drop it at'}
               </p>
-              <p className="mt-0.5 text-[12.5px] text-ink-500">{hub?.address}</p>
-              <p className="mt-0.5 text-[12px] text-ink-400">{hub?.landmark}</p>
-              <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-ink-100 px-2.5 py-1 text-[11.5px] font-bold text-ink-600">
-                <Clock size={11.5} />
-                {hub?.openFrom} – {hub?.openTo}
-              </p>
+              {isP2P ? (
+                <>
+                  <p className="mt-0.5 text-[13.5px] leading-snug font-semibold text-ink-800">
+                    {parcel.pickupAddress}
+                  </p>
+                  <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-ink-100 px-2.5 py-1 text-[11.5px] font-bold text-ink-600">
+                    <Clock size={11.5} />
+                    Usually collected within a few hours
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="truncate text-[14.5px] font-bold text-ink-900">
+                    {hub?.name.split('·').pop()?.trim()}
+                  </p>
+                  <p className="mt-0.5 text-[12.5px] text-ink-500">{hub?.address}</p>
+                  <p className="mt-0.5 text-[12px] text-ink-400">{hub?.landmark}</p>
+                  <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-ink-100 px-2.5 py-1 text-[11.5px] font-bold text-ink-600">
+                    <Clock size={11.5} />
+                    {hub?.openFrom} – {hub?.openTo}
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </Card>

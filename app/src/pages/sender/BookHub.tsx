@@ -18,7 +18,7 @@ import { cityName, hubsInCity } from '@/lib/data'
 import { useApp } from '@/lib/store'
 import { useLoaded } from '@/lib/hooks'
 import { useState } from 'react'
-import { BOOK_STEPS } from './BookRoute'
+import { bookSteps } from './BookRoute'
 
 /** Step 3 — pick the drop hub and the collection hub. */
 export default function BookHub() {
@@ -51,7 +51,7 @@ export default function BookHub() {
         <TopBar back title="Pickup & drop" subtitle="Step 3 of 5" />
 
         <div className="shrink-0 px-5 pb-4">
-          <Stepper steps={BOOK_STEPS} current={2} />
+          <Stepper steps={bookSteps(draft.mode)} current={2} />
         </div>
 
         <ScreenBody>
@@ -116,7 +116,7 @@ export default function BookHub() {
       <TopBar back title="Choose hubs" subtitle="Step 3 of 5" />
 
       <div className="shrink-0 px-5 pb-4">
-        <Stepper steps={BOOK_STEPS} current={2} />
+        <Stepper steps={bookSteps(draft.mode)} current={2} />
       </div>
 
       <div className="shrink-0 px-5 pb-4">
