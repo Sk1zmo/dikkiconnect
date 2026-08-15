@@ -1,3 +1,10 @@
+import type { ReactNode } from 'react'
+import {
+  CloudSlash as CloudSlashIcon,
+  Package as PackageIcon,
+  Path as PathIcon,
+  Wallet as WalletIcon,
+} from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -81,80 +88,101 @@ export function HeroNetwork({ className }: { className?: string }) {
 }
 
 /** Empty state: an open, empty box. */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Empty states.
+
+   These used to be drawn scenes — a cardboard box, a road, a wallet. Drawn
+   illustration is a genuine craft and a passable version of it reads worse
+   than none at all: it makes a product look like a template.
+
+   So the vocabulary here is the one Linear, Vercel and Stripe use instead —
+   a single confident icon on a lit plate, over a dot grid that fades out at
+   the edges. It carries no illustrative burden, scales to any concept by
+   swapping the glyph, and is built from the same tokens as the rest of the UI,
+   so it cannot drift out of step with the theme.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * The plate. A soft radial glow, a fading dot grid, and a floating rounded
+ * tile holding the glyph — with two accent motes drifting behind it so the
+ * composition breathes without asking for attention.
+ */
+export function EmptyArt({
+  icon,
+  tone = 'brand',
+  className,
+}: {
+  icon: ReactNode
+  tone?: 'brand' | 'neutral' | 'success' | 'warn'
+  className?: string
+}) {
+  const tones = {
+    brand: { glow: 'rgba(22,80,224,0.16)', tile: 'from-brand-500 to-brand-700', mote: '#628fff' },
+    neutral: { glow: 'rgba(99,116,150,0.14)', tile: 'from-ink-400 to-ink-600', mote: '#8fa3c8' },
+    success: { glow: 'rgba(16,185,129,0.16)', tile: 'from-success-500 to-success-700', mote: '#34d399' },
+    warn: { glow: 'rgba(245,158,11,0.18)', tile: 'from-warn-500 to-warn-600', mote: '#fbbf24' },
+  }[tone]
+
+  return (
+    <div className={cn('relative mb-4 grid h-[132px] w-[132px] place-items-center', className)} aria-hidden>
+      {/* Dot grid, masked to a circle so it has no visible edge */}
+      <span
+        className="absolute inset-0"
+        style={{
+          backgroundImage: 'radial-gradient(circle, rgba(99,116,150,0.28) 1px, transparent 1px)',
+          backgroundSize: '11px 11px',
+          maskImage: 'radial-gradient(circle at 50% 50%, #000 34%, transparent 72%)',
+          WebkitMaskImage: 'radial-gradient(circle at 50% 50%, #000 34%, transparent 72%)',
+        }}
+      />
+      {/* Glow */}
+      <span
+        className="absolute inset-0 rounded-full"
+        style={{ background: `radial-gradient(circle at 50% 46%, ${tones.glow}, transparent 62%)` }}
+      />
+      {/* Drifting motes */}
+      <span
+        className="anim-bob absolute top-[14px] left-[16px] size-2 rounded-full opacity-70"
+        style={{ background: tones.mote }}
+      />
+      <span
+        className="anim-bob absolute right-[20px] bottom-[24px] size-1.5 rounded-full opacity-55"
+        style={{ background: tones.mote, animationDelay: '0.9s' }}
+      />
+      {/* The tile */}
+      <span
+        className={cn(
+          'anim-scale-in relative grid size-[62px] place-items-center rounded-[20px] bg-gradient-to-br text-white',
+          'shadow-[0_10px_28px_rgba(16,26,56,0.16),inset_0_1px_0_rgba(255,255,255,0.28)]',
+          tones.tile,
+        )}
+      >
+        {icon}
+      </span>
+    </div>
+  )
+}
+
+/** Empty state: nothing has been shipped yet. */
 export function EmptyBoxArt({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 160 130" className={cn('mb-4 w-[150px]', className)} fill="none" aria-hidden>
-      <ellipse cx="80" cy="116" rx="46" ry="8" fill="#dfeaff" />
-      <path d="M32 54h96v52a6 6 0 0 1-6 6H38a6 6 0 0 1-6-6V54Z" fill="#c2d7ff" />
-      <path d="M32 54h96v14H32z" fill="#96b8ff" />
-      <path d="M74 54h12v58H74z" fill="#628fff" opacity="0.55" />
-      <path d="M24 32l16 22h36L60 32H24Z" fill="#96b8ff" />
-      <path d="M136 32l-16 22H84l16-22h36Z" fill="#628fff" />
-      <circle cx="80" cy="24" r="4" fill="#1650e0" opacity="0.35" />
-      <circle cx="52" cy="16" r="2.6" fill="#1650e0" opacity="0.22" />
-      <circle cx="110" cy="18" r="3.2" fill="#1650e0" opacity="0.28" />
-    </svg>
-  )
+  return <EmptyArt icon={<PackageIcon size={28} weight="duotone" />} className={className} />
 }
 
-/** Empty state: a road with no cars on it. */
+/** Empty state: no rides on this route. */
 export function EmptyRoadArt({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 170 120" className={cn('mb-4 w-[160px]', className)} fill="none" aria-hidden>
-      <ellipse cx="85" cy="106" rx="62" ry="9" fill="#eef1f8" />
-      <path d="M22 106 L60 24 h50 l38 82 Z" fill="#dfeaff" />
-      <path d="M79 24h12l14 82H67L79 24Z" fill="#f0f5ff" />
-      <g fill="#96b8ff">
-        <rect x="82" y="34" width="5" height="12" rx="2.5" />
-        <rect x="81" y="54" width="6" height="14" rx="3" />
-        <rect x="80" y="78" width="7" height="16" rx="3.5" />
-      </g>
-      <circle cx="36" cy="30" r="12" fill="#c2d7ff" opacity="0.6" />
-      <circle cx="140" cy="42" r="8" fill="#c2d7ff" opacity="0.5" />
-      <path d="M120 66c6-10 18-10 22 0" stroke="#96b8ff" strokeWidth="2.4" strokeLinecap="round" />
-    </svg>
-  )
+  return <EmptyArt icon={<PathIcon size={28} weight="duotone" />} className={className} />
 }
 
-/** Empty state: an unplugged / offline cloud. */
+/** Empty state: the connection dropped. */
 export function OfflineArt({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 160 120" className={cn('mb-4 w-[150px]', className)} fill="none" aria-hidden>
-      <ellipse cx="80" cy="104" rx="48" ry="8" fill="#eef1f8" />
-      <path
-        d="M52 78a20 20 0 0 1 .8-40 28 28 0 0 1 53 6 18 18 0 0 1-4 34H52Z"
-        fill="#cbd3e4"
-      />
-      <path
-        d="M36 26l88 72"
-        stroke="#ef4444"
-        strokeWidth="6"
-        strokeLinecap="round"
-        opacity="0.85"
-      />
-      <path d="M36 26l88 72" stroke="#fef2f2" strokeWidth="2" strokeLinecap="round" />
-    </svg>
+    <EmptyArt icon={<CloudSlashIcon size={28} weight="duotone" />} tone="neutral" className={className} />
   )
 }
 
-/** Empty state: a wallet with nothing in it. */
+/** Empty state: no money has moved yet. */
 export function EmptyWalletArt({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 160 120" className={cn('mb-4 w-[148px]', className)} fill="none" aria-hidden>
-      <ellipse cx="80" cy="106" rx="46" ry="8" fill="#eef1f8" />
-      <rect x="26" y="36" width="108" height="66" rx="12" fill="#c2d7ff" />
-      <rect x="26" y="36" width="108" height="18" rx="9" fill="#96b8ff" />
-      <rect x="96" y="60" width="46" height="26" rx="9" fill="#f0f5ff" />
-      <circle cx="115" cy="73" r="6.5" fill="#1650e0" />
-      <path
-        d="M44 24l58 12"
-        stroke="#96b8ff"
-        strokeWidth="5"
-        strokeLinecap="round"
-        opacity="0.7"
-      />
-    </svg>
-  )
+  return <EmptyArt icon={<WalletIcon size={28} weight="duotone" />} className={className} />
 }
 
 /** Success burst behind confirmation checkmarks. */

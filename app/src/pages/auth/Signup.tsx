@@ -30,7 +30,7 @@ export default function Signup() {
   const phone = params.get('phone') ?? ''
 
   const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(params.get('email') ?? '')
   const [role, setChosenRole] = useState<Role>('sender')
   const [errors, setErrors] = useState<{ name?: string; email?: string }>({})
   const [creating, setCreating] = useState(false)

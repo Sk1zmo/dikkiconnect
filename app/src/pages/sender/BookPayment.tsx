@@ -10,15 +10,17 @@ import {
   KeyValue,
   Note,
   RadioCard,
+  Sheet,
   Stepper,
   useToast,
 } from '@/components/ui'
 import { inr } from '@/lib/format'
 import { useApp } from '@/lib/store'
+import { UPI_APPS, buildUpiUrl, canPayByUpi, launchUpi, upiReference } from '@/lib/upi'
 import { useFakeProgress } from '@/lib/hooks'
 import { bookSteps } from './BookRoute'
 
-const UPI_APPS = ['Google Pay', 'PhonePe', 'Paytm', 'BHIM']
+
 
 /** Step 5 — payment. Includes a deliberate failure path (Uber/Airbnb both have one). */
 export default function BookPayment() {
@@ -29,25 +31,52 @@ export default function BookPayment() {
   const [processing, setProcessing] = useState(false)
   const [failed, setFailed] = useState(false)
   const [upiApp, setUpiApp] = useState(UPI_APPS[0])
+  const [handoff, setHandoff] = useState<null | { url: string; reference: string }>(null)
   const progress = useFakeProgress(2100, processing)
 
   const walletShort = balance < price.total
 
-  const pay = () => {
-    setProcessing(true)
-    setTimeout(() => {
-      // The decline path is reachable deterministically — a wallet payment that
-      // exceeds the balance fails, exactly as the real gateway would respond.
-      // (It used to fire at random, which made bookings unreliable to demo.)
-      if (draft.paymentMethod === 'wallet' && walletShort) {
-        setProcessing(false)
-        setFailed(true)
+  /** Wallet and card settle in-app; UPI hands off to the user's own bank app. */
+  const settle = () => {
+    const id = commitBooking()
+    toast.success('Payment successful', `${inr(price.total)} paid · ${id}`)
+    navigate('/sender/book/confirmed', { replace: true })
+  }
+
+  const pay = async () => {
+    // The decline path is deterministic: a wallet payment that exceeds the
+    // balance fails, exactly as a real gateway would respond.
+    if (draft.paymentMethod === 'wallet' && walletShort) {
+      setFailed(true)
+      return
+    }
+
+    if (draft.paymentMethod === 'upi') {
+      const reference = upiReference('parcel', String(Date.now()))
+      const req = {
+        amount: price.total,
+        reference,
+        note: `DikkiConnect parcel ${draft.fromCityId.toUpperCase()}-${draft.toCityId.toUpperCase()}`,
+      }
+      const result = await launchUpi(req, upiApp.id)
+
+      if (result === 'launched') {
+        // The UPI app has the payment now. Android gives no trustworthy result
+        // back, so we wait for the user to return and tell us.
+        setHandoff({ url: buildUpiUrl(req, upiApp.id), reference })
         return
       }
-      const id = commitBooking()
-      toast.success('Payment successful', `${inr(price.total)} paid · ${id}`)
-      navigate('/sender/book/confirmed', { replace: true })
-    }, 2300)
+      if (result === 'no-handler') {
+        toast.error(`${upiApp.label} isn't installed`, 'Pick another app or pay from your wallet.')
+        return
+      }
+      // Desktop or iOS: no UPI app can be reached from this browser.
+      setHandoff({ url: buildUpiUrl(req, 'any'), reference })
+      return
+    }
+
+    setProcessing(true)
+    setTimeout(settle, 2300)
   }
 
   if (processing) {
@@ -134,18 +163,26 @@ export default function BookPayment() {
             <div className="anim-fade-up -mt-1 mb-1 grid grid-cols-4 gap-2 px-1">
               {UPI_APPS.map((app) => (
                 <button
-                  key={app}
+                  key={app.id}
                   onClick={() => setUpiApp(app)}
                   className={`pressable rounded-(--radius-sm) border px-1.5 py-2.5 text-[10.5px] font-bold transition-colors ${
-                    upiApp === app
+                    upiApp.id === app.id
                       ? 'border-brand-600 bg-brand-50 text-brand-700'
                       : 'border-ink-200 bg-white text-ink-500'
                   }`}
                 >
-                  {app}
+                  {app.label}
                 </button>
               ))}
             </div>
+          )}
+
+          {draft.paymentMethod === 'upi' && (
+            <p className="-mt-1 px-1 text-[11.5px] leading-relaxed text-ink-500">
+              {canPayByUpi()
+                ? `Opens ${upiApp.label} with the amount filled in. You authorise it there with your own UPI PIN — we never see it.`
+                : 'UPI apps only open on Android. On this device you can scan the QR from your phone, or pay from your wallet.'}
+            </p>
           )}
 
           <RadioCard
@@ -195,7 +232,7 @@ export default function BookPayment() {
           <div className="flex items-baseline justify-between">
             <span className="text-[12px] font-semibold text-ink-500">
               {draft.paymentMethod === 'upi'
-                ? `Paying via ${upiApp}`
+                ? `Paying via ${upiApp.label}`
                 : draft.paymentMethod === 'wallet'
                   ? 'Paying from wallet'
                   : 'Paying by card'}
@@ -210,6 +247,62 @@ export default function BookPayment() {
           Pay securely
         </Button>
       </ActionBar>
+
+      {/* UPI handed off. Android returns no verifiable result, so the user
+          tells us what happened and the copy is honest about what that means. */}
+      <Sheet
+        open={handoff !== null}
+        onClose={() => setHandoff(null)}
+        title={`Finish in ${upiApp.label}`}
+        subtitle={`Reference ${handoff?.reference ?? ''}`}
+      >
+        <div className="flex flex-col gap-4 py-1">
+          <div className="flex items-center gap-3.5 rounded-(--radius-md) border border-brand-100 bg-brand-50/60 p-4">
+            <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-600 text-white">
+              <Smartphone size={19} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[14px] font-bold text-ink-900">{inr(price.total)} to DikkiConnect</p>
+              <p className="mt-0.5 text-[12px] text-ink-500">
+                Approve it in {upiApp.label}, then come back here.
+              </p>
+            </div>
+          </div>
+
+          <a
+            href={handoff?.url ?? '#'}
+            className="pressable flex h-12 w-full items-center justify-center gap-2 rounded-(--radius-md) border border-ink-200 bg-white text-[13.5px] font-bold text-ink-700"
+          >
+            Open {upiApp.label} again
+          </a>
+
+          <Note tone="warn" title="What we can and cannot see">
+            Your bank confirms this payment to you, not to us — a browser cannot be trusted to
+            report its own payment. Confirming below records your claim and books the parcel; final
+            settlement is reconciled against reference{' '}
+            <span className="font-mono font-bold">{handoff?.reference}</span> once the payment
+            gateway account is live.
+          </Note>
+
+          <Button
+            block
+            size="lg"
+            onClick={() => {
+              setHandoff(null)
+              setProcessing(true)
+              setTimeout(settle, 1400)
+            }}
+          >
+            I&apos;ve paid — book my parcel
+          </Button>
+          <button
+            onClick={() => setHandoff(null)}
+            className="pressable-sm w-full py-1 text-center text-[13px] font-semibold text-ink-500"
+          >
+            Payment didn&apos;t go through
+          </button>
+        </div>
+      </Sheet>
 
       <ConfirmDialog
         open={failed}

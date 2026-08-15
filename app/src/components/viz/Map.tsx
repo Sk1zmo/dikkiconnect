@@ -1,129 +1,215 @@
-import { useEffect, useState } from 'react'
-import { Navigation, Plus, Minus, Layers } from 'lucide-react'
-import { cn } from '@/lib/cn'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import * as maplibregl from 'maplibre-gl'
+import type { Map as MapLibreMap, LngLatBoundsLike } from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
+import { Layers, Minus, Navigation, Plus } from 'lucide-react'
 import { IconButton } from '@/components/ui'
+import { cn } from '@/lib/cn'
+import {
+  MAP_STYLE,
+  cityCoord,
+  currentPosition,
+  fetchRoute,
+  hubCoord,
+  pointAlong,
+  type LngLat,
+  type Route,
+} from '@/lib/geo'
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Vector map surfaces. Deliberately synthetic — they read as a real map
-   without shipping a tile provider or an API key, and they animate.
+   Maps.
 
-   Two orientations, because the same landscape canvas cannot serve both a
-   150px card strip and a full-bleed navigation screen: `slice` cropping would
-   zoom the portrait case ~3× and cut the route out of frame entirely.
+   Real OpenStreetMap vector tiles through MapLibre, real driving routes from
+   OSRM. Nothing here is drawn by hand: the roads are the roads, and a route
+   between two hubs follows the highway it would actually be driven on.
+
+   The exported components keep the signatures the rest of the app already
+   calls, so every screen picked this up without changing a line.
+
+   Tiles need a network. Every component below renders its frame, pins and
+   route immediately and lets the basemap paint in behind them, so a slow or
+   absent connection costs you the streets, never the information.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const W = 430
+const ATTRIB = '© OpenStreetMap contributors'
 
-/** Route geometry per orientation, kept clear of the crop margins. */
-const GEO = {
-  landscape: {
-    h: 300,
-    path: 'M60 198 C 110 198 120 162 170 152 C 226 141 248 118 330 116',
-    origin: [50, 188] as const,
-    dest: [318, 84] as const,
-  },
-  portrait: {
-    h: 860,
-    path: 'M70 760 C 136 700 112 600 188 524 C 264 448 242 344 324 250',
-    origin: [60, 750] as const,
-    dest: [312, 218] as const,
-  },
+/* Point MapLibre at the self-contained worker our Vite plugin emits at the
+   site root. Left to itself it looks for a sibling of its own bundled chunk,
+   finds nothing, and renders a map that never loads a single tile. Guarded so
+   a single-file build — which has no sibling assets — keeps MapLibre's own
+   resolution rather than pointing at a path that cannot exist. */
+if (typeof window !== 'undefined' && window.location.protocol.startsWith('http')) {
+  maplibregl.setWorkerUrl(new URL('/maplibre-gl-worker.js', window.location.origin).href)
 }
 
-/**
- * Procedural basemap. Legibility comes from hierarchy, not detail: two road
- * weights with casings, buildings offset from their footprints to suggest
- * height, and green/blue kept desaturated so the route stays the loudest mark.
- */
-function MapBase({ dark, h }: { dark?: boolean; h: number }) {
-  const land = dark ? '#0d1730' : '#eef2fb'
-  const arterial = dark ? '#243356' : '#ffffff'
-  const casing = dark ? '#101a33' : '#dde5f5'
-  const local = dark ? '#1b2949' : '#f8fafe'
-  const block = dark ? '#16224a' : '#dde5f4'
-  const roof = dark ? '#1d2c5c' : '#ccd7ee'
-  const water = dark ? '#0b1c44' : '#cfe0fa'
-  const park = dark ? '#12291f' : '#d8eee0'
+/** Shared bootstrap: creates the map, cleans it up, exposes the instance. */
+function useMapLibre(
+  container: React.RefObject<HTMLDivElement | null>,
+  opts: {
+    dark?: boolean
+    center: LngLat
+    zoom: number
+    interactive?: boolean
+  },
+) {
+  const [map, setMap] = useState<MapLibreMap | null>(null)
+  const [ready, setReady] = useState(false)
+  const { dark, center, zoom, interactive = false } = opts
 
-  const vArt = [8, 96, 174, 246, 324, 424]
-  const hArt: number[] = []
-  for (let y = 8; y < h + 70; y += 70) hArt.push(y)
+  useEffect(() => {
+    if (!container.current) return
+    const m = new maplibregl.Map({
+      container: container.current,
+      style: dark ? MAP_STYLE.dark : MAP_STYLE.light,
+      center: [center.lng, center.lat],
+      zoom,
+      attributionControl: false,
+      interactive,
+      // The phone shell is small; a tilted camera wastes half of it.
+      pitch: 0,
+      dragRotate: false,
+    })
+    /* Readiness here means "the style spec is parsed and addLayer will work",
+       which is what `styledata` signals. Deliberately NOT `load` or
+       `isStyleLoaded()`: both additionally wait for every source tile to
+       arrive, and on a slow connection or a software-rendered canvas that can
+       take many seconds or never happen at all — leaving a map with roads but
+       no route drawn on it. */
+    const markReady = () => setReady(true)
+    m.on('load', markReady)
+    m.once('styledata', markReady)
+    // Parent overlays (zoom, recentre) reach the instance through the DOM
+    // rather than a prop chain, so every existing call site kept its props.
+    ;(m.getContainer() as HTMLElement & { _dikkiMap?: MapLibreMap })._dikkiMap = m
+    /* MapLibre measures its container once at construction and then only
+       tracks *window* resizes. Several of these maps mount inside a parent
+       that has no height yet (a lazy route, a collapsed card, a sheet that is
+       still animating open), and a map that believes it is 0×0 requests no
+       tiles at all — you get the style, the sprites, the TileJSON, and then a
+       flat empty canvas forever. Watching the element itself is the fix. */
+    const ro = new ResizeObserver(() => m.resize())
+    ro.observe(container.current)
 
-  const blocks: Array<[number, number, number, number]> = []
-  for (let i = 0; i < vArt.length - 1; i++) {
-    for (let j = 0; j < hArt.length - 1; j++) {
-      const x = vArt[i] + 7
-      const y = hArt[j] + 7
-      const bw = vArt[i + 1] - vArt[i] - 14
-      const bh = hArt[j + 1] - hArt[j] - 14
-      // Punch a few gaps so the grid doesn't read as wallpaper
-      if ((i * 3 + j * 5) % 7 === 0) continue
-      if (bw > 8 && bh > 8) blocks.push([x, y, bw, bh])
+    setMap(m)
+    return () => {
+      ro.disconnect()
+      m.remove()
+      setMap(null)
+      setReady(false)
     }
+    // Style swaps are rare (light ↔ dark on a fixed screen), and rebuilding is
+    // cheaper and more reliable than diffing layers across a style change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dark])
+
+  return { map, ready }
+}
+
+/** Circular pin with a ring — used for origin, destination and hubs. */
+function pinEl(colour: string, size = 14, pulse = false) {
+  const el = document.createElement('div')
+  el.style.cssText = `
+    width:${size}px;height:${size}px;border-radius:999px;background:${colour};
+    box-shadow:0 0 0 4px ${colour}33, 0 1px 6px rgba(10,20,50,.35);
+    border:2.5px solid #fff;
+  `
+  if (pulse) el.style.animation = 'dikkiconnect-ping 2s var(--ease-smooth) infinite'
+  return el
+}
+
+/** Vehicle puck — a filled arrow that sits on the travelled portion. */
+function puckEl() {
+  const el = document.createElement('div')
+  el.innerHTML = `<svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="11" fill="#0b0e15" stroke="#fff" stroke-width="2"/>
+    <path d="M12 6.5 16 16l-4-2.2L8 16z" fill="#7ba5ff"/>
+  </svg>`
+  el.style.cssText = 'width:30px;height:30px;filter:drop-shadow(0 2px 6px rgba(10,20,50,.4))'
+  return el
+}
+
+/** Fits the camera to a set of points with sensible mobile padding. */
+function fitTo(map: MapLibreMap, points: LngLat[], pad = 46) {
+  if (points.length === 0) return
+  if (points.length === 1) {
+    map.jumpTo({ center: [points[0].lng, points[0].lat], zoom: 12.5 })
+    return
   }
+  const lngs = points.map((p) => p.lng)
+  const lats = points.map((p) => p.lat)
+  const bounds: LngLatBoundsLike = [
+    [Math.min(...lngs), Math.min(...lats)],
+    [Math.max(...lngs), Math.max(...lats)],
+  ]
+  map.fitBounds(bounds, { padding: pad, duration: 0, maxZoom: 14 })
+}
 
+/** Draws (or redraws) the route line as a cased, two-tone path. */
+function drawRoute(
+  map: MapLibreMap,
+  coords: Array<[number, number]>,
+  progress: number | undefined,
+  dark: boolean | undefined,
+): boolean {
+  const done = progress == null ? coords.length : Math.round(coords.length * progress)
+  const layers: Array<[string, Array<[number, number]>, string, number]> = [
+    ['dikki-route-case', coords, dark ? '#0b1020' : '#ffffff', 11],
+    ['dikki-route-full', coords, dark ? '#3a4a72' : '#c3d2f3', 5.5],
+    ['dikki-route-done', coords.slice(0, Math.max(2, done)), '#1650e0', 5.5],
+  ]
+
+  try {
+    for (const [id, line, colour, width] of layers) {
+      const data: GeoJSON.Feature<GeoJSON.LineString> = {
+        type: 'Feature',
+        properties: {},
+        geometry: { type: 'LineString', coordinates: line },
+      }
+      const existing = map.getSource(id) as maplibregl.GeoJSONSource | undefined
+      if (existing) {
+        existing.setData(data)
+        continue
+      }
+      map.addSource(id, { type: 'geojson', data })
+      map.addLayer({
+        id,
+        type: 'line',
+        source: id,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': colour, 'line-width': width },
+      })
+    }
+    // The untravelled portion must never paint over the travelled one.
+    if (progress != null && map.getLayer('dikki-route-done')) {
+      map.moveLayer('dikki-route-done')
+    }
+    return true
+  } catch {
+    // Style not parsed yet — the caller retries on the next styledata.
+    return false
+  }
+}
+
+/** Small attribution chip — OSM's licence requires visible credit. */
+function Attribution({ dark }: { dark?: boolean }) {
   return (
-    <g>
-      <rect width={W} height={h} fill={land} />
-
-      {/* Water across the lower third */}
-      <path
-        d={`M0 ${h - 54}c58-26 96 10 148-6 44-13 74-40 122-30 34 7 60 34 160 22v68H0v-54Z`}
-        fill={water}
-      />
-      <path
-        d={`M0 ${h - 54}c58-26 96 10 148-6 44-13 74-40 122-30 34 7 60 34 160 22`}
-        fill="none"
-        stroke={dark ? '#1b3565' : '#b9d0f3'}
-        strokeWidth="1.5"
-        opacity="0.8"
-      />
-
-      {/* Park */}
-      <ellipse cx="330" cy={h * 0.2} rx="62" ry="46" fill={park} />
-
-      {/* Footprint, then roof offset up-left — reads as extruded */}
-      {blocks.map(([x, y, bw, bh], i) => (
-        <g key={i}>
-          <rect x={x} y={y} width={bw} height={bh} rx={4} fill={block} />
-          <rect
-            x={x + 2}
-            y={y - 2}
-            width={bw - 4}
-            height={bh - 4}
-            rx={3}
-            fill={roof}
-            opacity={dark ? 0.55 : 0.85}
-          />
-        </g>
-      ))}
-
-      {/* Local streets — thin, no casing */}
-      {hArt.map((y) => (
-        <line key={`lh${y}`} x1="0" y1={y + 35} x2={W} y2={y + 35} stroke={local} strokeWidth="2.5" />
-      ))}
-      {[50, 138, 210, 288, 372].map((x) => (
-        <line key={`lv${x}`} x1={x} y1="0" x2={x} y2={h} stroke={local} strokeWidth="2.5" />
-      ))}
-
-      {/* Arterials — casing under fill so junctions read cleanly */}
-      {hArt.map((y, i) => (
-        <g key={`h${y}`}>
-          <line x1="0" y1={y} x2={W} y2={y} stroke={casing} strokeWidth={i % 3 === 1 ? 10 : 6.5} />
-          <line x1="0" y1={y} x2={W} y2={y} stroke={arterial} strokeWidth={i % 3 === 1 ? 7 : 4} />
-        </g>
-      ))}
-      {vArt.map((x) => (
-        <g key={`v${x}`}>
-          <line x1={x} y1="0" x2={x} y2={h} stroke={casing} strokeWidth={x === 246 ? 9 : 6.5} />
-          <line x1={x} y1="0" x2={x} y2={h} stroke={arterial} strokeWidth={x === 246 ? 6 : 4} />
-        </g>
-      ))}
-    </g>
+    <span
+      className={cn(
+        'pointer-events-none absolute bottom-1 left-1.5 z-10 rounded px-1.5 py-0.5 text-[8.5px] font-medium',
+        dark ? 'bg-black/35 text-white/60' : 'bg-white/70 text-ink-400',
+      )}
+    >
+      {ATTRIB}
+    </span>
   )
 }
 
-/** Static route preview — origin pin, destination pin, the highway between. */
+/* ── RouteMap ────────────────────────────────────────────────────────────── */
+
+/**
+ * A real driving route between two points. Give it hub ids or city ids and it
+ * fetches the road geometry; `progress` splits the line at the vehicle.
+ */
 export function RouteMap({
   height = 190,
   dark,
@@ -132,8 +218,13 @@ export function RouteMap({
   toLabel,
   progress,
   portrait,
+  from,
+  to,
+  fromHubId,
+  toHubId,
+  fromCityId = 'blr',
+  toCityId = 'mys',
 }: {
-  /** Number for a fixed strip, or "100%" to fill an absolutely-placed parent. */
   height?: number | string
   dark?: boolean
   className?: string
@@ -141,146 +232,210 @@ export function RouteMap({
   toLabel?: string
   /** 0–1 along the route; renders a vehicle puck when provided. */
   progress?: number
-  /** Use the tall canvas — required for full-bleed navigation screens. */
+  /** Kept for call-site compatibility; MapLibre handles aspect itself. */
   portrait?: boolean
+  /** Explicit endpoints win over the hub/city ids. */
+  from?: LngLat
+  to?: LngLat
+  fromHubId?: string
+  toHubId?: string
+  fromCityId?: string
+  toCityId?: string
 }) {
-  const geo = portrait ? GEO.portrait : GEO.landscape
-  const { path, h } = { path: geo.path, h: geo.h }
-  const [len, setLen] = useState(0)
-  const [puck, setPuck] = useState<{ x: number; y: number } | null>(null)
+  const container = useRef<HTMLDivElement>(null)
+  const [route, setRoute] = useState<Route | null>(null)
+  const markers = useRef<maplibregl.Marker[]>([])
+  const puck = useRef<maplibregl.Marker | null>(null)
 
-  // Walk the path to place the puck — cheap and exact.
+  const a = useMemo<LngLat>(
+    () => from ?? (fromHubId ? hubCoord(fromHubId, fromCityId) : cityCoord(fromCityId)),
+    [from, fromHubId, fromCityId],
+  )
+  const b = useMemo<LngLat>(
+    () => to ?? (toHubId ? hubCoord(toHubId, toCityId) : cityCoord(toCityId)),
+    [to, toHubId, toCityId],
+  )
+
+  const mid = { lng: (a.lng + b.lng) / 2, lat: (a.lat + b.lat) / 2 }
+  const { map, ready } = useMapLibre(container, { dark, center: mid, zoom: 7 })
+
+  // Real road geometry. Falls back to the straight line if OSRM is unreachable.
   useEffect(() => {
-    if (progress == null) return
-    const el = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-    el.setAttribute('d', path)
-    const total = el.getTotalLength()
-    setLen(total)
-    const p = el.getPointAtLength(total * Math.min(1, Math.max(0, progress)))
-    setPuck({ x: p.x, y: p.y })
-  }, [progress, path])
+    let live = true
+    fetchRoute(a, b).then((r) => {
+      if (!live) return
+      setRoute(
+        r ?? {
+          coordinates: [
+            [a.lng, a.lat],
+            [b.lng, b.lat],
+          ],
+          distanceKm: 0,
+          durationMin: 0,
+        },
+      )
+    })
+    return () => {
+      live = false
+    }
+  }, [a, b])
+
+  useEffect(() => {
+    if (!map || !ready || !route) return
+
+    if (!drawRoute(map, route.coordinates, progress, dark)) {
+      // Too early. One retry on the next style event covers the race.
+      map.once('styledata', () => drawRoute(map, route.coordinates, progress, dark))
+    }
+
+    markers.current.forEach((m) => m.remove())
+    markers.current = [
+      new maplibregl.Marker({ element: pinEl('#1650e0') }).setLngLat([a.lng, a.lat]).addTo(map),
+      new maplibregl.Marker({ element: pinEl('#12a150') }).setLngLat([b.lng, b.lat]).addTo(map),
+    ]
+
+    fitTo(
+      map,
+      route.coordinates.map(([lng, lat]) => ({ lng, lat })),
+      portrait ? 60 : 44,
+    )
+  }, [map, ready, route, dark, a, b, portrait, progress])
+
+  // Vehicle puck rides the real geometry.
+  useEffect(() => {
+    if (!map || !ready || !route || progress == null) return
+    const at = pointAlong(route.coordinates, progress)
+    if (!puck.current) {
+      puck.current = new maplibregl.Marker({ element: puckEl() }).setLngLat([at.lng, at.lat]).addTo(map)
+    } else {
+      puck.current.setLngLat([at.lng, at.lat])
+    }
+  }, [map, ready, route, progress])
 
   return (
     <div className={cn('relative overflow-hidden', className)} style={{ height }}>
-      <svg viewBox={`0 0 ${W} ${h}`} preserveAspectRatio="xMidYMid slice" className="size-full">
-        <MapBase dark={dark} h={h} />
-
-        {/* Glow, casing, then the line itself. With `progress` the full path is
-            muted and the travelled part overlaid bright, so the colour break
-            sits exactly at the vehicle. */}
-        <path d={path} stroke="#1650e0" strokeWidth="14" fill="none" strokeLinecap="round" opacity="0.14" />
-        <path d={path} stroke={dark ? '#0b1020' : '#ffffff'} strokeWidth="11" fill="none" strokeLinecap="round" />
-
-        {progress == null ? (
-          <path
-            d={path}
-            stroke="#1650e0"
-            strokeWidth="5.5"
-            fill="none"
-            strokeLinecap="round"
-            className="anim-draw"
-            style={{ ['--len' as string]: 1200, ['--dur' as string]: '1.1s' }}
-          />
-        ) : (
-          <>
-            <path d={path} stroke="#a9c6ff" strokeWidth="5.5" fill="none" strokeLinecap="round" />
-            {len > 0 && (
-              <path
-                d={path}
-                stroke="#1650e0"
-                strokeWidth="5.5"
-                fill="none"
-                strokeLinecap="round"
-                strokeDasharray={len}
-                strokeDashoffset={len * (1 - progress)}
-              />
-            )}
-          </>
-        )}
-
-        {/* origin */}
-        <g transform={`translate(${geo.origin[0]}, ${geo.origin[1]})`}>
-          <circle cx="10" cy="10" r="14" fill="#1650e0" opacity="0.16" className="anim-breathe" />
-          <circle cx="10" cy="10" r="8.5" fill="#ffffff" />
-          <circle cx="10" cy="10" r="5.5" fill="#1650e0" />
-        </g>
-
-        {/* destination — pin tip lands on the end of the route */}
-        <g transform={`translate(${geo.dest[0]}, ${geo.dest[1]})`} className="anim-bob">
-          <ellipse cx="12" cy="32" rx="7" ry="2.6" fill="#091a4a" opacity="0.2" />
-          <path
-            d="M12 0C5.4 0 0 5.3 0 11.8 0 20.5 12 32 12 32s12-11.5 12-20.2C24 5.3 18.6 0 12 0Z"
-            fill="#1650e0"
-          />
-          <path d="M12 0C5.4 0 0 5.3 0 11.8h24C24 5.3 18.6 0 12 0Z" fill="#4c7ef5" />
-          <circle cx="12" cy="11.6" r="4.8" fill="#ffffff" />
-        </g>
-
-        {/* moving vehicle */}
-        {puck && (
-          <g transform={`translate(${puck.x - 14}, ${puck.y - 14})`}>
-            <circle cx="14" cy="14" r="14" fill="#1650e0" opacity="0.22" className="anim-breathe" />
-            <circle cx="14" cy="14" r="10" fill="#ffffff" />
-            <circle cx="14" cy="14" r="6.5" fill="#1650e0" />
-          </g>
-        )}
-      </svg>
+      <div ref={container} className="size-full" />
 
       {(fromLabel || toLabel) && (
-        <>
-          {fromLabel && (
-            <span className="absolute bottom-4 left-3 rounded-full bg-white/95 px-2.5 py-1 text-[10.5px] font-bold text-ink-700 shadow-(--shadow-e1) backdrop-blur">
-              {fromLabel}
-            </span>
-          )}
-          {toLabel && (
-            <span className="absolute top-3 right-3 rounded-full bg-white/95 px-2.5 py-1 text-[10.5px] font-bold text-ink-700 shadow-(--shadow-e1) backdrop-blur">
-              {toLabel}
-            </span>
-          )}
-        </>
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-2.5">
+          {fromLabel && <MapChip label={fromLabel} tone="brand" />}
+          {toLabel && <MapChip label={toLabel} tone="success" />}
+        </div>
       )}
+      <Attribution dark={dark} />
     </div>
   )
 }
 
-/** Live tracking map — animated puck, controls, dark option for navigation. */
+function MapChip({ label, tone }: { label: string; tone: 'brand' | 'success' }) {
+  return (
+    <span className="inline-flex max-w-[46%] items-center gap-1.5 rounded-full bg-white/92 px-2.5 py-1 text-[10.5px] font-bold text-ink-700 shadow-(--shadow-e1) backdrop-blur-sm">
+      <span
+        className={cn(
+          'size-1.5 shrink-0 rounded-full',
+          tone === 'brand' ? 'bg-brand-600' : 'bg-success-500',
+        )}
+      />
+      <span className="truncate">{label}</span>
+    </span>
+  )
+}
+
+/* ── LiveMap ─────────────────────────────────────────────────────────────── */
+
+/** Tracking view — a moving vehicle on a real route, with working controls. */
 export function LiveMap({
   height = 320,
   dark,
   className,
   children,
   portrait,
+  fromHubId,
+  toHubId,
+  fromCityId = 'blr',
+  toCityId = 'mys',
+  progress,
 }: {
-  /** Number for a fixed strip, or "100%" to fill an absolutely-placed parent. */
   height?: number | string
   dark?: boolean
   className?: string
   children?: React.ReactNode
   portrait?: boolean
+  fromHubId?: string
+  toHubId?: string
+  fromCityId?: string
+  toCityId?: string
+  /** Fixed position along the route; omit to animate. */
+  progress?: number
 }) {
-  const [t, setT] = useState(0.34)
+  const [t, setT] = useState(progress ?? 0.34)
+  const wrap = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    if (progress != null) {
+      setT(progress)
+      return
+    }
     const id = setInterval(() => setT((v) => (v >= 0.94 ? 0.06 : v + 0.004)), 220)
     return () => clearInterval(id)
-  }, [])
+  }, [progress])
+
+  /* The controls drive the real camera. Reaching into the canvas for the map
+     instance keeps LiveMap's props identical to what every screen already
+     passes, which is worth more here than a tidier handle. */
+  const withMap = (fn: (m: MapLibreMap) => void) => () => {
+    const canvas = wrap.current?.querySelector('.maplibregl-map') as
+      | (HTMLElement & { _dikkiMap?: MapLibreMap })
+      | null
+    const m = canvas?._dikkiMap
+    if (m) fn(m)
+  }
 
   return (
-    <div className={cn('relative overflow-hidden', className)} style={{ height }}>
-      <RouteMap height={height} dark={dark} progress={t} portrait={portrait} />
+    <div ref={wrap} className={cn('relative overflow-hidden', className)} style={{ height }}>
+      <RouteMap
+        height="100%"
+        dark={dark}
+        progress={t}
+        portrait={portrait}
+        fromHubId={fromHubId}
+        toHubId={toHubId}
+        fromCityId={fromCityId}
+        toCityId={toCityId}
+      />
 
-      <div className="absolute top-3 right-3 flex flex-col gap-2">
-        <IconButton icon={<Plus size={16} />} label="Zoom in" tone="glass" size={36} />
-        <IconButton icon={<Minus size={16} />} label="Zoom out" tone="glass" size={36} />
+      <div className="absolute top-3 right-3 z-20 flex flex-col gap-2">
+        <IconButton
+          icon={<Plus size={16} />}
+          label="Zoom in"
+          tone="glass"
+          size={36}
+          onClick={withMap((m) => m.zoomIn({ duration: 260 }))}
+        />
+        <IconButton
+          icon={<Minus size={16} />}
+          label="Zoom out"
+          tone="glass"
+          size={36}
+          onClick={withMap((m) => m.zoomOut({ duration: 260 }))}
+        />
         <IconButton icon={<Layers size={16} />} label="Map layers" tone="glass" size={36} />
       </div>
-      <div className="absolute right-3 bottom-3">
+      <div className="absolute right-3 bottom-3 z-20">
         <IconButton
           icon={<Navigation size={16} className="fill-current" />}
-          label="Recentre"
+          label="Recentre on me"
           tone="solid"
           size={40}
+          onClick={async () => {
+            const here = await currentPosition()
+            const m = (
+              wrap.current?.querySelector('.maplibregl-map') as
+                | (HTMLElement & { _dikkiMap?: MapLibreMap })
+                | null
+            )?._dikkiMap
+            if (here && m) m.flyTo({ center: [here.lng, here.lat], zoom: 14, duration: 900 })
+          }}
         />
       </div>
 
@@ -289,49 +444,111 @@ export function LiveMap({
   )
 }
 
-/** Compact hub locator — several pins, one highlighted. */
+/* ── HubMap ──────────────────────────────────────────────────────────────── */
+
+/** Hub locator — every hub in a city, the selected one highlighted. */
 export function HubMap({
   height = 160,
   count = 4,
   activeIndex = 0,
   className,
+  hubIds,
+  cityId = 'blr',
 }: {
   height?: number
+  /** Kept for call-site compatibility when no ids are passed. */
   count?: number
   activeIndex?: number
   className?: string
+  hubIds?: string[]
+  cityId?: string
 }) {
-  // Same safe band as RouteMap — pins sit between y≈88 and y≈212.
-  const spots = [
-    [86, 106],
-    [216, 88],
-    [292, 160],
-    [136, 180],
-    [348, 118],
-    [48, 172],
-  ].slice(0, count)
+  const container = useRef<HTMLDivElement>(null)
+  const markers = useRef<maplibregl.Marker[]>([])
+
+  const points = useMemo<LngLat[]>(() => {
+    if (hubIds?.length) return hubIds.map((id) => hubCoord(id, cityId))
+    // No ids given: show the city itself rather than inventing pins.
+    return [cityCoord(cityId)]
+  }, [hubIds, cityId])
+
+  const { map, ready } = useMapLibre(container, {
+    dark: false,
+    center: points[0],
+    zoom: 11,
+  })
+
+  useEffect(() => {
+    if (!map || !ready) return
+    markers.current.forEach((m) => m.remove())
+    markers.current = points.map((p, i) =>
+      new maplibregl.Marker({
+        element: pinEl(i === activeIndex ? '#1650e0' : '#8fa3c8', i === activeIndex ? 16 : 11),
+      })
+        .setLngLat([p.lng, p.lat])
+        .addTo(map),
+    )
+    fitTo(map, points, 52)
+  }, [map, ready, points, activeIndex, count])
 
   return (
     <div className={cn('relative overflow-hidden', className)} style={{ height }}>
-      <svg viewBox="0 0 430 300" preserveAspectRatio="xMidYMid slice" className="size-full">
-        <MapBase h={300} />
-        {/* you-are-here */}
-        <g transform="translate(178, 134)">
-          <circle cx="10" cy="10" r="26" fill="#1650e0" opacity="0.12" className="anim-ping" />
-          <circle cx="10" cy="10" r="11" fill="#ffffff" />
-          <circle cx="10" cy="10" r="7" fill="#1650e0" />
-        </g>
-        {spots.map(([x, y], i) => (
-          <g key={i} transform={`translate(${x}, ${y})`} className={i === activeIndex ? 'anim-bob' : undefined}>
-            <ellipse cx="11" cy="30" rx="6" ry="2.4" fill="#091a4a" opacity="0.18" />
-            <path
-              d="M11 0C4.9 0 0 4.9 0 10.9 0 19 11 30 11 30s11-11 11-19.1C22 4.9 17.1 0 11 0Z"
-              fill={i === activeIndex ? '#1650e0' : '#96b8ff'}
-            />
-            <circle cx="11" cy="10.8" r="4.4" fill="#ffffff" />
-          </g>
-        ))}
-      </svg>
+      <div ref={container} className="size-full" />
+      <Attribution />
+    </div>
+  )
+}
+
+/* ── PickMap ─────────────────────────────────────────────────────────────── */
+
+/**
+ * A single draggable pin. Used by the P2P booking flow to confirm exactly
+ * where a traveler should knock — a typed address gets you to the street, the
+ * pin gets you to the door.
+ */
+export function PickMap({
+  at,
+  onMove,
+  height = 200,
+  className,
+}: {
+  at: LngLat
+  onMove?: (p: LngLat) => void
+  height?: number | string
+  className?: string
+}) {
+  const container = useRef<HTMLDivElement>(null)
+  const marker = useRef<maplibregl.Marker | null>(null)
+  const { map, ready } = useMapLibre(container, {
+    dark: false,
+    center: at,
+    zoom: 15,
+    interactive: true,
+  })
+
+  useEffect(() => {
+    if (!map || !ready) return
+    if (!marker.current) {
+      marker.current = new maplibregl.Marker({ element: pinEl('#1650e0', 16), draggable: true })
+        .setLngLat([at.lng, at.lat])
+        .addTo(map)
+      marker.current.on('dragend', () => {
+        const p = marker.current!.getLngLat()
+        onMove?.({ lng: p.lng, lat: p.lat })
+      })
+    } else {
+      marker.current.setLngLat([at.lng, at.lat])
+    }
+    map.easeTo({ center: [at.lng, at.lat], duration: 420 })
+  }, [map, ready, at, onMove])
+
+  return (
+    <div className={cn('relative overflow-hidden', className)} style={{ height }}>
+      <div ref={container} className="size-full" />
+      <span className="pointer-events-none absolute inset-x-0 top-2 z-10 text-center text-[10.5px] font-bold text-ink-500">
+        Drag the pin to the exact door
+      </span>
+      <Attribution />
     </div>
   )
 }

@@ -150,7 +150,7 @@ export default function SenderHome() {
             to="/sender/book"
           />
           <Card padded={false} className="overflow-hidden">
-            <HubMap height={148} count={4} activeIndex={0} />
+            <HubMap height={148} hubIds={nearby.map((h) => h.id)} cityId="blr" activeIndex={0} />
             <div className="p-4">
               {hubsLoading ? (
                 <div className="flex flex-col gap-3">

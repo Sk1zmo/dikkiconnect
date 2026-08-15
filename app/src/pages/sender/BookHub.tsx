@@ -10,9 +10,9 @@ import {
   Segmented,
   Skeleton,
   Stepper,
-  TextArea,
 } from '@/components/ui'
 import { HubCard } from '@/components/domain/Cards'
+import { AddressField } from '@/components/domain/AddressField'
 import { HubMap } from '@/components/viz/Map'
 import { cityName, hubsInCity } from '@/lib/data'
 import { useApp } from '@/lib/store'
@@ -61,23 +61,25 @@ export default function BookHub() {
           </Note>
 
           <div className="mt-5">
-            <TextArea
+            <AddressField
               label={`Pickup address in ${cityName(draft.fromCityId)}`}
               placeholder="Flat / house, street, area, landmark"
-              rows={3}
               value={draft.pickupAddress}
-              onChange={(e) => patchDraft({ pickupAddress: e.target.value })}
+              onChange={(v) => patchDraft({ pickupAddress: v })}
+              coord={draft.pickupCoord ?? undefined}
+              onCoord={(p) => patchDraft({ pickupCoord: p })}
               hint="Shared with the traveler only after they accept the job."
             />
           </div>
 
-          <div className="mt-2">
-            <TextArea
+          <div className="mt-5">
+            <AddressField
               label={`Delivery address in ${cityName(draft.toCityId)}`}
               placeholder="Flat / house, street, area, landmark"
-              rows={3}
               value={draft.dropAddress}
-              onChange={(e) => patchDraft({ dropAddress: e.target.value })}
+              onChange={(v) => patchDraft({ dropAddress: v })}
+              coord={draft.dropCoord ?? undefined}
+              onCoord={(p) => patchDraft({ dropCoord: p })}
               hint="The receiver gets an OTP to hand over at their door."
             />
           </div>
@@ -132,7 +134,12 @@ export default function BookHub() {
 
       <ScreenBody>
         <Card padded={false} className="mb-4 overflow-hidden">
-          <HubMap height={150} count={Math.max(2, list.length)} activeIndex={activeIndex} />
+          <HubMap
+            height={150}
+            hubIds={list.map((h) => h.id)}
+            cityId={side === 'origin' ? draft.fromCityId : draft.toCityId}
+            activeIndex={activeIndex}
+          />
         </Card>
 
         {loading ? (

@@ -1,22 +1,29 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle2, KeyRound, MessageSquare, RefreshCw } from 'lucide-react'
+import { CheckCircle2, KeyRound, MessageSquare, RefreshCw, Smartphone } from 'lucide-react'
 import { Screen, TopBar } from '@/components/layout/Screen'
 import { Button, OtpInput, useToast } from '@/components/ui'
 import { useCountdown } from '@/lib/hooks'
 import { maskPhone } from '@/lib/format'
 import { OTP_RESEND_SECONDS, useAuth } from '@/lib/auth'
+import { awaitSmsCode, canAutofillSms } from '@/lib/sms'
 
 /**
- * Verification step. The code is real — issued per request, single use, five
- * minutes to live, five attempts. Because there is no SMS gateway behind this
- * build the code is shown in the panel below rather than texted.
+ * Verification step.
+ *
+ * The code is real: issued per request, single use, five minutes to live, five
+ * attempts. Where it arrives depends on the build — a configured gateway texts
+ * it, an unconfigured one shows it in the panel below and says so.
+ *
+ * On Android Chrome the browser can read the arriving SMS itself and fill the
+ * boxes without the user leaving the app. That listener is attached whenever
+ * the platform supports it and simply never fires where it does not.
  */
 export default function Otp() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const toast = useToast()
-  const { requestOtp, verifyOtp, pendingCode, attemptsLeft } = useAuth()
+  const { requestOtp, verifyOtp, pendingCode, attemptsLeft, delivery, smsEnabled } = useAuth()
 
   const phone = params.get('phone') ?? ''
   const [code, setCode] = useState('')
@@ -27,6 +34,7 @@ export default function Otp() {
 
   const issued = pendingCode(phone)
   const left = attemptsLeft(phone)
+  const autofill = canAutofillSms()
 
   // Deep-linking straight here (or reloading) leaves no live challenge, so
   // issue one rather than dead-ending on a code that can never be right.
@@ -38,6 +46,20 @@ export default function Otp() {
     if (!issued) requestOtp(phone)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  /* WebOTP: read the code straight out of the arriving SMS. Aborted on
+     unmount so a backgrounded screen never holds the receiver open. */
+  useEffect(() => {
+    if (!autofill || verified) return
+    const ctrl = new AbortController()
+    awaitSmsCode(ctrl.signal).then((sms) => {
+      if (!sms) return
+      setCode(sms)
+      verify(sms)
+    })
+    return () => ctrl.abort()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autofill, verified])
 
   const verify = (value: string) => {
     if (value.length < 6 || verifying) return
@@ -74,9 +96,16 @@ export default function Otp() {
       setVerified(true)
       setTimeout(
         () =>
-          navigate(result.isNewUser ? `/auth/signup?phone=${phone}` : '/auth/role', {
-            replace: true,
-          }),
+          navigate(
+            result.isNewUser
+              ? `/auth/signup?phone=${phone}${
+                  params.get('email') ? `&email=${encodeURIComponent(params.get('email')!)}` : ''
+                }`
+              : '/auth/role',
+            {
+              replace: true,
+            },
+          ),
         780,
       )
     }, 700)
@@ -87,7 +116,10 @@ export default function Otp() {
     restart(OTP_RESEND_SECONDS)
     setCode('')
     setError(undefined)
-    toast.success('New code issued', `Code ${next.code} — valid for 5 minutes.`)
+    toast.success(
+      'New code issued',
+      smsEnabled ? `Sent to ${maskPhone(phone)} — valid for 5 minutes.` : `Code ${next.code} — valid for 5 minutes.`,
+    )
   }
 
   return (
@@ -103,9 +135,16 @@ export default function Otp() {
           Verify your number
         </h1>
         <p className="mt-2.5 text-[14.5px] leading-[1.55] text-ink-500">
-          Enter the 6-digit code issued for{' '}
+          {smsEnabled ? 'We texted a 6-digit code to' : 'Enter the 6-digit code issued for'}{' '}
           <span className="font-bold text-ink-800">{maskPhone(phone)}</span>
         </p>
+
+        {autofill && !verified && (
+          <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-success-50 px-3 py-1.5 text-[11.5px] font-bold text-success-700">
+            <Smartphone size={12} />
+            We&apos;ll fill it in automatically when the SMS lands
+          </p>
+        )}
 
         <div className="mt-9">
           {verified ? (
@@ -162,7 +201,19 @@ export default function Otp() {
           )}
         </div>
 
-        {!verified && (
+        {!verified && delivery?.sent && (
+          <div className="anim-fade-in mt-8 rounded-(--radius-lg) border border-success-100 bg-success-50 p-4">
+            <p className="flex items-center gap-2 text-[12.5px] font-bold text-success-800">
+              <MessageSquare size={14} /> Sent via {delivery.provider}
+            </p>
+            <p className="mt-1.5 text-[12px] leading-relaxed text-success-800/80">
+              Valid for 5 minutes, {left} attempt{left === 1 ? '' : 's'} remaining. It stops working
+              the moment it is used.
+            </p>
+          </div>
+        )}
+
+        {!verified && !delivery?.sent && (
           <div className="mt-8 rounded-(--radius-lg) border border-brand-100 bg-brand-50/70 p-4">
             <p className="flex items-center gap-2 text-[12px] font-bold tracking-wide text-brand-700 uppercase">
               <KeyRound size={13} /> Your code
@@ -171,9 +222,11 @@ export default function Otp() {
               {issued ?? '——————'}
             </p>
             <p className="mt-2.5 text-[12px] leading-relaxed text-brand-800/80">
-              Shown here because this build has no SMS gateway attached. The code itself is real:
-              generated for this request, valid for 5 minutes, {left} attempt{left === 1 ? '' : 's'}{' '}
-              remaining, and it stops working the moment it is used.
+              {delivery?.reason === 'failed'
+                ? 'The SMS gateway rejected this send, so the code is shown here instead.'
+                : 'Shown here because no SMS gateway is configured for this build.'}{' '}
+              The code itself is real: generated for this request, valid for 5 minutes, {left}{' '}
+              attempt{left === 1 ? '' : 's'} remaining, and it stops working once used.
             </p>
           </div>
         )}

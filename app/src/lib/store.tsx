@@ -22,6 +22,7 @@ import type {
   Trip,
 } from './types'
 import { useLocalStorage } from './hooks'
+import type { LngLat } from './geo'
 import { useAuth } from './auth'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -35,6 +36,9 @@ export interface BookingDraft {
   mode: DeliveryMode
   pickupAddress: string
   dropAddress: string
+  /** Resolved by geocoding, so the traveler gets a point and not just prose. */
+  pickupCoord: LngLat | null
+  dropCoord: LngLat | null
   fromCityId: string
   toCityId: string
   originHubId: string | null
@@ -57,6 +61,8 @@ export const EMPTY_DRAFT: BookingDraft = {
   mode: 'hub',
   pickupAddress: '',
   dropAddress: '',
+  pickupCoord: null,
+  dropCoord: null,
   fromCityId: 'blr',
   toCityId: 'mys',
   originHubId: null,

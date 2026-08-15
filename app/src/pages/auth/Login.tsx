@@ -1,154 +1,179 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Phone, UserRound } from 'lucide-react'
+import { ChevronsRight, UserRound } from 'lucide-react'
 import { Screen, TopBar } from '@/components/layout/Screen'
-import { Button, Divider, Field, Note } from '@/components/ui'
-import { LogoTile } from '@/components/brand/Logo'
-import { HeroImage } from '@/components/viz/HeroImage'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 
-/** Phone-first auth. Per PRD §8.1 there is no password anywhere in DikkiConnect. */
+/**
+ * Phone-first auth. Per PRD §8.1 there is no password anywhere in
+ * DikkiConnect — a code to your number is the only way in.
+ *
+ * The layout is deliberately spare: one card, one field, one button. Every
+ * other decision — which portal, what your name is, whether you drive — happens
+ * after you are through the door, because none of it is needed to get you
+ * there and all of it is friction in front of a first-run user.
+ */
 export default function Login() {
   const navigate = useNavigate()
   const { requestOtp, accounts } = useAuth()
-  const [phone, setPhone] = useState('')
+
+  const [value, setValue] = useState('')
+  const [email, setEmail] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string>()
+  const [notice, setNotice] = useState<string>()
 
-  const digits = phone.replace(/\D/g, '')
-  const valid = digits.length === 10
+  const isEmail = value.includes('@')
+  const digits = value.replace(/\D/g, '')
+  const valid = isEmail
+    ? /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim())
+    : digits.length === 10
   const returning = accounts.find((a) => a.phone === digits)
 
   const submit = () => {
+    if (!value.trim()) {
+      setError('Enter your mobile number to continue')
+      return
+    }
+
+    if (isEmail) {
+      /* Every account is keyed to a mobile number: the OTP, the custody chain
+         and the payout account all hang off it. An email on its own cannot
+         open any of that — so keep it and ask for the number, rather than
+         dead-ending on a field we invited them to fill. */
+      if (!valid) {
+        setError('That email doesn’t look right')
+        return
+      }
+      setEmail(value.trim())
+      setValue('')
+      setError(undefined)
+      setNotice('Got it — now your mobile number, and we’ll attach that email to the account.')
+      return
+    }
+
     if (!valid) {
       setError('Enter a valid 10-digit mobile number')
       return
     }
+
     setError(undefined)
     setSending(true)
-    // Issues the code before navigating, so the verify screen always has a
-    // live challenge to check against.
+    // Issue the code before navigating, so the verify screen always has a live
+    // challenge to check against.
     requestOtp(digits)
-    setTimeout(() => navigate(`/auth/otp?phone=${digits}`), 700)
+    const qs = new URLSearchParams({ phone: digits })
+    if (email) qs.set('email', email)
+    setTimeout(() => navigate(`/auth/otp?${qs.toString()}`), 600)
   }
 
   return (
     <Screen tone="white">
-      {/* Hero banner.
-          Drop a file at `app/public/login-hero.jpg` and it appears here
-          automatically — no code change needed. Until then the scene stands in,
-          so the screen never shows a broken image. */}
-      <div className="relative h-[210px] shrink-0 overflow-hidden bg-dusk-900">
-        <HeroImage focus="top" sceneAlign="xMidYMin" className="absolute inset-0" />
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white to-transparent" />
-        <TopBar back backTo="/" floating tone="dark" className="pt-safe" />
-      </div>
+      <TopBar back backTo="/" className="pt-safe" />
 
-      <div className="device-scroll -mt-8 flex-1 px-7">
-        <LogoTile size={56} className="relative mb-6" />
+      <div className="device-scroll flex flex-1 flex-col justify-center px-6 pb-10">
+        <div className="anim-scale-in mx-auto w-full max-w-[344px] rounded-(--radius-2xl) border border-ink-200/80 bg-white px-6 py-11 shadow-(--shadow-e2)">
+          <div className="flex justify-center">
+            <span className="grid size-11 place-items-center rounded-(--radius-md) bg-brand-50 text-brand-600">
+              <ChevronsRight size={22} strokeWidth={2.6} />
+            </span>
+          </div>
 
-        <h1 className="text-display text-[28px] leading-[1.14] font-extrabold text-ink-900">
-          {returning ? `Welcome back, ${returning.name.split(' ')[0]}` : 'Enter your mobile number'}
-        </h1>
-        <p className="mt-2.5 text-[14.5px] leading-[1.55] text-ink-500">
-          {returning
-            ? 'We’ll send a 6-digit code to sign you back in.'
-            : 'We’ll send a 6-digit code. A number that’s new to us creates an account.'}
-        </p>
+          <h1 className="text-display mt-5 text-center text-[23px] leading-tight font-extrabold text-ink-900">
+            Log in or sign up
+          </h1>
 
-        <div className="mt-8">
-          <Field
-            label="Mobile number"
-            type="tel"
-            inputMode="numeric"
-            autoComplete="tel"
-            placeholder="98450 12345"
-            value={phone}
-            error={error}
-            maxLength={11}
-            onChange={(e) => {
-              setPhone(e.target.value.replace(/[^\d ]/g, ''))
-              setError(undefined)
-            }}
-            onKeyDown={(e) => e.key === 'Enter' && submit()}
-            prefix={
-              <span className="flex items-center gap-2 border-r border-ink-200 pr-3">
-                <Phone size={15} />
-                <span className="text-[15px] font-bold text-ink-700">+91</span>
-              </span>
-            }
-            hint={
-              returning
-                ? 'Recognised — signing in to your existing account'
-                : 'A new number creates a fresh account'
-            }
-          />
-
-          {returning && (
-            <div className="anim-fade-in mt-2 flex items-center gap-2.5 rounded-(--radius-md) border border-success-100 bg-success-50 px-3.5 py-2.5">
-              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-success-500/15 text-success-600">
-                <UserRound size={15} />
-              </span>
-              <p className="min-w-0 text-[12.5px] font-semibold text-success-800">
-                <span className="truncate">{returning.name}</span> · joined{' '}
-                {new Date(returning.createdAt).toLocaleDateString('en-IN', {
-                  month: 'short',
-                  year: 'numeric',
-                })}
-              </p>
-            </div>
-          )}
-
-          <Button
-            block
-            size="lg"
-            loading={sending}
-            onClick={submit}
-            disabled={!valid}
-            iconRight={!sending ? <ArrowRight size={18} /> : undefined}
-            className="mt-2"
-          >
-            {sending ? 'Sending code…' : returning ? 'Sign in' : 'Create account'}
-          </Button>
-        </div>
-
-        <Divider label="or continue with" className="my-7" />
-
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: 'Google', mark: <GoogleMark /> },
-            { label: 'Truecaller', mark: <TruecallerMark /> },
-          ].map((p) => (
-            <button
-              key={p.label}
-              onClick={() =>
-                setError(
-                  `${p.label} sign-in needs its OAuth app registered under a company account — use your mobile number for now.`,
-                )
-              }
+          <div className="mt-7">
+            <div
               className={cn(
-                'pressable flex h-13 items-center justify-center gap-2.5 rounded-(--radius-md) border border-ink-200 bg-white',
-                'text-[14px] font-semibold text-ink-800 shadow-(--shadow-e1) hover:bg-ink-50',
+                'flex items-center rounded-(--radius-md) border-2 bg-white transition-colors',
+                error ? 'border-danger-400' : 'border-ink-200 focus-within:border-brand-500',
               )}
             >
-              {p.mark}
-              {p.label}
+              {!isEmail && digits.length > 0 && (
+                <span className="pl-3.5 text-[15px] font-bold text-ink-500">+91</span>
+              )}
+              <input
+                value={value}
+                onChange={(e) => {
+                  setValue(e.target.value)
+                  setError(undefined)
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && submit()}
+                inputMode={isEmail ? 'email' : 'tel'}
+                autoComplete="tel"
+                placeholder="Phone number or email"
+                className="h-13 w-full bg-transparent px-3.5 text-[15px] text-ink-900 outline-none placeholder:text-ink-400"
+              />
+            </div>
+
+            {error && (
+              <p className="anim-fade-in mt-2 text-[12.5px] font-semibold text-danger-600">
+                {error}
+              </p>
+            )}
+            {notice && !error && (
+              <p className="anim-fade-in mt-2 text-[12.5px] font-semibold text-brand-700">
+                {notice}
+              </p>
+            )}
+
+            {returning && !error && (
+              <div className="anim-fade-in mt-2.5 flex items-center gap-2.5 rounded-(--radius-md) border border-success-100 bg-success-50 px-3 py-2">
+                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-success-500/15 text-success-600">
+                  <UserRound size={14} />
+                </span>
+                <p className="min-w-0 truncate text-[12.5px] font-semibold text-success-800">
+                  Welcome back, {returning.name.split(' ')[0]}
+                </p>
+              </div>
+            )}
+
+            <button
+              onClick={submit}
+              disabled={sending}
+              className={cn(
+                'pressable focus-ring mt-3.5 h-13 w-full rounded-full text-[15px] font-bold text-white',
+                'bg-brand-600 shadow-(--shadow-brand-sm) hover:bg-brand-700 disabled:opacity-70',
+              )}
+            >
+              {sending ? 'Sending code…' : 'Continue'}
             </button>
-          ))}
+          </div>
+
+          <div className="my-6 flex items-center gap-3">
+            <span className="h-px flex-1 bg-ink-200" />
+            <span className="text-[12px] font-medium text-ink-400">or</span>
+            <span className="h-px flex-1 bg-ink-200" />
+          </div>
+
+          <div className="flex justify-center gap-3.5">
+            {[
+              { id: 'google', label: 'Continue with Google', mark: <GoogleMark /> },
+              { id: 'apple', label: 'Continue with Apple', mark: <AppleMark /> },
+            ].map((p) => (
+              <button
+                key={p.id}
+                aria-label={p.label}
+                onClick={() =>
+                  setError(
+                    `${p.id === 'google' ? 'Google' : 'Apple'} sign-in needs its OAuth app registered under a company account — use your mobile number for now.`,
+                  )
+                }
+                className="pressable grid size-13 place-items-center rounded-(--radius-md) border border-ink-200 bg-white hover:bg-ink-50"
+              >
+                {p.mark}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <Note tone="neutral" className="mt-7">
+        <p className="mx-auto mt-6 max-w-[300px] text-center text-[11.5px] leading-relaxed text-ink-400">
           By continuing you agree to DikkiConnect&apos;s{' '}
-          <span className="font-bold text-brand-700">Terms of Service</span>,{' '}
-          <span className="font-bold text-brand-700">Privacy Policy</span> and the{' '}
-          <span className="font-bold text-brand-700">Prohibited Items</span> declaration.
-        </Note>
-      </div>
-
-      <div className="pb-safe shrink-0 px-7 py-5 text-center">
-        <p className="text-[12px] text-ink-400">
-          Your parcels, rides and wallet are tied to this number.
+          <span className="font-semibold text-ink-600">Terms</span>,{' '}
+          <span className="font-semibold text-ink-600">Privacy Policy</span> and the{' '}
+          <span className="font-semibold text-ink-600">Prohibited Items</span> declaration.
         </p>
       </div>
     </Screen>
@@ -157,7 +182,7 @@ export default function Login() {
 
 function GoogleMark() {
   return (
-    <svg viewBox="0 0 24 24" className="size-[18px]" aria-hidden>
+    <svg viewBox="0 0 24 24" className="size-[21px]" aria-hidden>
       <path
         fill="#4285F4"
         d="M23 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.2a5.3 5.3 0 0 1-2.3 3.5v2.9h3.7c2.2-2 3.4-5 3.4-8.6Z"
@@ -175,14 +200,10 @@ function GoogleMark() {
   )
 }
 
-function TruecallerMark() {
+function AppleMark() {
   return (
-    <svg viewBox="0 0 24 24" className="size-[18px]" aria-hidden>
-      <rect width="24" height="24" rx="6" fill="#0089FF" />
-      <path
-        d="M8.4 6.2c.5-.4 1.2-.3 1.6.2l1.2 1.6c.4.5.3 1.2-.2 1.5l-.8.6c.5 1.2 1.5 2.2 2.7 2.7l.6-.8c.4-.5 1-.6 1.5-.2l1.6 1.2c.5.4.6 1.1.2 1.6l-.7.9c-.6.8-1.7 1-2.6.6a12.4 12.4 0 0 1-6.4-6.4c-.4-.9-.2-2 .6-2.6l.7-.9Z"
-        fill="#fff"
-      />
+    <svg viewBox="0 0 24 24" className="size-[21px]" fill="currentColor" aria-hidden>
+      <path d="M16.4 12.7c0-2.1 1.7-3.1 1.8-3.2-1-1.4-2.5-1.6-3-1.6-1.3-.1-2.5.8-3.2.8-.7 0-1.6-.7-2.7-.7-1.4 0-2.7.8-3.4 2C3.5 12.4 4.6 16 6 18c.7 1 1.5 2.1 2.6 2.1 1 0 1.4-.7 2.7-.7s1.6.7 2.7.6c1.1 0 1.8-1 2.5-2a9 9 0 0 0 1.1-2.3c-.1 0-2.2-.9-2.2-3ZM14.3 6.3c.6-.7 1-1.7.9-2.7-.8 0-1.9.6-2.5 1.3-.6.6-1 1.6-.9 2.6.9.1 1.9-.5 2.5-1.2Z" />
     </svg>
   )
 }

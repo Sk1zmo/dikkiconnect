@@ -37,7 +37,8 @@ export default function JobDetail() {
 
   // Live feed — jobs are derived from parcels, so one claimed by another
   // driver disappears from here too.
-  const job = useOpenJobs().map(jobFromParcel).find((j) => j.id === id)
+  const parcel = useOpenJobs().find((p) => jobFromParcel(p).id === id)
+  const job = parcel ? jobFromParcel(parcel) : undefined
   if (!job) return <Navigate to="/traveler/jobs" replace />
 
   const cat = categoryById(job.category)
@@ -63,7 +64,15 @@ export default function JobDetail() {
   return (
     <Screen>
       <div className="relative shrink-0">
-        <RouteMap height={190} fromLabel={job.fromLabel} toLabel={job.toLabel} />
+        <RouteMap
+          height={190}
+          fromLabel={job.fromLabel}
+          toLabel={job.toLabel}
+          fromCityId={parcel?.fromCityId ?? 'blr'}
+          toCityId={parcel?.toCityId ?? 'mys'}
+          fromHubId={isP2P ? undefined : job.fromHubId}
+          toHubId={isP2P ? undefined : job.toHubId}
+        />
         <TopBar floating tone="dark" back className="pt-safe" />
       </div>
 

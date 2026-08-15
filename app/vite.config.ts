@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 import path from 'node:path'
+import fs from 'node:fs'
 
 /**
  * The single-file build runs from file://, where the manifest, touch icon and
@@ -17,6 +18,77 @@ function stripPwaTags() {
         .replace(/\s*<link rel="manifest"[^>]*>/g, '')
         .replace(/\s*<link rel="apple-touch-icon"[^>]*>/g, '')
         .replace(/\s*<script>[\s\S]*?serviceWorker[\s\S]*?<\/script>/g, '')
+    },
+  }
+}
+
+/**
+ * MapLibre's tile-parsing worker, made deployable.
+ *
+ * Two things are wrong out of the box with a bundler:
+ *
+ *  1. MapLibre resolves the worker as a *sibling file* of whatever module it
+ *     is running from — `new URL('./maplibre-gl-worker.mjs', import.meta.url)`.
+ *     Vite bundles MapLibre into a hashed chunk and never emits that sibling,
+ *     so the Worker constructor 404s.
+ *
+ *  2. The shipped worker is an ES module that imports a 480 KB shared chunk.
+ *     MapLibre decides at runtime whether to construct a module worker or a
+ *     classic one, and when it picks classic the bare `import` inside is an
+ *     immediate syntax error.
+ *
+ * Neither failure throws anything you can see. The map loads its style,
+ * sprites and TileJSON, draws our own route layers and markers perfectly, and
+ * then requests zero tiles — a blank canvas with pins floating on it.
+ *
+ * So: pre-bundle the worker into one self-contained IIFE with no imports at
+ * all, which runs correctly as either worker type, and emit it at a fixed path
+ * that `setWorkerUrl` can point at. Works for the web build and for the APK,
+ * which serves the same files off disk.
+ */
+function maplibreWorker() {
+  const entry = path.resolve(
+    process.cwd(),
+    'node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs',
+  )
+  return {
+    name: 'maplibre-worker-asset',
+    async generateBundle(this: { emitFile: (f: unknown) => void }) {
+      const { build } = await import('esbuild')
+      const out = await build({
+        entryPoints: [entry],
+        bundle: true,
+        format: 'iife',
+        platform: 'browser',
+        target: 'es2020',
+        minify: true,
+        write: false,
+      })
+      this.emitFile({
+        type: 'asset',
+        fileName: 'maplibre-gl-worker.js',
+        source: out.outputFiles[0].text,
+      })
+    },
+    configureServer(server: { middlewares: { use: (fn: unknown) => void } }) {
+      let cached: string | null = null
+      server.middlewares.use(async (req: { url?: string }, res: any, next: () => void) => {
+        if (req.url !== '/maplibre-gl-worker.js') return next()
+        if (!cached) {
+          const { build } = await import('esbuild')
+          const out = await build({
+            entryPoints: [entry],
+            bundle: true,
+            format: 'iife',
+            platform: 'browser',
+            target: 'es2020',
+            write: false,
+          })
+          cached = out.outputFiles[0].text
+        }
+        res.setHeader('Content-Type', 'text/javascript')
+        res.end(cached)
+      })
     },
   }
 }
@@ -39,6 +111,8 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
+      // Not in the single-file build: that one has no sibling files at all.
+      ...(single ? [] : [maplibreWorker()]),
       ...(single ? [stripPwaTags(), viteSingleFile()] : []),
     ],
     resolve: {

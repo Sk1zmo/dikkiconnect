@@ -69,6 +69,10 @@ export default function BookReview() {
             height={140}
             fromLabel={cityName(draft.fromCityId)}
             toLabel={cityName(draft.toCityId)}
+            fromCityId={draft.fromCityId}
+            toCityId={draft.toCityId}
+            fromHubId={isP2P ? undefined : (originHub?.id ?? undefined)}
+            toHubId={isP2P ? undefined : (destHub?.id ?? undefined)}
           />
           <div className="p-4">
             <div className="flex items-start gap-3">

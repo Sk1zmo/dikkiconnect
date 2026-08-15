@@ -38,4 +38,16 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- "Use my location" on the pickup address, and Recentre on the tracking
+         map, both call navigator.geolocation. Android grants the WebView
+         nothing without these, and the failure is silent — the promise simply
+         never resolves. Coarse is listed too so a user who declines precise
+         location still gets a usable map centre. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Vector tiles are cached to disk; without this the map re-downloads the
+         whole viewport on every cold start. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 </manifest>

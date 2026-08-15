@@ -75,10 +75,22 @@ export default function Tracking() {
     <Screen>
       <div className="relative shrink-0">
         {live ? (
-          <LiveMap height={252} />
+          <LiveMap
+            height={252}
+            fromCityId={parcel.fromCityId}
+            toCityId={parcel.toCityId}
+            fromHubId={isP2P ? undefined : parcel.originHubId}
+            toHubId={isP2P ? undefined : parcel.destinationHubId}
+          />
         ) : (
           <div className="h-[180px]">
-            <LiveMap height={180} />
+            <LiveMap
+              height={180}
+              fromCityId={parcel.fromCityId}
+              toCityId={parcel.toCityId}
+              fromHubId={isP2P ? undefined : parcel.originHubId}
+              toHubId={isP2P ? undefined : parcel.destinationHubId}
+            />
           </div>
         )}
         <TopBar

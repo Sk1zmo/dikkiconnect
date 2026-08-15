@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useLocalStorage } from './hooks'
+import { sendOtpSms, smsConfigured, type SmsResult } from './sms'
 import type { KycTier, Role } from './types'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -17,12 +18,13 @@ import type { KycTier, Role } from './types'
    There are no shared demo logins.
 
    The OTP is a genuine one — generated per request, six digits, single-use,
-   five-minute expiry, five attempts, thirty-second resend cooldown. What it
-   is NOT is delivered by SMS: that needs a carrier gateway behind a server
-   (DLT registration, a sender ID, secrets that cannot live in a browser), so
-   the code is handed to the user in-app instead. Everything around the code —
-   generation, expiry, attempt limiting, single use — is exactly what it will
-   be once an SMS provider is wired to the same calls.
+   five-minute expiry, five attempts, thirty-second resend cooldown.
+
+   Delivery goes through `sms.ts`, which posts to whatever endpoint the build
+   is configured with. When one is set the code arrives by real SMS; when it
+   is not, the verification screen shows the code in-app and says why. The
+   code, and every rule around it, is identical either way — only the last
+   hop changes.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface Account {
@@ -71,6 +73,10 @@ interface AuthState {
 
   /** Issue a fresh code for a number. Returns the code so the UI can show it. */
   requestOtp: (phone: string) => { code: string; expiresAt: number }
+  /** Outcome of the last delivery attempt — drives what the UI tells the user. */
+  delivery: SmsResult | null
+  /** Is an SMS gateway configured for this build? */
+  smsEnabled: boolean
   /** The code currently outstanding, for the in-app delivery panel. */
   pendingCode: (phone: string) => string | null
   /** Attempts left on the outstanding challenge. */
@@ -105,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // behaviour — the user simply requests a new code.
   const [challenge, setChallenge] = useState<Challenge | null>(null)
   const [verifiedPhone, setVerifiedPhone] = useState<string | null>(null)
+  const [delivery, setDelivery] = useState<SmsResult | null>(null)
 
   const account = useMemo(
     () => accounts.find((a) => a.phone === sessionPhone) ?? null,
@@ -122,6 +129,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       attempts: 0,
     }
     setChallenge(next)
+
+    // Fire-and-forget: the challenge is live the moment it is generated, so a
+    // slow gateway must never hold up the verification screen.
+    setDelivery(null)
+    void sendOtpSms(phone, next.code).then(setDelivery)
+
     return { code: next.code, expiresAt: next.expiresAt }
   }, [])
 
@@ -250,6 +263,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authed: account !== null,
       accounts,
       requestOtp,
+      delivery,
+      smsEnabled: smsConfigured(),
       pendingCode,
       attemptsLeft,
       verifyOtp,
@@ -264,6 +279,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       account,
       accounts,
       requestOtp,
+      delivery,
       pendingCode,
       attemptsLeft,
       verifyOtp,
