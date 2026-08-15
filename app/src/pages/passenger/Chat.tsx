@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Headphones, Paperclip, Phone, Send, ShieldCheck } from 'lucide-react'
 import { Screen, TopBar } from '@/components/layout/Screen'
 import { Avatar, DotLoader, IconButton, Note, Skeleton } from '@/components/ui'
-import { RIDE_CHAT, SUPPORT_THREAD, TRIPS, travelerById } from '@/lib/data'
+import { RIDE_CHAT, SUPPORT_THREAD, travelerById } from '@/lib/data'
+import { useTrip } from '@/lib/store'
 import { time } from '@/lib/format'
 import type { ChatMessage } from '@/lib/types'
 import { cn } from '@/lib/cn'
@@ -20,7 +21,7 @@ export default function Chat() {
   const navigate = useNavigate()
 
   const isSupport = id === 'support'
-  const trip = TRIPS.find((t) => t.id === id)
+  const trip = useTrip(id)
   const driver = travelerById(trip?.travelerId)
   const name = isSupport ? 'DikkiConnect Support' : (driver?.name ?? 'Driver')
 

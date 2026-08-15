@@ -17,8 +17,10 @@ import {
 } from '@/components/ui'
 import { PhotoCapture } from '@/components/viz/Scanner'
 import { SuccessBurst, SuccessMark } from '@/components/viz/Illustrations'
-import { HUB_HANDLING_FEE, categoryById } from '@/lib/data'
+import { HUB_HANDLING_FEE, categoryById, otpFor } from '@/lib/data'
 import { useApp } from '@/lib/store'
+import { useOtpGate } from '@/lib/otp'
+import { OtpHelper } from '@/components/domain/OtpHelper'
 import { inr, kg } from '@/lib/format'
 
 const STEPS = ['Weigh', 'Photos', 'OTP', 'Done']
@@ -44,23 +46,23 @@ export default function HubIntake() {
   const [shelf, setShelf] = useState('A-04')
   const [shots, setShots] = useState(0)
   const [code, setCode] = useState('')
-  const [error, setError] = useState(false)
   const [verifying, setVerifying] = useState(false)
+
+  // Strict: only this parcel's real drop-off code opens the checkpoint.
+  const gate = useOtpGate(otpFor(parcel?.id ?? id ?? ''))
 
   const declared = parcel?.weightKg ?? 2.4
   const cat = categoryById(parcel?.category ?? 'electronics')
   const discrepancy = Math.abs(weight - declared) > 0.5
 
   const verify = (value: string) => {
-    if (value.length < 6) return
+    if (value.length < 6 || verifying) return
     setVerifying(true)
-    setError(false)
     setTimeout(() => {
       setVerifying(false)
-      if (value === '000000') {
-        setError(true)
+      if (!gate.check(value)) {
         setCode('')
-        toast.error('Incorrect OTP', 'Ask the sender to read it out again.')
+        toast.error('Incorrect OTP', 'Ask the sender to read out the code on their app.')
         return
       }
       // Move the shared ledger — the sender's tracker and the driver's job
@@ -236,10 +238,16 @@ export default function HubIntake() {
             </p>
 
             <div className="mt-8">
-              <OtpInput value={code} onChange={setCode} onComplete={verify} error={error} />
-              {error && (
+              <OtpInput
+                value={code}
+                onChange={setCode}
+                onComplete={verify}
+                error={Boolean(gate.error)}
+                disabled={gate.locked}
+              />
+              {gate.error && (
                 <p className="anim-fade-in -mt-1 text-center text-[12.5px] font-semibold text-danger-600">
-                  Code didn&apos;t match. Check they are showing the drop-off OTP.
+                  {gate.error}
                 </p>
               )}
             </div>
@@ -253,9 +261,11 @@ export default function HubIntake() {
               <KeyValue label="Photos" value={`${shots} captured`} />
             </Card>
 
-            <Note tone="neutral" icon={<ShieldCheck size={15} />} className="mt-3" title="Demo tip">
-              Any 6 digits work. Enter <span className="font-mono font-bold">000000</span> to see
-              the failure state.
+            <OtpHelper gate={gate} source="the sender's drop-off screen in their app" />
+
+            <Note tone="neutral" icon={<ShieldCheck size={15} />} className="mt-3" title="Why this matters">
+              This code is what ties the parcel in your hands to the booking on screen. Logging
+              intake without it leaves the custody chain with a gap nobody can account for.
             </Note>
           </div>
         )}

@@ -1,6 +1,16 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
-import { AlertTriangle, Clock, Fuel, MapPin, Package, ShieldCheck, Timer } from 'lucide-react'
+import {
+  AlertTriangle,
+  Building2,
+  Clock,
+  Fuel,
+  Home,
+  MapPin,
+  Package,
+  ShieldCheck,
+  Timer,
+} from 'lucide-react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -12,19 +22,26 @@ import {
   useToast,
 } from '@/components/ui'
 import { RouteMap } from '@/components/viz/Map'
-import { PARCEL_JOBS, categoryById, hubById } from '@/lib/data'
+import { categoryById, hubById, jobFromParcel } from '@/lib/data'
 import { inr, kg, relative } from '@/lib/format'
+import { useApp, useMe, useOpenJobs } from '@/lib/store'
+
 
 export default function JobDetail() {
+  const ME = useMe()
   const { id } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
+  const { advanceParcel } = useApp()
   const [accepting, setAccepting] = useState(false)
 
-  const job = PARCEL_JOBS.find((j) => j.id === id)
+  // Live feed — jobs are derived from parcels, so one claimed by another
+  // driver disappears from here too.
+  const job = useOpenJobs().map(jobFromParcel).find((j) => j.id === id)
   if (!job) return <Navigate to="/traveler/jobs" replace />
 
   const cat = categoryById(job.category)
+  const isP2P = job.mode === 'p2p'
   const from = hubById(job.fromHubId)
   const to = hubById(job.toHubId)
   const urgent = new Date(job.expiresAt).getTime() - Date.now() < 20 * 60_000
@@ -32,7 +49,13 @@ export default function JobDetail() {
   const accept = () => {
     setAccepting(true)
     setTimeout(() => {
-      toast.success('Job accepted', 'Head to the pickup hub and scan the parcel QR.')
+      advanceParcel(job.parcelId, 'assigned', { actor: ME.name, travelerId: ME.id })
+      toast.success(
+        'Job accepted',
+        isP2P
+          ? 'Head to the pickup address and enter the sender’s OTP.'
+          : 'Head to the pickup hub and scan the parcel QR.',
+      )
       navigate('/traveler/scan')
     }, 1100)
   }
@@ -40,7 +63,7 @@ export default function JobDetail() {
   return (
     <Screen>
       <div className="relative shrink-0">
-        <RouteMap height={190} fromLabel={from?.name.split('·').pop()?.trim()} toLabel={to?.name.split('·').pop()?.trim()} />
+        <RouteMap height={190} fromLabel={job.fromLabel} toLabel={job.toLabel} />
         <TopBar floating tone="dark" back className="pt-safe" />
       </div>
 
@@ -65,6 +88,12 @@ export default function JobDetail() {
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2 border-t border-ink-100 pt-3.5">
+            <Badge
+              tone={isP2P ? 'brand' : 'neutral'}
+              icon={isP2P ? <Home size={11} /> : <Building2 size={11} />}
+            >
+              {isP2P ? 'Door to door' : 'Hub ↔ Hub'}
+            </Badge>
             <Badge tone="neutral" icon={<Fuel size={11} />}>
               {job.detourKm} km detour
             </Badge>
@@ -95,27 +124,39 @@ export default function JobDetail() {
                 <p className="text-[11px] font-bold tracking-wide text-ink-400 uppercase">
                   Collect from
                 </p>
-                <p className="truncate text-[14px] font-bold text-ink-900">
-                  {from?.name.split('·').pop()?.trim()}
-                </p>
-                <p className="truncate text-[12px] text-ink-500">{from?.address}</p>
-                <p className="mt-1 inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-ink-500">
-                  <Clock size={11} />
-                  {from?.openFrom} – {from?.openTo}
-                </p>
+                <p className="text-[14px] font-bold text-ink-900">{job.fromLabel}</p>
+                {isP2P ? (
+                  <p className="mt-0.5 text-[12px] text-ink-500">
+                    The exact door address is revealed once you accept.
+                  </p>
+                ) : (
+                  <>
+                    <p className="truncate text-[12px] text-ink-500">{from?.address}</p>
+                    <p className="mt-1 inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-ink-500">
+                      <Clock size={11} />
+                      {from?.openFrom} – {from?.openTo}
+                    </p>
+                  </>
+                )}
               </div>
               <div>
                 <p className="text-[11px] font-bold tracking-wide text-ink-400 uppercase">
                   Deliver to
                 </p>
-                <p className="truncate text-[14px] font-bold text-ink-900">
-                  {to?.name.split('·').pop()?.trim()}
-                </p>
-                <p className="truncate text-[12px] text-ink-500">{to?.address}</p>
-                <p className="mt-1 inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-ink-500">
-                  <Clock size={11} />
-                  {to?.openFrom} – {to?.openTo}
-                </p>
+                <p className="text-[14px] font-bold text-ink-900">{job.toLabel}</p>
+                {isP2P ? (
+                  <p className="mt-0.5 text-[12px] text-ink-500">
+                    The receiver hands over their OTP at the door.
+                  </p>
+                ) : (
+                  <>
+                    <p className="truncate text-[12px] text-ink-500">{to?.address}</p>
+                    <p className="mt-1 inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-ink-500">
+                      <Clock size={11} />
+                      {to?.openFrom} – {to?.openTo}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -136,8 +177,9 @@ export default function JobDetail() {
         </Card>
 
         <Note tone="brand" icon={<ShieldCheck size={15} />} className="mt-3" title="Custody rules">
-          You take custody at the origin hub by scanning the QR and entering the OTP the hub manager
-          generates. Liability shifts to you at that timestamp and back to the hub on drop-off.
+          {isP2P
+            ? 'You take custody at the sender’s door by entering their OTP, and close the job with the receiver’s OTP — two checkpoints, both timestamped.'
+            : 'You take custody at the origin hub by scanning the QR and entering the OTP the hub manager generates. Liability shifts to you at that timestamp and back to the hub on drop-off.'}
         </Note>
 
         <Note tone="neutral" icon={<Package size={15} />} className="mt-3">

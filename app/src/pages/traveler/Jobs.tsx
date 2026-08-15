@@ -9,6 +9,7 @@ import {
   EmptyState,
   IconButton,
   Note,
+  Segmented,
   Sheet,
   SkeletonList,
   Switch,
@@ -16,20 +17,22 @@ import {
 } from '@/components/ui'
 import { JobCard } from '@/components/domain/Cards'
 import { EmptyBoxArt } from '@/components/viz/Illustrations'
-import { TRAVELERS, jobFromParcel } from '@/lib/data'
+import { jobFromParcel } from '@/lib/data'
 import { inr } from '@/lib/format'
 import { useLoaded } from '@/lib/hooks'
-import { useApp, useOpenJobs } from '@/lib/store'
+import { useApp, useMe, useOpenJobs } from '@/lib/store'
 
-const ME = TRAVELERS[0]
 
 type SortKey = 'payout' | 'detour' | 'expiry'
+type ModeFilter = 'all' | 'hub' | 'p2p'
 
 export default function TravelerJobs() {
+  const ME = useMe()
   const navigate = useNavigate()
   const toast = useToast()
 
   const [sort, setSort] = useState<SortKey>('payout')
+  const [mode, setMode] = useState<ModeFilter>('all')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [maxDetour, setMaxDetour] = useState(10)
   const [minPayout, setMinPayout] = useState(0)
@@ -45,6 +48,7 @@ export default function TravelerJobs() {
 
   const visible = useMemo(() => {
     let list = jobs.filter((j) => j.detourKm <= maxDetour && j.payout >= minPayout)
+    if (mode !== 'all') list = list.filter((j) => j.mode === mode)
     if (hideFragile) list = list.filter((j) => !j.fragile)
 
     return [...list].sort((a, b) => {
@@ -52,7 +56,7 @@ export default function TravelerJobs() {
       if (sort === 'detour') return a.detourKm - b.detourKm
       return new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime()
     })
-  }, [jobs, sort, maxDetour, minPayout, hideFragile])
+  }, [jobs, mode, sort, maxDetour, minPayout, hideFragile])
 
   const totalPayout = visible.reduce((sum, j) => sum + j.payout, 0)
 
@@ -87,6 +91,16 @@ export default function TravelerJobs() {
       />
 
       <div className="shrink-0 px-5 pb-3">
+        <Segmented
+          value={mode}
+          onChange={setMode}
+          className="mb-3"
+          options={[
+            { value: 'all', label: 'All', badge: jobs.length },
+            { value: 'hub', label: 'Hub ↔ Hub', badge: jobs.filter((j) => j.mode === 'hub').length },
+            { value: 'p2p', label: 'Door to door', badge: jobs.filter((j) => j.mode === 'p2p').length },
+          ]}
+        />
         <ChipRow
           value={sort}
           onChange={setSort}
@@ -146,8 +160,10 @@ export default function TravelerJobs() {
         )}
 
         <Note tone="neutral" className="mt-5" title="How matching works">
-          We only show parcels whose origin hub is on or near your declared route, sized to the boot
-          space you published. Accepting one holds it for 45 minutes.
+          Hub-to-hub jobs are parcels already sitting at a hub on your corridor. Door-to-door jobs
+          are collected from the sender&apos;s address and dropped at the receiver&apos;s — they pay
+          more, for the detour. Both are sized to the boot space you published, and accepting one
+          holds it for 45 minutes.
         </Note>
       </ScreenBody>
 

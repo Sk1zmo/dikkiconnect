@@ -1,21 +1,24 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Phone } from 'lucide-react'
+import { ArrowRight, Phone, UserRound } from 'lucide-react'
 import { Screen, TopBar } from '@/components/layout/Screen'
 import { Button, Divider, Field, Note } from '@/components/ui'
 import { LogoTile } from '@/components/brand/Logo'
 import { HeroImage } from '@/components/viz/HeroImage'
+import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 
 /** Phone-first auth. Per PRD §8.1 there is no password anywhere in DikkiConnect. */
 export default function Login() {
   const navigate = useNavigate()
+  const { requestOtp, accounts } = useAuth()
   const [phone, setPhone] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string>()
 
   const digits = phone.replace(/\D/g, '')
   const valid = digits.length === 10
+  const returning = accounts.find((a) => a.phone === digits)
 
   const submit = () => {
     if (!valid) {
@@ -24,7 +27,10 @@ export default function Login() {
     }
     setError(undefined)
     setSending(true)
-    setTimeout(() => navigate(`/auth/otp?phone=${digits}`), 1000)
+    // Issues the code before navigating, so the verify screen always has a
+    // live challenge to check against.
+    requestOtp(digits)
+    setTimeout(() => navigate(`/auth/otp?phone=${digits}`), 700)
   }
 
   return (
@@ -43,10 +49,12 @@ export default function Login() {
         <LogoTile size={56} className="relative mb-6" />
 
         <h1 className="text-display text-[28px] leading-[1.14] font-extrabold text-ink-900">
-          Enter your mobile number
+          {returning ? `Welcome back, ${returning.name.split(' ')[0]}` : 'Enter your mobile number'}
         </h1>
         <p className="mt-2.5 text-[14.5px] leading-[1.55] text-ink-500">
-          We&apos;ll text you a 6-digit code. New here? This creates your account too.
+          {returning
+            ? 'We’ll send a 6-digit code to sign you back in.'
+            : 'We’ll send a 6-digit code. A number that’s new to us creates an account.'}
         </p>
 
         <div className="mt-8">
@@ -70,8 +78,27 @@ export default function Login() {
                 <span className="text-[15px] font-bold text-ink-700">+91</span>
               </span>
             }
-            hint="Standard SMS rates may apply"
+            hint={
+              returning
+                ? 'Recognised — signing in to your existing account'
+                : 'A new number creates a fresh account'
+            }
           />
+
+          {returning && (
+            <div className="anim-fade-in mt-2 flex items-center gap-2.5 rounded-(--radius-md) border border-success-100 bg-success-50 px-3.5 py-2.5">
+              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-success-500/15 text-success-600">
+                <UserRound size={15} />
+              </span>
+              <p className="min-w-0 text-[12.5px] font-semibold text-success-800">
+                <span className="truncate">{returning.name}</span> · joined{' '}
+                {new Date(returning.createdAt).toLocaleDateString('en-IN', {
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </p>
+            </div>
+          )}
 
           <Button
             block
@@ -82,7 +109,7 @@ export default function Login() {
             iconRight={!sending ? <ArrowRight size={18} /> : undefined}
             className="mt-2"
           >
-            {sending ? 'Sending code…' : 'Continue'}
+            {sending ? 'Sending code…' : returning ? 'Sign in' : 'Create account'}
           </Button>
         </div>
 
@@ -95,10 +122,11 @@ export default function Login() {
           ].map((p) => (
             <button
               key={p.label}
-              onClick={() => {
-                setPhone('9845067890')
-                setError(undefined)
-              }}
+              onClick={() =>
+                setError(
+                  `${p.label} sign-in needs its OAuth app registered under a company account — use your mobile number for now.`,
+                )
+              }
               className={cn(
                 'pressable flex h-13 items-center justify-center gap-2.5 rounded-(--radius-md) border border-ink-200 bg-white',
                 'text-[14px] font-semibold text-ink-800 shadow-(--shadow-e1) hover:bg-ink-50',
@@ -119,12 +147,9 @@ export default function Login() {
       </div>
 
       <div className="pb-safe shrink-0 px-7 py-5 text-center">
-        <button
-          onClick={() => navigate('/auth/role')}
-          className="pressable-sm text-[13px] font-semibold text-ink-400 hover:text-ink-600"
-        >
-          Explore as a demo user →
-        </button>
+        <p className="text-[12px] text-ink-400">
+          Your parcels, rides and wallet are tied to this number.
+        </p>
       </div>
     </Screen>
   )

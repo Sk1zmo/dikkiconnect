@@ -6,6 +6,7 @@ import { Screen } from '@/components/layout/Screen'
 import { Button } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useApp } from '@/lib/store'
+import { useAuth } from '@/lib/auth'
 import type { Role } from '@/lib/types'
 
 const ROLES: Array<{
@@ -57,12 +58,16 @@ const ROLES: Array<{
 export default function RoleSelect() {
   const navigate = useNavigate()
   const { setRole, user } = useApp()
-  const [selected, setSelected] = useState<Role>('sender')
+  const { addRole, account } = useAuth()
+  const [selected, setSelected] = useState<Role>(account?.roles[0] ?? 'sender')
   const [going, setGoing] = useState(false)
 
   const enter = () => {
     setGoing(true)
     setRole(selected)
+    // Records the role on the account, so the profile shows every portal this
+    // person actually uses rather than just the one they signed up through.
+    addRole(selected)
     const home = ROLES.find((r) => r.id === selected)?.home ?? '/sender'
     setTimeout(() => navigate(home, { replace: true }), 620)
   }

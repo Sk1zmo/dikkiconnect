@@ -14,10 +14,10 @@ import {
   SkeletonList,
 } from '@/components/ui'
 import { TripCard } from '@/components/domain/Cards'
-import { CITIES, TRAVELERS, TRIPS, corridorKm } from '@/lib/data'
+import { CITIES, TRAVELERS, corridorKm } from '@/lib/data'
 import { inr } from '@/lib/format'
 import { useLoaded } from '@/lib/hooks'
-import { useApp } from '@/lib/store'
+import { useApp, useTrips } from '@/lib/store'
 
 const POPULAR = [
   { from: 'blr', to: 'mys', price: 399, badge: 'Most booked' },
@@ -35,7 +35,9 @@ export default function PassengerSearch() {
   const [seats, setSeats] = useState(1)
   const [searching, setSearching] = useState(false)
 
-  const suggested = TRIPS.slice(0, 2)
+  const suggested = useTrips()
+    .filter((t) => t.status !== 'completed')
+    .slice(0, 2)
   const { loading } = useLoaded(suggested, 1200)
 
   const cityOptions = CITIES.map((c) => ({ value: c.id, label: `${c.name}, ${c.state}` }))

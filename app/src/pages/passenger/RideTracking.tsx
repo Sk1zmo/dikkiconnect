@@ -14,7 +14,8 @@ import {
   useToast,
 } from '@/components/ui'
 import { LiveMap } from '@/components/viz/Map'
-import { TRIPS, cityName, otpFor, travelerById } from '@/lib/data'
+import { cityName, otpFor, travelerById } from '@/lib/data'
+import { useTrip } from '@/lib/store'
 import { inr, time } from '@/lib/format'
 import { useCountdown } from '@/lib/hooks'
 
@@ -30,7 +31,7 @@ export default function RideTracking() {
   const [cancelOpen, setCancelOpen] = useState(false)
   const { label } = useCountdown(2 * 3600 + 48 * 60)
 
-  const trip = TRIPS.find((t) => t.id === id)
+  const trip = useTrip(id)
   if (!trip) return <Navigate to="/passenger" replace />
 
   const driver = travelerById(trip.travelerId)!

@@ -15,7 +15,8 @@ import {
   useToast,
 } from '@/components/ui'
 import { Confetti, SuccessBurst, SuccessMark } from '@/components/viz/Illustrations'
-import { TRIPS, cityName, travelerById } from '@/lib/data'
+import { cityName, travelerById } from '@/lib/data'
+import { useTrip } from '@/lib/store'
 import { inr, time } from '@/lib/format'
 import { cn } from '@/lib/cn'
 
@@ -39,7 +40,7 @@ export default function RideComplete() {
   const [tip, setTip] = useState(0)
   const [submitting, setSubmitting] = useState(false)
 
-  const trip = TRIPS.find((t) => t.id === id)
+  const trip = useTrip(id)
   if (!trip) return <Navigate to="/passenger" replace />
 
   const driver = travelerById(trip.travelerId)!

@@ -1,14 +1,26 @@
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react'
-import { NOTIFICATIONS, PARCELS, quote, resolveHub, type PriceBreakdown } from './data'
-import type { NotificationItem, Parcel, ParcelSize, ParcelStatus, Role } from './types'
+  NOTIFICATIONS,
+  PARCELS,
+  TRAVELERS,
+  TRIPS,
+  newTimeline,
+  quote,
+  resolveHub,
+  type PriceBreakdown,
+} from './data'
+import type {
+  DeliveryMode,
+  NotificationItem,
+  Parcel,
+  ParcelSize,
+  ParcelStatus,
+  Role,
+  Traveler,
+  Trip,
+} from './types'
 import { useLocalStorage } from './hooks'
+import { useAuth } from './auth'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    App-wide state: session, the in-progress booking draft, wallet, parcels.
@@ -17,6 +29,10 @@ import { useLocalStorage } from './hooks'
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface BookingDraft {
+  /** Hub-to-hub (drop at a hub) or P2P (traveler collects from your door). */
+  mode: DeliveryMode
+  pickupAddress: string
+  dropAddress: string
   fromCityId: string
   toCityId: string
   originHubId: string | null
@@ -36,6 +52,9 @@ export interface BookingDraft {
 }
 
 export const EMPTY_DRAFT: BookingDraft = {
+  mode: 'hub',
+  pickupAddress: '',
+  dropAddress: '',
   fromCityId: 'blr',
   toCityId: 'mys',
   originHubId: null,
@@ -61,13 +80,14 @@ export interface SessionUser {
   since: string
 }
 
+const MONTH_YEAR: Intl.DateTimeFormatOptions = { month: 'long', year: 'numeric' }
+
 interface AppState {
   /* session */
   user: SessionUser
   role: Role
   setRole: (r: Role) => void
   authed: boolean
-  signIn: (phone: string) => void
   signOut: () => void
   onboarded: boolean
   completeOnboarding: () => void
@@ -93,6 +113,16 @@ interface AppState {
     detail?: { actor?: string; location?: string; photos?: number; travelerId?: string },
   ) => void
 
+  /* trips — the driver's published rides, shared with the passenger portal */
+  trips: Trip[]
+  /** Publish a ride, optionally dated days ahead. Returns the new trip id. */
+  publishTrip: (t: Omit<Trip, 'id' | 'status' | 'parcelIds'>) => string
+  /** Driver taps "Start trip" on the day — moves published → running. */
+  startTrip: (id: string) => void
+  cancelTrip: (id: string) => void
+  /** A passenger takes seats on a trip. */
+  bookSeats: (tripId: string, seats: number) => void
+
   /* wallet */
   balance: number
   addMoney: (amount: number) => void
@@ -109,12 +139,15 @@ interface AppState {
 const AppContext = createContext<AppState | null>(null)
 
 let bookingCounter = 4870
+let tripCounter = 9060
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useLocalStorage<Role>('dikkiconnect.role', 'sender')
-  const [authed, setAuthed] = useState(false)
   const [onboarded, setOnboarded] = useLocalStorage('dikkiconnect.onboarded', false)
-  const [phone, setPhone] = useState('9845067890')
+
+  // The session lives in <AuthProvider> — real per-number accounts, so the
+  // name on a booking is the name of whoever is actually signed in.
+  const { account, authed, signOut } = useAuth()
 
   const [draft, setDraft] = useState<BookingDraft>(EMPTY_DRAFT)
 
@@ -122,6 +155,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // reopen as the hub manager, and it is still sitting in the intake queue.
   const [parcels, setParcels] = useLocalStorage<Parcel[]>('dikkiconnect.parcels', PARCELS)
   const [lastBookedId, setLastBookedId] = useState<string | null>(null)
+  const [trips, setTrips] = useLocalStorage<Trip[]>('dikkiconnect.trips', TRIPS)
   const [balance, setBalance] = useLocalStorage('dikkiconnect.balance', 1240)
   const [notifications, setNotifications] = useLocalStorage<NotificationItem[]>(
     'dikkiconnect.notifications',
@@ -153,13 +187,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const now = new Date().toISOString()
     const parcel: Parcel = {
       id,
-      senderName: 'Aditi Sharma',
+      mode: draft.mode,
+      senderName: account?.name ?? 'You',
       receiverName: draft.receiverName || 'Receiver',
       receiverPhone: draft.receiverPhone || '9000000000',
       fromCityId: draft.fromCityId,
       toCityId: draft.toCityId,
       originHubId: resolveHub(draft.originHubId, draft.fromCityId).id,
       destinationHubId: resolveHub(draft.destinationHubId, draft.toCityId).id,
+      pickupAddress: draft.mode === 'p2p' ? draft.pickupAddress : undefined,
+      dropAddress: draft.mode === 'p2p' ? draft.dropAddress : undefined,
       category: draft.category,
       size: draft.size,
       weightKg: draft.weightKg,
@@ -170,56 +207,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       bookedAt: now,
       etaAt: new Date(Date.now() + 20 * 3_600_000).toISOString(),
       price: price.total,
-      timeline: [
-        {
-          id: 'ev-0',
-          status: 'booked',
-          title: 'Booking confirmed',
-          detail: 'Payment received. Drop-off OTP sent to your phone.',
-          at: now,
-          done: true,
-        },
-        {
-          id: 'ev-1',
-          status: 'at_origin_hub',
-          title: 'Drop at origin hub',
-          detail: 'Hub manager will weigh, photograph and verify your OTP.',
-          at: null,
-          done: false,
-        },
-        {
-          id: 'ev-2',
-          status: 'assigned',
-          title: 'Matched with a traveler',
-          detail: 'We are finding a verified traveler on your route.',
-          at: null,
-          done: false,
-        },
-        {
-          id: 'ev-3',
-          status: 'in_transit',
-          title: 'Picked up · in transit',
-          detail: 'Custody moves from hub to traveler.',
-          at: null,
-          done: false,
-        },
-        {
-          id: 'ev-4',
-          status: 'at_destination_hub',
-          title: 'Arrives at destination hub',
-          detail: 'Receiver OTP is sent once the parcel lands.',
-          at: null,
-          done: false,
-        },
-        {
-          id: 'ev-5',
-          status: 'delivered',
-          title: 'Collected by receiver',
-          detail: 'Receiver OTP closes the delivery loop.',
-          at: null,
-          done: false,
-        },
-      ],
+      timeline: newTimeline(draft.mode, now),
     }
 
     setParcels((p) => [parcel, ...p])
@@ -240,7 +228,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ])
 
     return id
-  }, [draft, price.total, setParcels, setBalance, setNotifications])
+  }, [account, draft, price.total, setParcels, setBalance, setNotifications])
 
   /* ── Custody chain ─────────────────────────────────────────────────────
      Marks every timeline node up to `to` as done, stamping the one that just
@@ -300,22 +288,69 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [setParcels, setNotifications],
   )
 
+  /* ── Trips ─────────────────────────────────────────────────────────────
+     A ride published here is immediately searchable in the passenger portal —
+     the two roles read the same list, which is what makes "post in advance"
+     mean something rather than just showing a toast.                        */
+  const publishTrip = useCallback<AppState['publishTrip']>(
+    (t) => {
+      const id = `TRP-${++tripCounter}`
+      setTrips((list) => [{ ...t, id, status: 'published', parcelIds: [] }, ...list])
+      setNotifications((n) => [
+        {
+          id: `n-${id}`,
+          title: 'Ride published',
+          body: `Your ${new Date(t.departAt).toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+          })} ride is live. We'll notify you as seats and parcels come in.`,
+          at: new Date().toISOString(),
+          read: false,
+          kind: 'ride' as const,
+          href: '/traveler/trips',
+        },
+        ...n,
+      ])
+      return id
+    },
+    [setTrips, setNotifications],
+  )
+
+  const startTrip = useCallback(
+    (id: string) =>
+      setTrips((list) => list.map((t) => (t.id === id ? { ...t, status: 'running' } : t))),
+    [setTrips],
+  )
+
+  const cancelTrip = useCallback(
+    (id: string) => setTrips((list) => list.filter((t) => t.id !== id)),
+    [setTrips],
+  )
+
+  const bookSeats = useCallback(
+    (tripId: string, seats: number) =>
+      setTrips((list) =>
+        list.map((t) =>
+          t.id === tripId ? { ...t, seatsLeft: Math.max(0, t.seatsLeft - seats) } : t,
+        ),
+      ),
+    [setTrips],
+  )
+
   const value = useMemo<AppState>(
     () => ({
       user: {
-        name: 'Aditi Sharma',
-        phone,
-        email: 'aditi.sharma@gmail.com',
-        since: 'March 2025',
+        name: account?.name ?? 'Guest',
+        phone: account?.phone ?? '',
+        email: account?.email ?? '',
+        since: account
+          ? new Date(account.createdAt).toLocaleDateString('en-IN', MONTH_YEAR)
+          : '—',
       },
       role,
       setRole,
       authed,
-      signIn: (p: string) => {
-        setPhone(p || '9845067890')
-        setAuthed(true)
-      },
-      signOut: () => setAuthed(false),
+      signOut,
       onboarded,
       completeOnboarding: () => setOnboarded(true),
 
@@ -328,6 +363,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       lastBookedId,
       commitBooking,
       advanceParcel,
+
+      trips,
+      publishTrip,
+      startTrip,
+      cancelTrip,
+      bookSeats,
 
       balance,
       addMoney: (a: number) => setBalance((b) => b + a),
@@ -355,10 +396,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setNotifications((n) => n.map((x) => (x.id === id ? { ...x, read: true } : x))),
     }),
     [
-      phone,
+      account,
       role,
       setRole,
       authed,
+      signOut,
       onboarded,
       setOnboarded,
       draft,
@@ -369,6 +411,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       lastBookedId,
       commitBooking,
       advanceParcel,
+      trips,
+      publishTrip,
+      startTrip,
+      cancelTrip,
+      bookSeats,
       balance,
       setBalance,
       notifications,
@@ -392,6 +439,7 @@ export function useHubInventory(hubId?: string) {
       parcels
         .filter(
           (p) =>
+            p.mode === 'hub' &&
             (p.status === 'at_origin_hub' || p.status === 'assigned') &&
             (!hubId || p.originHubId === hubId),
         )
@@ -404,7 +452,10 @@ export function useHubInventory(hubId?: string) {
 export function useAwaitingIntake(hubId?: string) {
   const { parcels } = useApp()
   return useMemo(
-    () => parcels.filter((p) => p.status === 'booked' && (!hubId || p.originHubId === hubId)),
+    () =>
+      parcels.filter(
+        (p) => p.mode === 'hub' && p.status === 'booked' && (!hubId || p.originHubId === hubId),
+      ),
     [parcels, hubId],
   )
 }
@@ -415,7 +466,10 @@ export function useAwaitingPickup(hubId?: string) {
   return useMemo(
     () =>
       parcels.filter(
-        (p) => p.status === 'at_destination_hub' && (!hubId || p.destinationHubId === hubId),
+        (p) =>
+          p.mode === 'hub' &&
+          p.status === 'at_destination_hub' &&
+          (!hubId || p.destinationHubId === hubId),
       ),
     [parcels, hubId],
   )
@@ -425,7 +479,12 @@ export function useAwaitingPickup(hubId?: string) {
 export function useOpenJobs() {
   const { parcels } = useApp()
   return useMemo(
-    () => parcels.filter((p) => p.status === 'at_origin_hub' && !p.travelerId),
+    () =>
+      parcels.filter(
+        (p) =>
+          !p.travelerId &&
+          (p.mode === 'p2p' ? p.status === 'booked' : p.status === 'at_origin_hub'),
+      ),
     [parcels],
   )
 }
@@ -439,6 +498,58 @@ export function useManifest(travelerId?: string) {
         (p) => p.status === 'in_transit' && (!travelerId || p.travelerId === travelerId),
       ),
     [parcels, travelerId],
+  )
+}
+
+/** Every ride a driver has published, soonest departure first. */
+export function useTrips() {
+  const { trips } = useApp()
+  return useMemo(
+    () => [...trips].sort((a, b) => +new Date(a.departAt) - +new Date(b.departAt)),
+    [trips],
+  )
+}
+
+/** One trip by id, live from the ledger. */
+export function useTrip(id?: string) {
+  const { trips } = useApp()
+  return useMemo(() => trips.find((t) => t.id === id), [trips, id])
+}
+
+/**
+ * A driver's own rides split by where they are in their life cycle. Scheduled
+ * rides are the ones published in advance that have not started yet.
+ */
+export function useMyTrips(travelerId: string) {
+  const trips = useTrips()
+  return useMemo(() => {
+    const mine = trips.filter((t) => t.travelerId === travelerId)
+    return {
+      scheduled: mine.filter((t) => t.status === 'published' || t.status === 'draft'),
+      running: mine.filter((t) => t.status === 'running'),
+      completed: mine.filter((t) => t.status === 'completed'),
+      all: mine,
+    }
+  }, [trips, travelerId])
+}
+
+/**
+ * The signed-in person as a driver. Identity (name, phone) comes from their
+ * account; vehicle, rating and trip history come from the driver record, which
+ * is what a real KYC + RC verification would populate.
+ */
+export function useMe(): Traveler {
+  const { account } = useAuth()
+  return useMemo(
+    () => ({
+      ...TRAVELERS[0],
+      // The id stays the fixture's: it is the key the seeded trips, manifests
+      // and payout history hang off, so a new sign-in inherits a populated
+      // portal rather than an empty one. Everything the user sees is theirs.
+      name: account?.name ?? TRAVELERS[0].name,
+      phone: account?.phone ?? TRAVELERS[0].phone,
+    }),
+    [account],
   )
 }
 

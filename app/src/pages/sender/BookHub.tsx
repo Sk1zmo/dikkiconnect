@@ -1,8 +1,17 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Clock, Navigation } from 'lucide-react'
+import { ArrowRight, Clock, Home, Navigation } from 'lucide-react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
-import { ActionBar, Button, Card, Note, Segmented, Skeleton, Stepper } from '@/components/ui'
+import {
+  ActionBar,
+  Button,
+  Card,
+  Note,
+  Segmented,
+  Skeleton,
+  Stepper,
+  TextArea,
+} from '@/components/ui'
 import { HubCard } from '@/components/domain/Cards'
 import { HubMap } from '@/components/viz/Map'
 import { cityName, hubsInCity } from '@/lib/data'
@@ -30,7 +39,77 @@ export default function BookHub() {
 
   const selectedId = side === 'origin' ? draft.originHubId : draft.destinationHubId
   const activeIndex = Math.max(0, list.findIndex((h) => h.id === selectedId))
-  const ready = Boolean(draft.originHubId && draft.destinationHubId)
+  const isP2P = draft.mode === 'p2p'
+  const ready = isP2P
+    ? draft.pickupAddress.trim().length > 8 && draft.dropAddress.trim().length > 8
+    : Boolean(draft.originHubId && draft.destinationHubId)
+
+  /* ── P2P: no hubs involved, so collect the two door addresses instead ── */
+  if (isP2P) {
+    return (
+      <Screen>
+        <TopBar back title="Pickup & drop" subtitle="Step 3 of 5" />
+
+        <div className="shrink-0 px-5 pb-4">
+          <Stepper steps={BOOK_STEPS} current={2} />
+        </div>
+
+        <ScreenBody>
+          <Note tone="brand" icon={<Home size={15} />} title="Door to door">
+            A verified traveler collects from your address and hands it to the receiver at theirs.
+            No hub in between — two OTP checkpoints instead of four.
+          </Note>
+
+          <div className="mt-5">
+            <TextArea
+              label={`Pickup address in ${cityName(draft.fromCityId)}`}
+              placeholder="Flat / house, street, area, landmark"
+              rows={3}
+              value={draft.pickupAddress}
+              onChange={(e) => patchDraft({ pickupAddress: e.target.value })}
+              hint="Shared with the traveler only after they accept the job."
+            />
+          </div>
+
+          <div className="mt-2">
+            <TextArea
+              label={`Delivery address in ${cityName(draft.toCityId)}`}
+              placeholder="Flat / house, street, area, landmark"
+              rows={3}
+              value={draft.dropAddress}
+              onChange={(e) => patchDraft({ dropAddress: e.target.value })}
+              hint="The receiver gets an OTP to hand over at their door."
+            />
+          </div>
+
+          <Note tone="neutral" icon={<Clock size={15} />} className="mt-5" title="Timing">
+            Door pickups are matched to travelers already driving your route, so collection is
+            usually within a few hours rather than immediate.
+          </Note>
+        </ScreenBody>
+
+        <ActionBar
+          helper={
+            !ready ? (
+              <p className="text-[11.5px] font-semibold text-ink-500">
+                Enter both addresses to continue
+              </p>
+            ) : undefined
+          }
+        >
+          <Button
+            block
+            size="lg"
+            disabled={!ready}
+            onClick={() => navigate('/sender/book/review')}
+            iconRight={<ArrowRight size={18} />}
+          >
+            Review booking
+          </Button>
+        </ActionBar>
+      </Screen>
+    )
+  }
 
   return (
     <Screen>

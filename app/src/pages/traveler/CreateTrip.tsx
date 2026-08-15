@@ -1,6 +1,15 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, ArrowUpDown, Calendar, Car, Check, Package, Users } from 'lucide-react'
+import {
+  ArrowRight,
+  ArrowUpDown,
+  CalendarClock,
+  Calendar,
+  Car,
+  Check,
+  Package,
+  Users,
+} from 'lucide-react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -16,20 +25,41 @@ import {
   useToast,
 } from '@/components/ui'
 import { RouteMap } from '@/components/viz/Map'
-import { CITIES, TRAVELERS, corridorKm } from '@/lib/data'
+import { CITIES, corridorKm } from '@/lib/data'
 import { inr } from '@/lib/format'
+import { useApp, useMe } from '@/lib/store'
+import { cn } from '@/lib/cn'
+
+/** yyyy-mm-dd for today + n days, in local time (not UTC — dates must not slip). */
+function isoDay(offset: number) {
+  const d = new Date()
+  d.setDate(d.getDate() + offset)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate(),
+  ).padStart(2, '0')}`
+}
+
+const WHEN_PRESETS = [
+  { label: 'Today', offset: 0 },
+  { label: 'Tomorrow', offset: 1 },
+  { label: 'In 2 days', offset: 2 },
+  { label: 'This weekend', offset: (6 - new Date().getDay() + 7) % 7 || 7 },
+]
 
 const STEPS = ['Route', 'Capacity', 'Publish']
-const ME = TRAVELERS[0]
 
 export default function CreateTrip() {
+  const ME = useMe()
   const navigate = useNavigate()
   const toast = useToast()
+  const { publishTrip } = useApp()
 
   const [step, setStep] = useState(0)
   const [from, setFrom] = useState('blr')
   const [to, setTo] = useState('mys')
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  // Defaults to tomorrow: publishing ahead of the drive is the normal case,
+  // which is what gives passengers and hubs time to match onto the ride.
+  const [date, setDate] = useState(() => isoDay(1))
   const [depart, setDepart] = useState('14:30')
   const [seats, setSeats] = useState(3)
   const [bootSlots, setBootSlots] = useState(2)
@@ -43,12 +73,41 @@ export default function CreateTrip() {
   const fuelShare = Math.round((km * 7.2) / Math.max(1, seats + 1))
   const sameCity = from === to
 
+  const departAt = new Date(`${date}T${depart}:00`)
+  const driveHours = km / 45
+  const arriveAt = new Date(departAt.getTime() + driveHours * 3_600_000)
+  const daysAhead = Math.round(
+    (new Date(`${date}T00:00:00`).getTime() - new Date(isoDay(0) + 'T00:00:00').getTime()) /
+      86_400_000,
+  )
+  const inPast = departAt.getTime() < Date.now() - 60_000
+  const whenLabel =
+    daysAhead <= 0 ? 'today' : daysAhead === 1 ? 'tomorrow' : `in ${daysAhead} days`
+
   const publish = () => {
     setPublishing(true)
     setTimeout(() => {
-      toast.success('Trip published', 'Matching parcels and passengers on your route now.')
+      const bootSizes: Array<'S' | 'M' | 'L'> = carryParcels
+        ? Array.from({ length: bootSlots }, () => maxSize)
+        : []
+      publishTrip({
+        travelerId: ME.id,
+        fromCityId: from,
+        toCityId: to,
+        departAt: departAt.toISOString(),
+        arriveAt: arriveAt.toISOString(),
+        seatsTotal: carryPassengers ? seats : 0,
+        seatsLeft: carryPassengers ? seats : 0,
+        bootSlots: bootSizes,
+        farePerSeat: carryPassengers ? fare : 0,
+        viaStops: [],
+      })
+      toast.success(
+        daysAhead > 0 ? `Ride published for ${whenLabel}` : 'Ride published',
+        'Passengers can book it now — start it when you set off.',
+      )
       navigate('/traveler/trips', { replace: true })
-    }, 1300)
+    }, 1100)
   }
 
   const cityOptions = CITIES.map((c) => ({ value: c.id, label: `${c.name}, ${c.state}` }))
@@ -111,21 +170,68 @@ export default function CreateTrip() {
               </Note>
             )}
 
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <Field
-                label="Date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                prefix={<Calendar size={15} />}
-              />
-              <Field
-                label="Departure"
-                type="time"
-                value={depart}
-                onChange={(e) => setDepart(e.target.value)}
-              />
+            {/* ── When ────────────────────────────────────────────────── */}
+            <div className="mt-5">
+              <div className="mb-2.5 flex items-baseline justify-between">
+                <p className="text-[12px] font-bold tracking-wide text-ink-400 uppercase">
+                  When are you driving?
+                </p>
+                <span className="text-[11.5px] font-semibold text-brand-700">
+                  Post it in advance
+                </span>
+              </div>
+
+              <div className="no-scrollbar -mx-5 mb-3 flex gap-2 overflow-x-auto px-5">
+                {WHEN_PRESETS.map((w) => {
+                  const value = isoDay(w.offset)
+                  const active = date === value
+                  return (
+                    <button
+                      key={w.label}
+                      onClick={() => setDate(value)}
+                      className={cn(
+                        'pressable-sm shrink-0 rounded-full border px-3.5 py-2 text-[12.5px] font-semibold transition-colors',
+                        active
+                          ? 'border-brand-600 bg-brand-600 text-white shadow-(--shadow-brand-sm)'
+                          : 'border-ink-200 bg-white text-ink-600 hover:border-ink-300',
+                      )}
+                    >
+                      {w.label}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field
+                  label="Date"
+                  type="date"
+                  value={date}
+                  min={isoDay(0)}
+                  onChange={(e) => setDate(e.target.value)}
+                  prefix={<Calendar size={15} />}
+                />
+                <Field
+                  label="Departure"
+                  type="time"
+                  value={depart}
+                  onChange={(e) => setDepart(e.target.value)}
+                />
+              </div>
             </div>
+
+            {inPast ? (
+              <Note tone="warn" className="mt-3">
+                That departure time has already passed. Pick a later time so passengers can still
+                find and book the ride.
+              </Note>
+            ) : (
+              <Note tone="brand" icon={<CalendarClock size={15} />} className="mt-3" title={`Departs ${whenLabel}`}>
+                {daysAhead > 0
+                  ? 'Publishing early is how you fill the car. The ride goes live now and you start it from My trips when you actually set off.'
+                  : 'Same-day rides are matched immediately, but posting a day or two ahead fills far more seats and boot slots.'}
+              </Note>
+            )}
 
             <Card className="mt-2 flex items-center gap-3.5">
               <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-50 text-brand-600">
@@ -194,7 +300,7 @@ export default function CreateTrip() {
                     >
                       <span className="block text-[18px] font-extrabold">{s}</span>
                       <span className="mt-0.5 block text-[10.5px] font-semibold">
-                        {s === 'S' ? '≤3 kg' : s === 'M' ? '≤10 kg' : '≤25 kg'}
+                        {s === 'S' ? '≤3 kg' : s === 'M' ? '≤10 kg' : '≤20 kg'}
                       </span>
                     </button>
                   ))}
@@ -251,7 +357,15 @@ export default function CreateTrip() {
                 value={`${CITIES.find((c) => c.id === from)?.name} → ${CITIES.find((c) => c.id === to)?.name}`}
               />
               <KeyValue label="Distance" value={`${km} km`} />
-              <KeyValue label="Departs" value={`${date} · ${depart}`} />
+              <KeyValue
+                label="Departs"
+                value={`${departAt.toLocaleDateString('en-IN', {
+                  weekday: 'short',
+                  day: 'numeric',
+                  month: 'short',
+                })} · ${depart}`}
+              />
+              <KeyValue label="Goes live" value={daysAhead > 0 ? `Now — ${whenLabel}` : 'Now'} />
               <KeyValue label="Vehicle" value={`${ME.vehicle.model} · ${ME.vehicle.plate}`} />
               <div className="my-2 h-px bg-ink-100" />
               <KeyValue
@@ -287,9 +401,11 @@ export default function CreateTrip() {
               </div>
             </Card>
 
-            <Note tone="neutral" className="mt-3">
-              Once published, travelers can book seats immediately and we start matching parcels at
-              hubs on your corridor. You can edit or cancel until departure.
+            <Note tone="neutral" icon={<CalendarClock size={15} />} className="mt-3" title="Published now, driven later">
+              The ride goes live the moment you publish, so passengers can book and parcels can be
+              matched {daysAhead > 0 ? `over the next ${daysAhead === 1 ? 'day' : `${daysAhead} days`}` : 'right away'}.
+              Tap <span className="font-bold">Start trip</span> in My trips when you actually set
+              off. You can cancel any time before that.
             </Note>
           </div>
         )}
@@ -300,7 +416,10 @@ export default function CreateTrip() {
           <Button
             block
             size="lg"
-            disabled={(step === 0 && sameCity) || (step === 1 && !carryParcels && !carryPassengers)}
+            disabled={
+              (step === 0 && (sameCity || inPast)) ||
+              (step === 1 && !carryParcels && !carryPassengers)
+            }
             onClick={() => setStep((s) => s + 1)}
             iconRight={<ArrowRight size={18} />}
           >
@@ -308,7 +427,7 @@ export default function CreateTrip() {
           </Button>
         ) : (
           <Button block size="lg" loading={publishing} onClick={publish} icon={<Check size={18} />}>
-            {publishing ? 'Publishing…' : 'Publish trip'}
+            {publishing ? 'Publishing…' : daysAhead > 0 ? `Publish for ${whenLabel}` : 'Publish trip'}
           </Button>
         )}
       </ActionBar>

@@ -1,6 +1,7 @@
 import { lazy } from 'react'
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { AppProvider, useApp } from '@/lib/store'
+import { AuthProvider, useAuth } from '@/lib/auth'
 import { ToastProvider } from '@/components/ui'
 import { DeviceShell, FlowLayout, RoleLayout, ScrollReset } from '@/components/layout/AppShell'
 
@@ -9,6 +10,7 @@ const Splash = lazy(() => import('@/pages/auth/Splash'))
 const Onboarding = lazy(() => import('@/pages/auth/Onboarding'))
 const Login = lazy(() => import('@/pages/auth/Login'))
 const Otp = lazy(() => import('@/pages/auth/Otp'))
+const Signup = lazy(() => import('@/pages/auth/Signup'))
 const RoleSelect = lazy(() => import('@/pages/auth/RoleSelect'))
 
 /* ── Sender ───────────────────────────────────────────────────────────────── */
@@ -76,19 +78,22 @@ export default function App() {
   // The admin console is a desktop product — it renders outside the phone shell.
   if (location.pathname.startsWith('/admin')) {
     return (
-      <AppProvider>
-        <ToastProvider>
-          <Routes>
-            <Route path="/admin/*" element={<AdminApp />} />
-          </Routes>
-        </ToastProvider>
-      </AppProvider>
+      <AuthProvider>
+        <AppProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/admin/*" element={<AdminApp />} />
+            </Routes>
+          </ToastProvider>
+        </AppProvider>
+      </AuthProvider>
     )
   }
 
   return (
-    <AppProvider>
-      <DeviceShell>
+    <AuthProvider>
+      <AppProvider>
+        <DeviceShell>
         <ToastProvider>
           <ScrollReset />
           <Routes>
@@ -98,8 +103,12 @@ export default function App() {
               <Route path="/auth/onboarding" element={<Onboarding />} />
               <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/otp" element={<Otp />} />
+              <Route path="/auth/signup" element={<Signup />} />
               <Route path="/auth/role" element={<RoleSelect />} />
             </Route>
+
+            {/* Everything past this point needs a verified account */}
+            <Route element={<RequireAuth />}>
 
             {/* Sender — tabbed */}
             <Route element={<RoleLayout role="sender" />}>
@@ -179,12 +188,28 @@ export default function App() {
               <Route path="/404" element={<NotFound />} />
             </Route>
 
+            </Route>
+
             <Route path="*" element={<Navigate to="/404" replace />} />
           </Routes>
         </ToastProvider>
-      </DeviceShell>
-    </AppProvider>
+        </DeviceShell>
+      </AppProvider>
+    </AuthProvider>
   )
+}
+
+/**
+ * Auth gate. Without a signed-in account every portal route bounces to the
+ * login screen, remembering where you were headed.
+ */
+function RequireAuth() {
+  const { authed } = useAuth()
+  const location = useLocation()
+  if (!authed) {
+    return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />
+  }
+  return <Outlet />
 }
 
 /** Wallet and Profile are shared, so the tab bar follows whichever role is active. */

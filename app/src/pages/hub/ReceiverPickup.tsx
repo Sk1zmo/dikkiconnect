@@ -17,8 +17,11 @@ import {
 } from '@/components/ui'
 import { PhotoCapture } from '@/components/viz/Scanner'
 import { SuccessBurst, SuccessMark } from '@/components/viz/Illustrations'
-import { HUB_HANDLING_FEE, categoryById } from '@/lib/data'
-import { inr, phone as fmtPhone } from '@/lib/format'
+import { HUB_HANDLING_FEE, categoryById, otpFor } from '@/lib/data'
+import { inr, phone as fmtPhone, relative } from '@/lib/format'
+import { useApp, useAwaitingPickup } from '@/lib/store'
+import { useOtpGate } from '@/lib/otp'
+import { OtpHelper } from '@/components/domain/OtpHelper'
 
 const STEPS = ['Verify', 'Evidence', 'Delivered']
 
@@ -26,32 +29,47 @@ const STEPS = ['Verify', 'Evidence', 'Delivered']
 export default function ReceiverPickup() {
   const navigate = useNavigate()
   const toast = useToast()
+  const { advanceParcel, earn } = useApp()
+
+  // The oldest parcel actually waiting to be collected at this hub.
+  const parcel = useAwaitingPickup()[0]
 
   const [step, setStep] = useState(0)
   const [code, setCode] = useState('')
-  const [error, setError] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [shots, setShots] = useState(0)
   const [signature, setSignature] = useState(true)
-  const [receiverName, setReceiverName] = useState('Rohit Sharma')
+  const [receiverName, setReceiverName] = useState(parcel?.receiverName ?? '')
 
-  const cat = categoryById('electronics')
+  const cat = categoryById(parcel?.category ?? 'electronics')
+  // Strict: the receiver's code, and nothing else, releases the parcel.
+  const gate = useOtpGate(otpFor((parcel?.id ?? '') + 'recv'))
 
   const verify = (value: string) => {
-    if (value.length < 6) return
+    if (value.length < 6 || verifying) return
     setVerifying(true)
-    setError(false)
     setTimeout(() => {
       setVerifying(false)
-      if (value === '000000') {
-        setError(true)
+      if (!gate.check(value)) {
         setCode('')
         toast.error('Incorrect OTP', 'Do not release the parcel without a matching code.')
         return
       }
       setStep(1)
       toast.success('Receiver verified', 'Capture evidence to close the delivery.')
-    }, 1100)
+    }, 900)
+  }
+
+  /** Evidence captured — close the loop on the shared ledger. */
+  const complete = () => {
+    if (parcel) {
+      advanceParcel(parcel.id, 'delivered', {
+        actor: receiverName || parcel.receiverName,
+        photos: shots,
+      })
+      earn(HUB_HANDLING_FEE, 'Handling fee credited', `${parcel.id} · collected by receiver`)
+    }
+    setStep(2)
   }
 
   /* ── Delivered ───────────────────────────────────────────────────────── */
@@ -77,7 +95,7 @@ export default function ReceiverPickup() {
           </div>
 
           <Card className="mt-8">
-            <KeyValue label="Parcel" value="DKC-4821" />
+            <KeyValue label="Parcel" value={parcel?.id ?? '—'} />
             <KeyValue label="Collected by" value={receiverName} />
             <KeyValue label="Evidence" value={`${shots} photos${signature ? ' + signature' : ''}`} />
             <KeyValue label="Verification" value="OTP matched" tone="success" />
@@ -126,9 +144,12 @@ export default function ReceiverPickup() {
               {cat.emoji}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="tabular truncate text-[14.5px] font-extrabold text-ink-900">DKC-4821</p>
+              <p className="tabular truncate text-[14.5px] font-extrabold text-ink-900">
+                {parcel?.id ?? 'No parcel waiting'}
+              </p>
               <p className="mt-0.5 truncate text-[12px] text-ink-500">
-                {cat.label} · shelf C-02 · arrived 1h ago
+                {cat.label} · shelf C-02 ·{' '}
+                {parcel ? `arrived ${relative(parcel.etaAt)}` : 'nothing ready for collection'}
               </p>
             </div>
             <span className="shrink-0 rounded-full bg-warn-50 px-2.5 py-1 text-[11px] font-bold text-warn-700">
@@ -136,8 +157,8 @@ export default function ReceiverPickup() {
             </span>
           </div>
           <div className="mt-3.5 border-t border-ink-100 pt-3.5">
-            <KeyValue label="Expected receiver" value="Rohit Sharma" />
-            <KeyValue label="Their mobile" value={fmtPhone('9845567890')} />
+            <KeyValue label="Expected receiver" value={parcel?.receiverName ?? '—'} />
+            <KeyValue label="Their mobile" value={fmtPhone(parcel?.receiverPhone ?? '9845567890')} />
           </div>
         </Card>
 
@@ -153,13 +174,21 @@ export default function ReceiverPickup() {
             </p>
 
             <div className="mt-8">
-              <OtpInput value={code} onChange={setCode} onComplete={verify} error={error} />
-              {error && (
+              <OtpInput
+                value={code}
+                onChange={setCode}
+                onComplete={verify}
+                error={Boolean(gate.error)}
+                disabled={gate.locked}
+              />
+              {gate.error && (
                 <p className="anim-fade-in -mt-1 text-center text-[12.5px] font-semibold text-danger-600">
-                  Code didn&apos;t match. Do not hand over the parcel.
+                  {gate.error} Do not hand over the parcel.
                 </p>
               )}
             </div>
+
+            <OtpHelper gate={gate} source="the receiver's phone — sent when the parcel landed" />
 
             <div className="mt-6">
               <Field
@@ -227,7 +256,7 @@ export default function ReceiverPickup() {
             block
             size="lg"
             disabled={shots < 2}
-            onClick={() => setStep(2)}
+            onClick={complete}
             icon={<Camera size={18} />}
           >
             {shots < 2 ? `Capture ${2 - shots} more` : 'Mark as delivered'}

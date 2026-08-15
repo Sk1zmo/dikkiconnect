@@ -12,7 +12,8 @@ import {
   Stars,
 } from '@/components/ui'
 import { RouteMap } from '@/components/viz/Map'
-import { TRIPS, cityName, travelerById } from '@/lib/data'
+import { cityName, travelerById } from '@/lib/data'
+import { useTrips } from '@/lib/store'
 import { dayDate, inr, time } from '@/lib/format'
 import { useDebounced, useLoaded } from '@/lib/hooks'
 import type { Trip } from '@/lib/types'
@@ -24,6 +25,7 @@ export default function AdminTrips() {
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Trip | null>(null)
   const debounced = useDebounced(query, 200)
+  const TRIPS = useTrips()
   const { loading } = useLoaded(TRIPS, 700)
 
   const rows = useMemo(() => {

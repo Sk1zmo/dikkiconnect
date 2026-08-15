@@ -14,6 +14,7 @@ export function OtpInput({
   autoFocus = true,
   size = 'md',
   tone = 'light',
+  disabled = false,
 }: {
   length?: number
   value: string
@@ -23,6 +24,8 @@ export function OtpInput({
   autoFocus?: boolean
   size?: 'sm' | 'md'
   tone?: 'light' | 'dark'
+  /** Locked out after too many wrong attempts. */
+  disabled?: boolean
 }) {
   const refs = useRef<Array<HTMLInputElement | null>>([])
   const [active, setActive] = useState(0)
@@ -102,11 +105,13 @@ export function OtpInput({
             onFocus={() => setActive(i)}
             type="tel"
             inputMode="numeric"
+            disabled={disabled}
             autoComplete={i === 0 ? 'one-time-code' : 'off'}
             aria-label={`Digit ${i + 1}`}
             className={cn(
               'rounded-(--radius-md) border-2 text-center font-extrabold transition-all duration-200 outline-none',
               box,
+              disabled && 'cursor-not-allowed opacity-45',
               tone === 'dark'
                 ? cn(
                     'text-white',

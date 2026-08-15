@@ -1,12 +1,15 @@
 import type {
   ChatMessage,
   City,
+  DeliveryMode,
   Hub,
   HubInventoryItem,
   KycStep,
   NotificationItem,
   Parcel,
   ParcelJob,
+  ParcelStatus,
+  TrackingEvent,
   Traveler,
   Trip,
   WalletTxn,
@@ -216,7 +219,7 @@ export const PARCEL_CATEGORIES = [
 export const PARCEL_SIZES = [
   { id: 'S' as const, label: 'Small', dims: 'Up to 30×20×15 cm', maxKg: 3, base: 79, emoji: '🥡' },
   { id: 'M' as const, label: 'Medium', dims: 'Up to 45×35×25 cm', maxKg: 10, base: 139, emoji: '📦' },
-  { id: 'L' as const, label: 'Large', dims: 'Up to 60×45×40 cm', maxKg: 25, base: 249, emoji: '🗄️' },
+  { id: 'L' as const, label: 'Large', dims: 'Up to 60×45×40 cm', maxKg: 20, base: 249, emoji: '🗄️' },
 ]
 
 /** Per the PRD's trust & safety layer — sender must accept this before booking. */
@@ -318,6 +321,7 @@ function chain(stageIndex: number, opts: { traveler?: string; originHub: string;
 export const PARCELS: Parcel[] = [
   {
     id: 'DKC-4821',
+    mode: 'hub',
     senderName: 'Aditi Sharma',
     receiverName: 'Rohit Sharma',
     receiverPhone: '9845567890',
@@ -344,6 +348,7 @@ export const PARCELS: Parcel[] = [
   },
   {
     id: 'DKC-4796',
+    mode: 'hub',
     senderName: 'Aditi Sharma',
     receiverName: 'Meera Iyer',
     receiverPhone: '9900112233',
@@ -367,6 +372,7 @@ export const PARCELS: Parcel[] = [
   },
   {
     id: 'DKC-4703',
+    mode: 'hub',
     senderName: 'Aditi Sharma',
     receiverName: 'Nikhil Verma',
     receiverPhone: '9812345678',
@@ -392,6 +398,7 @@ export const PARCELS: Parcel[] = [
   },
   {
     id: 'DKC-4655',
+    mode: 'hub',
     senderName: 'Aditi Sharma',
     receiverName: 'Sanjay Pillai',
     receiverPhone: '9845009988',
@@ -417,6 +424,7 @@ export const PARCELS: Parcel[] = [
   },
   {
     id: 'DKC-4610',
+    mode: 'hub',
     senderName: 'Aditi Sharma',
     receiverName: 'Priya Das',
     receiverPhone: '9611223344',
@@ -511,8 +519,11 @@ export const PARCEL_JOBS: ParcelJob[] = [
   {
     id: 'JOB-311',
     parcelId: 'DKC-4796',
+    mode: 'hub',
     fromHubId: 'hub-blr-jay',
     toHubId: 'hub-mys-vij',
+    fromLabel: 'Jayanagar',
+    toLabel: 'Vijayanagar',
     size: 'S',
     weightKg: 0.4,
     payout: 62,
@@ -524,8 +535,11 @@ export const PARCEL_JOBS: ParcelJob[] = [
   {
     id: 'JOB-312',
     parcelId: 'DKC-4844',
+    mode: 'hub',
     fromHubId: 'hub-blr-kor',
     toHubId: 'hub-mys-sar',
+    fromLabel: 'Koramangala',
+    toLabel: 'Saraswathipuram',
     size: 'M',
     weightKg: 4.6,
     payout: 118,
@@ -537,8 +551,11 @@ export const PARCEL_JOBS: ParcelJob[] = [
   {
     id: 'JOB-313',
     parcelId: 'DKC-4851',
+    mode: 'hub',
     fromHubId: 'hub-blr-kor',
     toHubId: 'hub-mys-sar',
+    fromLabel: 'Koramangala',
+    toLabel: 'Saraswathipuram',
     size: 'L',
     weightKg: 11.2,
     payout: 214,
@@ -550,8 +567,11 @@ export const PARCEL_JOBS: ParcelJob[] = [
   {
     id: 'JOB-314',
     parcelId: 'DKC-4858',
+    mode: 'hub',
     fromHubId: 'hub-blr-elc',
     toHubId: 'hub-mys-vij',
+    fromLabel: 'Electronic City',
+    toLabel: 'Vijayanagar',
     size: 'S',
     weightKg: 1.1,
     payout: 74,
@@ -815,27 +835,75 @@ export function quote(input: {
  * two sides of the marketplace always reconcile.
  */
 export function jobFromParcel(p: Parcel): ParcelJob {
+  const isP2P = p.mode === 'p2p'
   const from = hubById(p.originHubId)
   const to = hubById(p.destinationHubId)
-  const detourKm = Number(((from?.distanceKm ?? 2) + (to?.distanceKm ?? 2)).toFixed(1))
+
+  // A door pickup always costs the driver more deviation than a hub that sits
+  // on the corridor, and the payout carries a premium to match.
+  const detourKm = isP2P
+    ? Number((6 + (p.weightKg > 10 ? 2 : 0)).toFixed(1))
+    : Number(((from?.distanceKm ?? 2) + (to?.distanceKm ?? 2)).toFixed(1))
+
+  // P2P is claimable from booking; hub jobs only once the hub has taken custody.
+  const openedAt = isP2P
+    ? p.bookedAt
+    : (p.timeline.find((e) => e.status === 'at_origin_hub')?.at ?? p.bookedAt)
 
   return {
     id: `JOB-${p.id.replace(/\D/g, '').slice(-4)}`,
     parcelId: p.id,
+    mode: p.mode,
     fromHubId: p.originHubId,
     toHubId: p.destinationHubId,
+    fromLabel: isP2P ? (p.pickupAddress ?? cityName(p.fromCityId)) : hubShort(p.originHubId),
+    toLabel: isP2P ? (p.dropAddress ?? cityName(p.toCityId)) : hubShort(p.destinationHubId),
     size: p.size,
     weightKg: p.weightKg,
-    payout: Math.round(p.price * 0.62),
+    // No hub fees to fund on a door run, so more of the fare reaches the driver.
+    payout: Math.round(p.price * (isP2P ? 0.72 : 0.62)),
     detourKm,
-    // Holds for 45 minutes from intake, per the matching rules.
+    // Holds for 45 minutes once it becomes claimable. Seeded parcels can have
+    // an opening timestamp older than that, so the floor keeps every open job
+    // showing a live countdown rather than a stale "expired 3h ago".
     expiresAt: new Date(
-      new Date(p.timeline.find((e) => e.status === 'at_origin_hub')?.at ?? p.bookedAt).getTime() +
-        45 * 60_000,
+      Math.max(new Date(openedAt).getTime() + 45 * 60_000, Date.now() + 12 * 60_000),
     ).toISOString(),
     category: p.category,
     fragile: p.fragile,
   }
+}
+
+/**
+ * The custody chain for a new booking. Hub mode has four OTP checkpoints;
+ * P2P has two, because there is no hub taking custody in between (PRD §6).
+ */
+export function newTimeline(mode: DeliveryMode, bookedAt: string): TrackingEvent[] {
+  const node = (
+    id: string,
+    status: ParcelStatus,
+    title: string,
+    detail: string,
+    done = false,
+  ): TrackingEvent => ({ id, status, title, detail, at: done ? bookedAt : null, done })
+
+  if (mode === 'p2p') {
+    return [
+      node('ev-0', 'booked', 'Booking confirmed', 'Payment received. Pickup OTP sent to your phone.', true),
+      node('ev-1', 'assigned', 'Traveler assigned', 'A verified traveler on your route accepted this parcel.'),
+      node('ev-2', 'in_transit', 'Collected from you', 'Traveler verified your OTP at your door and took custody.'),
+      node('ev-3', 'delivered', 'Delivered to receiver', 'Receiver OTP verified at their door. Loop closed.'),
+    ]
+  }
+
+  return [
+    node('ev-0', 'booked', 'Booking confirmed', 'Payment received. Drop-off OTP sent to your phone.', true),
+    node('ev-1', 'at_origin_hub', 'Drop at origin hub', 'Hub manager will weigh, photograph and verify your OTP.'),
+    node('ev-2', 'assigned', 'Matched with a traveler', 'We are finding a verified traveler on your route.'),
+    node('ev-3', 'in_transit', 'Picked up · in transit', 'Custody moves from hub to traveler.'),
+    node('ev-4', 'at_destination_hub', 'Arrives at destination hub', 'Receiver OTP is sent once the parcel lands.'),
+    node('ev-5', 'delivered', 'Collected by receiver', 'Receiver OTP closes the delivery loop.'),
+  ]
 }
 
 /** Deterministic 6-digit OTP so demo flows are reproducible. */

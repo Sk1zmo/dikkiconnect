@@ -1,7 +1,9 @@
 import {
   ArrowRight,
+  Building2,
   Clock,
   Fuel,
+  Home,
   MapPin,
   Package,
   ShieldCheck,
@@ -12,7 +14,7 @@ import {
 import { cn } from '@/lib/cn'
 import { Avatar, Badge, Card, StatusBadge, Stars } from '@/components/ui'
 import { MiniTimeline } from '@/components/viz/Timeline'
-import { categoryById, cityName, hubShort, travelerById } from '@/lib/data'
+import { categoryById, cityName, travelerById } from '@/lib/data'
 import { ageInHub, inr, kg, relative, shortDate, time } from '@/lib/format'
 import type { Hub, Parcel, ParcelJob, Trip } from '@/lib/types'
 
@@ -198,8 +200,15 @@ export function JobCard({
                 </Badge>
               )}
             </div>
-            <p className="mt-1 truncate text-[12px] text-ink-500">
-              {hubShort(job.fromHubId)} → {hubShort(job.toHubId)}
+            <p className="mt-1 flex items-center gap-1.5 text-[12px] text-ink-500">
+              {job.mode === 'p2p' ? (
+                <Home size={12} className="shrink-0 text-brand-600" />
+              ) : (
+                <Building2 size={12} className="shrink-0 text-ink-400" />
+              )}
+              <span className="truncate">
+                {job.fromLabel} → {job.toLabel}
+              </span>
             </p>
           </div>
           <div className="shrink-0 text-right">
@@ -211,6 +220,16 @@ export function JobCard({
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11.5px] font-semibold text-ink-500">
+          <span
+            className={cn(
+              'inline-flex items-center rounded-full px-2 py-0.5 text-[10.5px] font-bold',
+              job.mode === 'p2p'
+                ? 'bg-brand-50 text-brand-700'
+                : 'bg-ink-100 text-ink-600',
+            )}
+          >
+            {job.mode === 'p2p' ? 'Door to door' : 'Hub ↔ Hub'}
+          </span>
           <span className="inline-flex items-center gap-1.5">
             <Fuel size={12} className="text-ink-400" />
             {job.detourKm} km detour

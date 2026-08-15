@@ -77,7 +77,7 @@ export default function AdminSettings() {
               {[
                 { label: 'Small · up to 3 kg', value: smallBase, set: setSmallBase },
                 { label: 'Medium · up to 10 kg', value: mediumBase, set: setMediumBase },
-                { label: 'Large · up to 25 kg', value: largeBase, set: setLargeBase },
+                { label: 'Large · up to 20 kg', value: largeBase, set: setLargeBase },
               ].map((f) => (
                 <div key={f.label}>
                   <p className="mb-2 text-[12.5px] font-semibold text-ink-700">{f.label}</p>

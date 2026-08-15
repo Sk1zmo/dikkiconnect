@@ -130,7 +130,7 @@ export default function BookParcel() {
             value={draft.weightKg}
             onChange={(v) => patchDraft({ weightKg: v })}
             min={0.1}
-            max={25}
+            max={20}
             step={0.5}
             decimals={1}
             suffix="kg"
@@ -250,7 +250,7 @@ export default function BookParcel() {
           onClick={() => navigate('/sender/book/hub')}
           iconRight={<ArrowRight size={18} />}
         >
-          Choose hubs
+          {draft.mode === 'p2p' ? 'Pickup & drop' : 'Choose hubs'}
         </Button>
       </ActionBar>
 

@@ -23,19 +23,25 @@ export default function DropOffQr() {
   const parcel = parcels.find((p) => p.id === id)
   if (!parcel) return <Navigate to="/sender" replace />
 
+  const isP2P = parcel.mode === 'p2p'
   const hub = hubById(parcel.originHubId)
   const cat = categoryById(parcel.category)
-  const otp = otpFor(parcel.id)
+  // Hub mode: the hub manager types this at intake. P2P: the traveler types it
+  // at your door. Different checkpoints, so different codes.
+  const otp = isP2P ? otpFor(parcel.id + 'pick') : otpFor(parcel.id)
 
   return (
     <Screen tone="white">
-      <TopBar back title="Drop-off pass" subtitle={parcel.id} />
+      <TopBar back title={isP2P ? 'Pickup pass' : 'Drop-off pass'} subtitle={parcel.id} />
 
       <ScreenBody>
         <div className="flex flex-col items-center pt-4">
           {ready ? (
             <div className="anim-scale-in">
-              <QrTicket value={`dikkiconnect://parcel/${parcel.id}/dropoff`} caption={parcel.id} />
+              <QrTicket
+                value={`dikkiconnect://parcel/${parcel.id}/${isP2P ? 'pickup' : 'dropoff'}`}
+                caption={parcel.id}
+              />
             </div>
           ) : (
             <div className="flex flex-col items-center">
@@ -51,7 +57,7 @@ export default function DropOffQr() {
         </div>
 
         <Card className="mt-6 border-brand-100 bg-brand-50/60">
-          <OtpDisplay code={otp} label="Drop-off OTP" />
+          <OtpDisplay code={otp} label={isP2P ? 'Show this to the traveler' : 'Drop-off OTP'} />
         </Card>
 
         <Card className="mt-3">

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight, Camera, ShieldCheck } from 'lucide-react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
@@ -14,8 +14,12 @@ import {
 } from '@/components/ui'
 import { PhotoCapture } from '@/components/viz/Scanner'
 import { Confetti, SuccessBurst, SuccessMark } from '@/components/viz/Illustrations'
-import { PARCEL_JOBS, categoryById, hubById, otpFor } from '@/lib/data'
+import { categoryById, hubById, jobFromParcel, otpFor } from '@/lib/data'
 import { inr, kg } from '@/lib/format'
+import { useApp, useManifest, useMe, useOpenJobs } from '@/lib/store'
+import { useOtpGate } from '@/lib/otp'
+import { OtpHelper } from '@/components/domain/OtpHelper'
+
 
 type Stage = 'otp' | 'photos' | 'done'
 
@@ -25,38 +29,82 @@ type Stage = 'otp' | 'photos' | 'done'
  *  · dropoff — traveler SHOWS an OTP the hub manager enters
  */
 export default function HandoffOtp() {
+  const ME = useMe()
   const { mode } = useParams<{ mode: string }>()
   const navigate = useNavigate()
   const toast = useToast()
 
   const isPickup = mode !== 'dropoff'
-  const job = PARCEL_JOBS[1]
-  const cat = categoryById(job.category)
-  const hub = hubById(isPickup ? job.fromHubId : job.toHubId)
+  const { advanceParcel, earn, parcels } = useApp()
+
+  // Pickup works on the parcel this driver has just claimed; drop-off on the
+  // one they are currently carrying. Both come from the shared ledger, so the
+  // OTP belongs to a parcel that genuinely exists.
+  const claimed = parcels.find((p) => p.travelerId === ME.id && p.status === 'assigned')
+  const carrying = useManifest(ME.id)[0]
+  const openFallback = useOpenJobs()[0]
+  const parcel = (isPickup ? claimed ?? openFallback : carrying ?? claimed) ?? parcels[0]
+  const job = parcel ? jobFromParcel(parcel) : null
 
   const [stage, setStage] = useState<Stage>('otp')
   const [code, setCode] = useState('')
-  const [error, setError] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [shots, setShots] = useState(0)
 
-  const expected = otpFor(job.parcelId + (isPickup ? 'pick' : 'drop'))
+  // Hub drop-off is the one checkpoint the driver SHOWS rather than types —
+  // the hub manager keys it in. Everywhere else the driver types.
+  const p2pRoute = parcel?.mode === 'p2p'
+  const entersCode = isPickup || p2pRoute
+  const expected = otpFor(
+    (job?.parcelId ?? '') + (isPickup ? 'pick' : p2pRoute ? 'recv' : 'drop'),
+  )
+  const gate = useOtpGate(expected)
+
+  if (!parcel || !job) return <Navigate to="/traveler/jobs" replace />
+
+  const cat = categoryById(job.category)
+  const isP2P = job.mode === 'p2p'
+  const hub = hubById(isPickup ? job.fromHubId : job.toHubId)
+  const counterpart = isPickup
+    ? isP2P
+      ? "the sender's parcel screen"
+      : "the hub manager's release screen"
+    : isP2P
+      ? "the receiver's collection screen"
+      : "the destination hub's intake screen"
 
   const verify = (value: string) => {
-    if (value.length < 6) return
+    if (value.length < 6 || verifying) return
     setVerifying(true)
-    setError(false)
     setTimeout(() => {
       setVerifying(false)
-      if (value === '000000') {
-        setError(true)
+      if (!gate.check(value)) {
         setCode('')
-        toast.error('Incorrect OTP', 'Ask the hub manager to read it out again.')
+        toast.error('Incorrect OTP', `Ask ${isP2P ? 'them' : 'the hub manager'} to read it again.`)
         return
       }
       setStage('photos')
       toast.success('Custody verified', 'Now capture photo evidence.')
-    }, 1100)
+    }, 900)
+  }
+
+  /** Photo evidence captured — write the handoff to the shared ledger. */
+  const commit = () => {
+    if (isPickup) {
+      advanceParcel(job.parcelId, 'in_transit', {
+        actor: ME.name,
+        location: isP2P ? job.fromLabel : hub?.name,
+        photos: shots,
+      })
+    } else {
+      advanceParcel(job.parcelId, isP2P ? 'delivered' : 'at_destination_hub', {
+        actor: ME.name,
+        location: isP2P ? job.toLabel : hub?.name,
+        photos: shots,
+      })
+      earn(job.payout, 'Delivery payout credited', `${job.parcelId} · handed over`)
+    }
+    setStage('done')
   }
 
   /* ── Success ─────────────────────────────────────────────────────────── */
@@ -159,7 +207,7 @@ export default function HandoffOtp() {
             block
             size="lg"
             disabled={shots < 3}
-            onClick={() => setStage('done')}
+            onClick={commit}
             icon={<Camera size={18} />}
           >
             {shots < 3 ? `Capture ${3 - shots} more` : 'Confirm handoff'}
@@ -175,7 +223,7 @@ export default function HandoffOtp() {
       <TopBar
         back
         title={isPickup ? 'Confirm pickup' : 'Confirm drop-off'}
-        subtitle={hub?.name.split('·').pop()?.trim()}
+        subtitle={isP2P ? (isPickup ? job.fromLabel : job.toLabel) : hub?.name.split('·').pop()?.trim()}
       />
 
       <ScreenBody>
@@ -198,30 +246,37 @@ export default function HandoffOtp() {
           </div>
         </Card>
 
-        {isPickup ? (
+        {entersCode ? (
           <>
             <h2 className="text-display text-[22px] leading-tight font-extrabold text-ink-900">
-              Enter the hub manager&apos;s OTP
+              {!isPickup
+                ? "Enter the receiver's OTP"
+                : isP2P
+                  ? "Enter the sender's OTP"
+                  : "Enter the hub manager's OTP"}
             </h2>
             <p className="mt-2 text-[13.5px] leading-relaxed text-ink-500">
-              They will read out a 6-digit code from their dashboard. Entering it moves custody to
-              you and timestamps the liability shift.
+              {isPickup
+                ? 'They read out a 6-digit code tied to this parcel. Entering it moves custody to you and timestamps the liability shift.'
+                : 'The receiver was sent a code when you set off. Entering it closes the delivery and releases your payout.'}
             </p>
 
             <div className="mt-8">
-              <OtpInput value={code} onChange={setCode} onComplete={verify} error={error} />
-              {error && (
+              <OtpInput
+                value={code}
+                onChange={setCode}
+                onComplete={verify}
+                error={Boolean(gate.error)}
+                disabled={gate.locked}
+              />
+              {gate.error && (
                 <p className="anim-fade-in -mt-1 text-center text-[12.5px] font-semibold text-danger-600">
-                  Code didn&apos;t match. Ask them to regenerate it.
+                  {gate.error}
                 </p>
               )}
             </div>
 
-            <Note tone="neutral" className="mt-7" title="Demo tip">
-              Any 6 digits work. Use <span className="font-mono font-bold">000000</span> to see the
-              failure state. The real code for this parcel is{' '}
-              <span className="font-mono font-bold">{expected}</span>.
-            </Note>
+            <OtpHelper gate={gate} source={counterpart} />
           </>
         ) : (
           <>
@@ -244,15 +299,19 @@ export default function HandoffOtp() {
       </ScreenBody>
 
       <ActionBar>
-        {isPickup ? (
+        {entersCode ? (
           <Button
             block
             size="lg"
             loading={verifying}
-            disabled={code.length < 6}
+            disabled={code.length < 6 || gate.locked}
             onClick={() => verify(code)}
           >
-            {verifying ? 'Verifying…' : 'Verify & take custody'}
+            {verifying
+              ? 'Verifying…'
+              : isPickup
+                ? 'Verify & take custody'
+                : 'Verify & complete delivery'}
           </Button>
         ) : (
           <Button block size="lg" onClick={() => setStage('photos')}>

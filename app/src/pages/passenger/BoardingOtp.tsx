@@ -13,7 +13,8 @@ import {
   OtpDisplay,
 } from '@/components/ui'
 import { Confetti } from '@/components/viz/Illustrations'
-import { TRIPS, cityName, otpFor, travelerById } from '@/lib/data'
+import { cityName, otpFor, travelerById } from '@/lib/data'
+import { useTrip } from '@/lib/store'
 import { dayDate, inr, phone as fmtPhone, time } from '@/lib/format'
 
 /** Booking confirmed + the single boarding OTP (PRD §6 — one OTP, no drop-off OTP). */
@@ -21,7 +22,7 @@ export default function BoardingOtp() {
   const { id } = useParams()
   const navigate = useNavigate()
 
-  const trip = TRIPS.find((t) => t.id === id)
+  const trip = useTrip(id)
   if (!trip) return <Navigate to="/passenger" replace />
 
   const driver = travelerById(trip.travelerId)!

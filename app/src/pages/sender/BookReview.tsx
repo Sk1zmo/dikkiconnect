@@ -39,6 +39,7 @@ export default function BookReview() {
   const cat = categoryById(draft.category)
   const originHub = resolveHub(draft.originHubId, draft.fromCityId)
   const destHub = resolveHub(draft.destinationHubId, draft.toCityId)
+  const isP2P = draft.mode === 'p2p'
 
   const applyPromo = () => {
     const code = promoInput.trim().toUpperCase()
@@ -79,27 +80,33 @@ export default function BookReview() {
               <div className="min-w-0 flex-1">
                 <div className="mb-4">
                   <p className="text-[11px] font-bold tracking-wide text-ink-400 uppercase">
-                    Drop at
+                    {isP2P ? 'Collected from you at' : 'Drop at'}
                   </p>
                   <p className="truncate text-[14px] font-bold text-ink-900">
-                    {originHub?.name.split('·').pop()?.trim()}
+                    {isP2P
+                      ? cityName(draft.fromCityId)
+                      : originHub?.name.split('·').pop()?.trim()}
                   </p>
-                  <p className="truncate text-[12px] text-ink-500">{originHub?.address}</p>
+                  <p className="truncate-2 text-[12px] text-ink-500">
+                    {isP2P ? draft.pickupAddress : originHub?.address}
+                  </p>
                 </div>
                 <div>
                   <p className="text-[11px] font-bold tracking-wide text-ink-400 uppercase">
-                    Collect from
+                    {isP2P ? 'Handed over at' : 'Collect from'}
                   </p>
                   <p className="truncate text-[14px] font-bold text-ink-900">
-                    {destHub?.name.split('·').pop()?.trim()}
+                    {isP2P ? cityName(draft.toCityId) : destHub?.name.split('·').pop()?.trim()}
                   </p>
-                  <p className="truncate text-[12px] text-ink-500">{destHub?.address}</p>
+                  <p className="truncate-2 text-[12px] text-ink-500">
+                    {isP2P ? draft.dropAddress : destHub?.address}
+                  </p>
                 </div>
               </div>
               <button
                 onClick={() => navigate('/sender/book/hub')}
                 className="pressable-sm grid size-8 shrink-0 place-items-center rounded-full bg-ink-100 text-ink-600"
-                aria-label="Edit hubs"
+                aria-label={isP2P ? 'Edit addresses' : 'Edit hubs'}
               >
                 <Pencil size={14} />
               </button>

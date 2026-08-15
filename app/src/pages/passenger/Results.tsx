@@ -15,9 +15,10 @@ import {
 } from '@/components/ui'
 import { TripCard } from '@/components/domain/Cards'
 import { EmptyRoadArt } from '@/components/viz/Illustrations'
-import { TRIPS, cityName, travelerById } from '@/lib/data'
+import { cityName, travelerById } from '@/lib/data'
 import { dayDate, inr } from '@/lib/format'
 import { useLoaded } from '@/lib/hooks'
+import { useTrips } from '@/lib/store'
 
 type SortKey = 'earliest' | 'cheapest' | 'rating'
 
@@ -36,9 +37,19 @@ export default function RideResults() {
   const [minRating, setMinRating] = useState(4)
   const [instantOnly, setInstantOnly] = useState(false)
 
+  // Reads the shared ledger, so a ride a driver posted in advance shows up
+  // here the moment they publish it.
+  const trips = useTrips()
   const matches = useMemo(
-    () => TRIPS.filter((t) => t.fromCityId === from && t.toCityId === to),
-    [from, to],
+    () =>
+      trips.filter(
+        (t) =>
+          t.fromCityId === from &&
+          t.toCityId === to &&
+          t.status !== 'completed' &&
+          new Date(t.departAt).getTime() > Date.now() - 3_600_000,
+      ),
+    [trips, from, to],
   )
   const { loading } = useLoaded(matches, 1150)
 

@@ -78,9 +78,21 @@
   --color-ember-300: #ffc588;
   --color-ember-200: #ffdfb4;
 
-  /* ── Type ──────────────────────────────────────────────────────────────── */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  /* ── Type ──────────────────────────────────────────────────────────────────
+     One family across the whole product. Two competing sans faces read as an
+     unfinished template; a single voice varied by weight and tracking is what
+     makes Airbnb and Uber feel resolved. Figtree is geometric enough to feel
+     modern and humanist enough to stay legible at the 11–13px label sizes this
+     UI leans on heavily.                                                      */
+  --font-sans: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Tracking ramp — type tightens as it grows, the way optical sizing would. */
+  --tracking-micro: 0.055em;
+  --tracking-body: -0.006em;
+  --tracking-title: -0.021em;
+  --tracking-display: -0.034em;
+  --tracking-hero: -0.042em;
 
   /* ── Radii ─────────────────────────────────────────────────────────────── */
   --radius-xs: 6px;
@@ -128,10 +140,14 @@
     margin: 0;
     min-height: 100dvh;
     font-family: var(--font-sans);
-    font-feature-settings: 'cv11', 'ss01';
+    /* 'ss01' gives the single-storey g that keeps Figtree from reading like
+       every other geometric sans; 'cv11' was an Inter-only feature. */
+    font-feature-settings: 'ss01';
     font-variant-numeric: tabular-nums;
+    letter-spacing: var(--tracking-body);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
     color: var(--color-ink-900);
     background: #0b1020;
     overscroll-behavior-y: none;
@@ -693,16 +709,45 @@ svg .anim-rush {
   box-shadow: 0 0 0 3px rgba(22, 80, 224, 0.28);
 }
 
-/* ═══ Text helpers ═════════════════════════════════════════════════════════ */
+/* ═══ Text helpers ═════════════════════════════════════════════════════════
+   The scale is enforced by tracking, not by swapping families: headings run
+   heavy and tight, body sits neutral, micro-labels open up so they stay
+   readable in uppercase at 10–11px.
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 .text-display {
   font-family: var(--font-display);
-  letter-spacing: -0.028em;
-  line-height: 1.1;
+  letter-spacing: var(--tracking-display);
+  line-height: 1.08;
+  font-feature-settings: 'ss01';
+}
+
+/* Headline sizes need more negative tracking than mid-size titles, so anything
+   set at 24px and up tightens a further notch. */
+.text-display:is(h1, .hero) {
+  letter-spacing: var(--tracking-hero);
+}
+
+/* Section titles and card headings — tight, but not headline-tight. */
+h2,
+h3,
+h4 {
+  letter-spacing: var(--tracking-title);
+}
+
+/* The uppercase micro-labels this UI uses everywhere. */
+.text-micro {
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: var(--tracking-micro);
+  text-transform: uppercase;
 }
 
 .tabular {
   font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum', 'ss01';
+  letter-spacing: -0.012em;
 }
 
 .truncate-2 {

@@ -24,7 +24,8 @@ import {
   VerifiedChip,
 } from '@/components/ui'
 import { RouteMap } from '@/components/viz/Map'
-import { TRIPS, cityName, travelerById } from '@/lib/data'
+import { cityName, travelerById } from '@/lib/data'
+import { useTrip } from '@/lib/store'
 import { dayDate, inr, time } from '@/lib/format'
 
 const PREFERENCES = [
@@ -51,7 +52,7 @@ const REVIEWS = [
 
 export default function RideDetail() {
   const { id } = useParams()
-  const trip = TRIPS.find((t) => t.id === id)
+  const trip = useTrip(id)
   if (!trip) return <Navigate to="/passenger" replace />
 
   const driver = travelerById(trip.travelerId)!

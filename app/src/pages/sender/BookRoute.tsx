@@ -1,6 +1,16 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, ArrowUpDown, Clock, MapPin, Repeat, Search, Zap } from 'lucide-react'
+import {
+  ArrowRight,
+  ArrowUpDown,
+  Building2,
+  Clock,
+  Home,
+  MapPin,
+  Repeat,
+  Search,
+  Zap,
+} from 'lucide-react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import { ActionBar, Button, Card, Note, SearchField, Sheet, Stepper } from '@/components/ui'
 import { CITIES, corridorKm } from '@/lib/data'
@@ -56,8 +66,66 @@ export default function BookRoute() {
           Where is it going?
         </h2>
         <p className="mt-2 text-[13.5px] text-ink-500">
-          We move parcels between cities through verified hubs.
+          Pick how it should travel, then the two cities.
         </p>
+
+        {/* ── Delivery mode ─────────────────────────────────────────────── */}
+        <div className="mt-5 grid grid-cols-2 gap-2.5">
+          {(
+            [
+              {
+                id: 'hub' as const,
+                icon: Building2,
+                label: 'Hub to hub',
+                blurb: 'Drop at a hub, receiver collects',
+                meta: 'Cheapest · 4 OTP checkpoints',
+              },
+              {
+                id: 'p2p' as const,
+                icon: Home,
+                label: 'Door to door',
+                blurb: 'Traveler collects from your address',
+                meta: 'Fastest · 2 OTP checkpoints',
+              },
+            ] as const
+          ).map((m) => {
+            const active = draft.mode === m.id
+            const Icon = m.icon
+            return (
+              <button
+                key={m.id}
+                onClick={() => patchDraft({ mode: m.id })}
+                className={cn(
+                  'springy focus-ring rounded-(--radius-md) border-2 bg-white p-3.5 text-left',
+                  active
+                    ? 'border-brand-600 bg-brand-50/60 shadow-(--shadow-brand-sm)'
+                    : 'border-ink-200 hover:border-ink-300',
+                )}
+              >
+                <span
+                  className={cn(
+                    'grid size-9 place-items-center rounded-(--radius-sm)',
+                    active ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-500',
+                  )}
+                >
+                  <Icon size={17} />
+                </span>
+                <span className="mt-2.5 block text-[14px] font-bold text-ink-900">{m.label}</span>
+                <span className="mt-0.5 block text-[11.5px] leading-snug text-ink-500">
+                  {m.blurb}
+                </span>
+                <span
+                  className={cn(
+                    'mt-1.5 block text-[10.5px] font-bold',
+                    active ? 'text-brand-700' : 'text-ink-400',
+                  )}
+                >
+                  {m.meta}
+                </span>
+              </button>
+            )
+          })}
+        </div>
 
         {/* From / To */}
         <Card className="relative mt-6" padded={false}>
@@ -172,8 +240,9 @@ export default function BookRoute() {
         </div>
 
         <Note tone="neutral" icon={<Clock size={15} />} className="mt-6">
-          Hub-to-hub is the fastest route for the pilot corridor. Door pickup (P2P) is coming after
-          hub density is proven.
+          {draft.mode === 'p2p'
+            ? 'Door to door skips the hub entirely: a traveler already driving your route collects from your address and hands it over at the receiver’s. You pay for the convenience and the detour.'
+            : 'Hub to hub is the cheapest way to move a parcel — you drop it at a counter near you and the receiver collects from one near them, with a custody checkpoint at every step.'}
         </Note>
       </ScreenBody>
 

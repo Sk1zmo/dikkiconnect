@@ -17,9 +17,10 @@ import {
   useToast,
 } from '@/components/ui'
 import { SuccessBurst, SuccessMark } from '@/components/viz/Illustrations'
-import { HUB_HANDLING_FEE, HUB_INVENTORY, TRAVELERS, categoryById, otpFor } from '@/lib/data'
+import { HUB_HANDLING_FEE, TRAVELERS, categoryById, otpFor } from '@/lib/data'
 import { ageInHub, inr } from '@/lib/format'
 import { useCountdown } from '@/lib/hooks'
+import { useApp, useHubInventory } from '@/lib/store'
 import { cn } from '@/lib/cn'
 
 const STEPS = ['Select', 'OTP', 'Released']
@@ -33,13 +34,30 @@ export default function HubHandoff() {
   const navigate = useNavigate()
   const toast = useToast()
 
+  const { advanceParcel } = useApp()
+
+  // Only parcels physically on the shelf here, claimed by a driver, can be
+  // released — the same list the inventory screen shows.
+  const inventory = useHubInventory()
+  const available = inventory.map((p) => ({
+    parcelId: p.id,
+    shelf: `A-0${(p.id.charCodeAt(p.id.length - 1) % 9) + 1}`,
+    intakeAt: p.timeline.find((e) => e.status === 'at_origin_hub')?.at ?? p.bookedAt,
+    category: p.category,
+    claimed: Boolean(p.travelerId),
+  }))
+
   const [step, setStep] = useState(0)
-  const [selected, setSelected] = useState<string[]>(['DKC-4796', 'DKC-4851'])
+  const [selected, setSelected] = useState<string[]>(() =>
+    inventory.filter((p) => p.travelerId).map((p) => p.id),
+  )
   const [releasing, setReleasing] = useState(false)
   const { label, restart, done } = useCountdown(180)
 
-  const available = HUB_INVENTORY.filter((i) => i.state === 'waiting' || i.state === 'assigned')
-  const otp = otpFor(selected.join('-') + 'release')
+  // Each parcel carries its own pickup code — the exact code the traveler's
+  // app checks. One shared "release code" would not survive a real audit.
+  const codes = selected.map((id) => ({ id, code: otpFor(id + 'pick') }))
+  const otp = codes[0]?.code ?? '——————'
 
   const toggle = (parcelId: string) =>
     setSelected((prev) =>
@@ -50,6 +68,11 @@ export default function HubHandoff() {
     setReleasing(true)
     setTimeout(() => {
       setReleasing(false)
+      // Moves each parcel to in_transit on the shared ledger, so the sender's
+      // tracker and the driver's manifest both update from this one action.
+      selected.forEach((id) =>
+        advanceParcel(id, 'in_transit', { actor: TRAVELER.name, travelerId: TRAVELER.id }),
+      )
       setStep(2)
       toast.success('Parcels released', `${selected.length} handed to ${TRAVELER.name}`)
     }, 1200)
@@ -186,8 +209,14 @@ export default function HubHandoff() {
             </div>
 
             <div className="flex flex-col gap-2.5">
+              {available.length === 0 && (
+                <Note tone="neutral">
+                  Nothing on the shelf is ready to go out. Parcels appear here once they have been
+                  taken in and a driver has claimed them.
+                </Note>
+              )}
               {available.map((item) => {
-                const cat = categoryById('documents')
+                const cat = categoryById(item.category)
                 const isSelected = selected.includes(item.parcelId)
                 return (
                   <button
@@ -210,6 +239,7 @@ export default function HubHandoff() {
                       </span>
                       <span className="mt-0.5 block truncate text-[11.5px] text-ink-500">
                         {cat.label} · in hub {ageInHub(item.intakeAt)}
+                        {item.claimed ? ' · driver assigned' : ' · awaiting a driver'}
                       </span>
                     </span>
                     <Package size={16} className="shrink-0 text-ink-300" />
@@ -232,8 +262,8 @@ export default function HubHandoff() {
               Read this out to the traveler
             </h2>
             <p className="mt-2 text-[13.5px] leading-relaxed text-ink-500">
-              They type it into their app to take custody of {selected.length} parcel
-              {selected.length > 1 ? 's' : ''}.
+              They type it into their app to take custody. Each parcel has its own code, so a wrong
+              one is rejected against that specific parcel.
             </p>
 
             <Card className="mt-7 border-brand-100 bg-brand-50/60">
@@ -257,6 +287,24 @@ export default function HubHandoff() {
                 )}
               </div>
             </Card>
+
+            {codes.length > 1 && (
+              <Card className="mt-3">
+                <p className="mb-2.5 text-[12px] font-bold tracking-wide text-ink-400 uppercase">
+                  Code per parcel
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {codes.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between">
+                      <span className="tabular text-[13px] font-semibold text-ink-700">{c.id}</span>
+                      <span className="tabular text-[15px] font-extrabold tracking-[0.1em] text-brand-700">
+                        {c.code}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
 
             <Card className="mt-3">
               <p className="mb-2 text-[12px] font-bold tracking-wide text-ink-400 uppercase">

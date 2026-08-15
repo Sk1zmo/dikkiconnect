@@ -16,16 +16,16 @@ import {
   Switch,
   useToast,
 } from '@/components/ui'
-import { TRIPS, cityName, travelerById } from '@/lib/data'
+import { cityName, travelerById } from '@/lib/data'
 import { dayDate, inr, time } from '@/lib/format'
-import { useApp } from '@/lib/store'
+import { useApp, useTrip } from '@/lib/store'
 import { useFakeProgress } from '@/lib/hooks'
 
 export default function RideCheckout() {
   const { id } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
-  const { balance } = useApp()
+  const { balance, bookSeats, spend } = useApp()
 
   const [seats, setSeats] = useState(1)
   const [method, setMethod] = useState<'upi' | 'wallet' | 'card'>('upi')
@@ -34,7 +34,7 @@ export default function RideCheckout() {
   const [paying, setPaying] = useState(false)
   const progress = useFakeProgress(2000, paying)
 
-  const trip = TRIPS.find((t) => t.id === id)
+  const trip = useTrip(id)
   if (!trip) return <Navigate to="/passenger" replace />
 
   const driver = travelerById(trip.travelerId)!
@@ -46,6 +46,10 @@ export default function RideCheckout() {
   const pay = () => {
     setPaying(true)
     setTimeout(() => {
+      // Decrements the driver's seat count on the shared ledger, so the ride
+      // shows as filling up in their portal and to every other passenger.
+      bookSeats(trip.id, seats)
+      if (method === 'wallet') spend(total)
       toast.success('Seat confirmed', `${seats} seat${seats > 1 ? 's' : ''} on ${trip.id}`)
       navigate(`/passenger/boarding/${trip.id}`, { replace: true })
     }, 2200)

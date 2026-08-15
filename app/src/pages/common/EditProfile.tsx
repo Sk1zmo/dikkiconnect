@@ -13,12 +13,14 @@ import {
   useToast,
 } from '@/components/ui'
 import { useApp } from '@/lib/store'
+import { useAuth } from '@/lib/auth'
 import { maskPhone } from '@/lib/format'
 
 export default function EditProfile() {
   const navigate = useNavigate()
   const toast = useToast()
   const { user } = useApp()
+  const { updateAccount } = useAuth()
 
   const [name, setName] = useState(user.name)
   const [email, setEmail] = useState(user.email)
@@ -31,6 +33,9 @@ export default function EditProfile() {
     setSaving(true)
     setTimeout(() => {
       setSaving(false)
+      // Writes through to the account, so the new name shows on every parcel
+      // and ride from here on.
+      updateAccount({ name, email })
       toast.success('Profile updated')
       navigate('/profile')
     }, 1000)

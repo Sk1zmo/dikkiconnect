@@ -91,15 +91,29 @@ export interface TrackingEvent {
   done: boolean
 }
 
+/**
+ * How the parcel moves (PRD §4).
+ *  hub — sender drops at a hub, any traveler on the route carries it, receiver
+ *        collects from the destination hub. Four OTP custody checkpoints.
+ *  p2p — traveler collects from the sender's door and delivers to the
+ *        receiver's door. Two OTP checkpoints, no hub in the middle.
+ */
+export type DeliveryMode = 'hub' | 'p2p'
+
 export interface Parcel {
   id: string
+  mode: DeliveryMode
   senderName: string
   receiverName: string
   receiverPhone: string
   fromCityId: string
   toCityId: string
+  /** Hub mode only — ignored when mode is 'p2p'. */
   originHubId: string
   destinationHubId: string
+  /** P2P only — door addresses the traveler collects from and delivers to. */
+  pickupAddress?: string
+  dropAddress?: string
   category: string
   size: ParcelSize
   weightKg: number
@@ -133,8 +147,12 @@ export interface Trip {
 export interface ParcelJob {
   id: string
   parcelId: string
+  mode: DeliveryMode
+  /** Hub ids in hub mode; free-text door addresses in P2P. */
   fromHubId: string
   toHubId: string
+  fromLabel: string
+  toLabel: string
   size: ParcelSize
   weightKg: number
   payout: number
