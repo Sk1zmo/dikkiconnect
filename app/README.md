@@ -142,3 +142,11 @@ Admin charts use a validated categorical palette (blue `#2a78d6`, orange
 rounded data-ends, lines are 2px, gridlines are solid hairlines, and every chart
 carries a **table view toggle** so nothing is gated behind colour perception.
 Status colours are reserved and never reused as a data series.
+
+## Why the SPA rewrite excludes /api
+
+`vercel.json` rewrites `/((?!api/).*)` rather than `/(.*)`. The negative
+lookahead is load-bearing. Without it the SPA fallback also matches `/api/*`,
+and every serverless call quietly receives `index.html` with status 200 instead
+of JSON. The client then fails to parse it and reports a network error — which
+sends you off to debug a connection that was never the problem.
