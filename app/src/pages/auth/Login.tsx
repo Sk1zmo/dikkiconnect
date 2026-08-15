@@ -134,15 +134,18 @@ export default function Login() {
 
       if (!result.delivered) {
         setError(
-          result.reason === 'no-email-for-number'
-            ? 'We have no email on file for that number. Sign in with your email address instead.'
-            : 'We couldn’t send the code just now. Try again in a moment.',
+          result.reason === 'no-channel'
+            ? 'We have no way to reach that number yet. Sign in with your email address instead.'
+            : result.reason === 'unconfigured'
+              ? 'Message delivery isn’t switched on for this deployment yet.'
+              : 'We couldn’t send the code just now. Try again in a moment.',
         )
         return
       }
 
       const qs = new URLSearchParams({ id: identifier })
       if (result.to) qs.set('to', result.to)
+      if (result.channel) qs.set('ch', result.channel)
       navigate(`/auth/otp?${qs.toString()}`)
     })()
   }

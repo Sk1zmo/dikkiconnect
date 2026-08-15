@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle2, MailCheck, RefreshCw, Smartphone } from 'lucide-react'
+import { CheckCircle2, MailCheck, MessageSquare, RefreshCw, Smartphone } from 'lucide-react'
 import { Screen, TopBar } from '@/components/layout/Screen'
 import { Button, Note, OtpInput, useToast } from '@/components/ui'
 import { useCountdown } from '@/lib/hooks'
@@ -24,6 +24,7 @@ export default function Otp() {
 
   const identifier = params.get('id') ?? ''
   const sentTo = params.get('to') ?? identifier
+  const channel = params.get('ch') === 'sms' ? 'sms' : 'email'
 
   const [code, setCode] = useState('')
   const [error, setError] = useState<string>()
@@ -123,14 +124,15 @@ export default function Otp() {
 
       <div className="device-scroll flex-1 px-7">
         <div className="mb-6 grid size-14 place-items-center rounded-(--radius-lg) bg-brand-50 text-brand-600">
-          <MailCheck size={24} />
+          {channel === 'sms' ? <MessageSquare size={24} /> : <MailCheck size={24} />}
         </div>
 
         <h1 className="text-display text-[28px] leading-[1.14] font-extrabold text-ink-900">
-          Check your email
+          {channel === 'sms' ? 'Check your messages' : 'Check your email'}
         </h1>
         <p className="mt-2.5 text-[14.5px] leading-[1.55] text-ink-500">
-          We sent a 6-digit code to <span className="font-bold text-ink-800">{sentTo}</span>
+          We sent a 6-digit code {channel === 'sms' ? 'by SMS to' : 'to'}{' '}
+          <span className="font-bold text-ink-800">{sentTo}</span>
         </p>
 
         {autofill && !verified && (
@@ -197,7 +199,9 @@ export default function Otp() {
 
         {!verified && (
           <Note tone="neutral" className="mt-8" title="Not arrived?">
-            Check spam, and that {sentTo} is right. The code is valid for 5 minutes, works once,
+            {channel === 'sms'
+              ? `Check that ${sentTo} is right.`
+              : `Check spam, and that ${sentTo} is right.`}{' '} The code is valid for 5 minutes, works once,
             and you have {attemptsLeft} attempt{attemptsLeft === 1 ? '' : 's'} left before it locks.
           </Note>
         )}

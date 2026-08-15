@@ -1,43 +1,89 @@
+import nodemailer from 'nodemailer'
+
 /* ═══════════════════════════════════════════════════════════════════════════
    Email delivery.
 
-   Email is the one channel that can genuinely be switched on without a
-   regulator in the way. SMS to an Indian number needs DLT registration, an
-   approved template and a licensed gateway; email needs an API key and a
-   verified sender, and Resend's free tier gives both in a few minutes.
+   Email is the channel that can be switched on without a regulator in the way,
+   and there are two ways to do it — deliberately, because they suit different
+   moments:
 
-   So this is a real sender, not a placeholder. With RESEND_API_KEY set the
-   code leaves the building. Without it, `send` reports `unconfigured` and the
-   caller records that on the event log — nothing anywhere pretends a message
-   was delivered when it was not.
+     · SMTP (SMTP_USER + SMTP_PASS). Works with a Gmail account you already
+       have: turn on 2-step verification, generate an App Password, paste it
+       in. No new service, no signup, live in about two minutes. Gmail caps a
+       personal account at roughly 500 messages a day, which is plenty for a
+       pilot and not enough for a launch.
+     · Resend (RESEND_API_KEY). A proper transactional provider — better
+       deliverability, a real sending domain, and headroom. The right answer
+       once the app has users.
+
+   Resend wins when both are set. Neither reports `unconfigured` and the caller
+   records that on the event log; nothing anywhere pretends a message was sent
+   when it was not.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const KEY = process.env.RESEND_API_KEY
-const FROM = process.env.MAIL_FROM ?? 'DikkiConnect <onboarding@resend.dev>'
 
-export const mailConfigured = () => Boolean(KEY)
+const SMTP_HOST = process.env.SMTP_HOST ?? 'smtp.gmail.com'
+const SMTP_PORT = Number(process.env.SMTP_PORT ?? 465)
+const SMTP_USER = process.env.SMTP_USER
+const SMTP_PASS = process.env.SMTP_PASS
+
+const FROM =
+  process.env.MAIL_FROM ??
+  (SMTP_USER ? `DikkiConnect <${SMTP_USER}>` : 'DikkiConnect <onboarding@resend.dev>')
+
+export function mailProvider(): 'resend' | 'smtp' | null {
+  if (KEY) return 'resend'
+  if (SMTP_USER && SMTP_PASS) return 'smtp'
+  return null
+}
+
+export const mailConfigured = () => mailProvider() !== null
 
 export type MailResult =
-  | { sent: true; id: string }
-  | { sent: false; reason: 'unconfigured' | 'failed'; detail?: string }
+  | { sent: true; id: string; provider: string }
+  | { sent: false; reason: 'unconfigured' | 'failed'; detail?: string; provider?: string }
 
-export async function sendMail(to: string, subject: string, html: string, text: string): Promise<MailResult> {
-  if (!KEY) return { sent: false, reason: 'unconfigured' }
+async function viaResend(to: string, subject: string, html: string, text: string): Promise<MailResult> {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: FROM, to: [to], subject, html, text }),
+  })
+  const body = (await res.json().catch(() => ({}))) as { id?: string; message?: string }
+  if (!res.ok) {
+    return { sent: false, reason: 'failed', provider: 'resend', detail: body.message ?? `HTTP ${res.status}` }
+  }
+  return { sent: true, provider: 'resend', id: body.id ?? 'accepted' }
+}
+
+async function viaSmtp(to: string, subject: string, html: string, text: string): Promise<MailResult> {
+  const transport = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    // 465 is implicit TLS; 587 upgrades with STARTTLS.
+    secure: SMTP_PORT === 465,
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
+  })
+  const info = await transport.sendMail({ from: FROM, to, subject, html, text })
+  return { sent: true, provider: 'smtp', id: info.messageId }
+}
+
+export async function sendMail(
+  to: string,
+  subject: string,
+  html: string,
+  text: string,
+): Promise<MailResult> {
+  const provider = mailProvider()
+  if (!provider) return { sent: false, reason: 'unconfigured' }
 
   try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ from: FROM, to: [to], subject, html, text }),
-    })
-    const body = (await res.json()) as { id?: string; message?: string }
-    if (!res.ok) return { sent: false, reason: 'failed', detail: body.message ?? `HTTP ${res.status}` }
-    return { sent: true, id: body.id ?? 'accepted' }
+    return provider === 'resend'
+      ? await viaResend(to, subject, html, text)
+      : await viaSmtp(to, subject, html, text)
   } catch (err) {
-    return { sent: false, reason: 'failed', detail: String(err).slice(0, 160) }
+    return { sent: false, reason: 'failed', provider, detail: String(err).slice(0, 200) }
   }
 }
 

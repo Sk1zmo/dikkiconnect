@@ -2,7 +2,8 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { withCors } from './_lib/http.js'
 import { readEvents } from './_lib/auth.js'
 import { K, kvList, storageBackend, storageDurable } from './_lib/store.js'
-import { mailConfigured } from './_lib/mail.js'
+import { mailConfigured, mailProvider } from './_lib/mail.js'
+import { smsConfigured, smsProvider } from './_lib/sms.js'
 
 /**
  * GET /api/ops?key=…   — the monitoring feed.
@@ -44,13 +45,25 @@ async function handler(req: VercelRequest, res: VercelResponse) {
       storage: storageBackend(),
       storageDurable: storageDurable(),
       mailConfigured: mailConfigured(),
+      mailProvider: mailProvider(),
+      smsConfigured: smsConfigured(),
+      smsProvider: smsProvider(),
       // Said plainly, because a dashboard that looks green while running on a
       // Map that dies with the instance is worse than no dashboard.
       warnings: [
         ...(storageDurable()
           ? []
           : ['Storage is in-memory: accounts and codes are lost on a cold start. Set KV_REST_API_URL and KV_REST_API_TOKEN.']),
-        ...(mailConfigured() ? [] : ['No mail provider: verification codes cannot be delivered. Set RESEND_API_KEY.']),
+        ...(mailConfigured()
+          ? []
+          : [
+              'No mail provider: codes cannot be emailed. Set SMTP_USER + SMTP_PASS (a Gmail App Password works), or RESEND_API_KEY.',
+            ]),
+        ...(smsConfigured()
+          ? []
+          : [
+              'No SMS gateway: codes cannot be texted, so phone sign-in falls back to the email on the account. Set FAST2SMS_API_KEY, or MSG91_AUTH_KEY + MSG91_TEMPLATE_ID, or the three TWILIO_ variables.',
+            ]),
       ],
     },
     counts: {
@@ -63,6 +76,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
       wrongCodes24h: tally('otp.wrong'),
       lockouts24h: tally('otp.locked'),
       throttled24h: tally('otp.throttled'),
+      undeliverable24h: tally('otp.undeliverable'),
     },
     failures: failures.slice(0, 20),
     events,

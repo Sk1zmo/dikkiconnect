@@ -5,7 +5,9 @@ import {
   Database,
   KeyRound,
   Mail,
+  MessageSquare,
   RefreshCw,
+  Send,
   ShieldCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -34,6 +36,9 @@ interface OpsFeed {
     storage: string
     storageDurable: boolean
     mailConfigured: boolean
+    mailProvider: string | null
+    smsConfigured: boolean
+    smsProvider: string | null
     warnings: string[]
   }
   counts: Record<string, number>
@@ -48,6 +53,36 @@ export default function Ops() {
   const [feed, setFeed] = useState<OpsFeed | null>(null)
   const [error, setError] = useState<string>()
   const [loading, setLoading] = useState(false)
+
+  // Test send — the only way to find out that a gateway is misconfigured
+  // without waiting for a user to fail to sign in.
+  const [testTo, setTestTo] = useState('')
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{
+    ok: boolean
+    channel?: string
+    provider?: string
+    detail?: string
+    reason?: string
+  } | null>(null)
+
+  const sendTest = async () => {
+    if (!testTo.trim()) return
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_ORIGIN ?? ''}/api/ops-test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, to: testTo.trim() }),
+      })
+      setTestResult(await res.json())
+    } catch {
+      setTestResult({ ok: false, detail: 'Could not reach the API.' })
+    } finally {
+      setTesting(false)
+    }
+  }
 
   const load = useCallback(
     async (k: string) => {
@@ -153,7 +188,7 @@ export default function Ops() {
               </div>
             )}
 
-            <div className="mb-6 grid gap-3 sm:grid-cols-3">
+            <div className="mb-6 grid gap-3 sm:grid-cols-4">
               <Health
                 icon={<Database size={16} />}
                 label="Storage"
@@ -162,9 +197,15 @@ export default function Ops() {
               />
               <Health
                 icon={<Mail size={16} />}
-                label="Mail provider"
-                value={feed.health.mailConfigured ? 'configured' : 'not configured'}
+                label="Email"
+                value={feed.health.mailProvider ?? 'not configured'}
                 good={feed.health.mailConfigured}
+              />
+              <Health
+                icon={<MessageSquare size={16} />}
+                label="SMS"
+                value={feed.health.smsProvider ?? 'not configured'}
+                good={feed.health.smsConfigured}
               />
               <Health
                 icon={<ShieldCheck size={16} />}
@@ -172,6 +213,61 @@ export default function Ops() {
                 value="server-side, hashed"
                 good
               />
+            </div>
+
+            {/* ── Test send ─────────────────────────────────────────────── */}
+            <div className="mb-6 rounded-(--radius-lg) border border-ink-200 bg-white p-5">
+              <h2 className="flex items-center gap-2 text-[13.5px] font-bold text-ink-800">
+                <Send size={15} className="text-ink-400" />
+                Send a test
+              </h2>
+              <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-500">
+                Delivers one real message and shows the provider&apos;s own answer, including its
+                error text. An email address goes by email; a 10-digit number goes by SMS.
+              </p>
+              <div className="mt-3.5 flex flex-wrap gap-2.5">
+                <input
+                  value={testTo}
+                  onChange={(e) => setTestTo(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && void sendTest()}
+                  placeholder="you@example.com or 9812345678"
+                  className="focus-ring h-11 min-w-[240px] flex-1 rounded-(--radius-md) border-2 border-ink-200 px-3.5 text-[13.5px] outline-none focus:border-brand-500"
+                />
+                <button
+                  onClick={() => void sendTest()}
+                  disabled={testing || !testTo.trim()}
+                  className="pressable h-11 rounded-(--radius-md) bg-ink-900 px-5 text-[13.5px] font-bold text-white disabled:opacity-50"
+                >
+                  {testing ? 'Sending…' : 'Send test'}
+                </button>
+              </div>
+
+              {testResult && (
+                <div
+                  className={cn(
+                    'anim-fade-in mt-3.5 rounded-(--radius-md) border p-3.5',
+                    testResult.ok
+                      ? 'border-success-200 bg-success-50'
+                      : 'border-danger-200 bg-danger-50',
+                  )}
+                >
+                  <p
+                    className={cn(
+                      'text-[13px] font-bold',
+                      testResult.ok ? 'text-success-800' : 'text-danger-700',
+                    )}
+                  >
+                    {testResult.ok
+                      ? `Sent via ${testResult.provider} (${testResult.channel})`
+                      : `Not sent — ${testResult.reason ?? 'failed'}`}
+                  </p>
+                  {testResult.detail && (
+                    <p className="mt-1.5 font-mono text-[11.5px] leading-relaxed break-words text-ink-600">
+                      {testResult.detail}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">

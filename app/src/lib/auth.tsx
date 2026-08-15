@@ -41,7 +41,15 @@ export const OTP_MAX_ATTEMPTS = 5
 export const OTP_RESEND_SECONDS = 30
 
 export type RequestResult =
-  | { ok: true; channel: 'email'; delivered: boolean; to?: string; reason?: string }
+  | {
+      ok: true
+      /** Which channel actually carried it — the server decides, not the app. */
+      channel: 'email' | 'sms' | null
+      delivered: boolean
+      to?: string
+      reason?: string
+      provider?: string
+    }
   | {
       ok: false
       reason: 'bad-identifier' | 'too-soon' | 'offline' | 'no-api'
@@ -140,10 +148,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ok?: boolean
       error?: string
       retryInSeconds?: number
-      channel?: 'email'
+      channel?: 'email' | 'sms'
       delivered?: boolean
       to?: string
       reason?: string
+      provider?: string
     }>('/api/auth/request-code', { identifier })
 
     if (failed(res)) return { ok: false, reason: res === 'no-api' ? 'no-api' : 'offline' }
@@ -154,10 +163,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return {
       ok: true,
-      channel: 'email',
+      channel: res.channel ?? null,
       delivered: Boolean(res.delivered),
       to: res.to,
       reason: res.reason,
+      provider: res.provider,
     }
   }, [])
 
