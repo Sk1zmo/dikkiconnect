@@ -69,27 +69,7 @@ const HelpCenter = lazy(() => import('@/pages/common/HelpCenter'))
 const PaymentMethods = lazy(() => import('@/pages/common/PaymentMethods'))
 const NotFound = lazy(() => import('@/pages/common/NotFound'))
 
-/* ── Admin (desktop) ──────────────────────────────────────────────────────── */
-const AdminApp = lazy(() => import('@/pages/admin/AdminApp'))
-
 export default function App() {
-  const location = useLocation()
-
-  // The admin console is a desktop product — it renders outside the phone shell.
-  if (location.pathname.startsWith('/admin')) {
-    return (
-      <AuthProvider>
-        <AppProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/admin/*" element={<AdminApp />} />
-            </Routes>
-          </ToastProvider>
-        </AppProvider>
-      </AuthProvider>
-    )
-  }
-
   return (
     <AuthProvider>
       <AppProvider>

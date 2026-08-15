@@ -1,9 +1,51 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronsRight, UserRound } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ChevronDown, ChevronsRight, UserRound } from 'lucide-react'
 import { Screen, TopBar } from '@/components/layout/Screen'
+import { Sheet } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
+
+/**
+ * Dial codes. India is the whole served network today, so it leads and the
+ * rest are here because a login that cannot accept a foreign number turns an
+ * NRI sender into a support ticket. Anything outside +91 still verifies — it
+ * just cannot be a hub or driver account.
+ */
+const EASE = [0.16, 1, 0.3, 1] as const
+
+const DIAL_CODES = [
+  { code: '+91', label: 'India', digits: 10 },
+  { code: '+971', label: 'United Arab Emirates', digits: 9 },
+  { code: '+65', label: 'Singapore', digits: 8 },
+  { code: '+44', label: 'United Kingdom', digits: 10 },
+  { code: '+1', label: 'United States', digits: 10 },
+  { code: '+61', label: 'Australia', digits: 9 },
+]
+
+const POLICY = [
+  {
+    title: 'Your number is your account',
+    body: 'We use it to send verification codes and to identify you across the sender, driver, passenger and hub portals. We never sell it, and we do not share it with other users — a driver sees a masked number, never yours in full.',
+  },
+  {
+    title: 'What we keep',
+    body: 'Your name, email, the parcels and rides you book, and the OTP timestamps that form each delivery’s custody chain. That chain is what protects you in a dispute, so it is retained even after a delivery closes.',
+  },
+  {
+    title: 'Verification documents',
+    body: 'Aadhaar and licence checks run through a licensed verification partner. We store only the partner’s masked token and the pass/fail result — never the raw document number.',
+  },
+  {
+    title: 'Location',
+    body: 'Used only while you have a trip or parcel in progress, to show it on the map. Background tracking is off, and you can decline location and still use the app by typing addresses.',
+  },
+  {
+    title: 'Messages and rates',
+    body: 'Verification codes are sent by SMS. Your carrier’s standard message and data rates apply — DikkiConnect does not charge for them.',
+  },
+]
 
 /**
  * Phone-first auth. Per PRD §8.1 there is no password anywhere in
@@ -23,13 +65,19 @@ export default function Login() {
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string>()
   const [notice, setNotice] = useState<string>()
+  const [touched, setTouched] = useState(false)
+  const [policyOpen, setPolicyOpen] = useState(false)
+  const [dial, setDial] = useState(DIAL_CODES[0])
+  const [dialOpen, setDialOpen] = useState(false)
 
   const isEmail = value.includes('@')
   const digits = value.replace(/\D/g, '')
+  const complete = digits.length === dial.digits
   const valid = isEmail
     ? /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim())
-    : digits.length === 10
+    : complete
   const returning = accounts.find((a) => a.phone === digits)
+  const showDial = !isEmail && complete
 
   const submit = () => {
     if (!value.trim()) {
@@ -54,7 +102,7 @@ export default function Login() {
     }
 
     if (!valid) {
-      setError('Enter a valid 10-digit mobile number')
+      setError(`Enter a valid ${dial.digits}-digit mobile number`)
       return
     }
 
@@ -87,25 +135,67 @@ export default function Login() {
           <div className="mt-7">
             <div
               className={cn(
-                'flex items-center rounded-(--radius-md) border-2 bg-white transition-colors',
+                'flex items-stretch overflow-hidden rounded-(--radius-md) border-2 bg-white transition-colors',
                 error ? 'border-danger-400' : 'border-ink-200 focus-within:border-brand-500',
               )}
             >
-              {!isEmail && digits.length > 0 && (
-                <span className="pl-3.5 text-[15px] font-bold text-ink-500">+91</span>
-              )}
-              <input
-                value={value}
-                onChange={(e) => {
-                  setValue(e.target.value)
-                  setError(undefined)
-                }}
-                onKeyDown={(e) => e.key === 'Enter' && submit()}
-                inputMode={isEmail ? 'email' : 'tel'}
-                autoComplete="tel"
-                placeholder="Phone number or email"
-                className="h-13 w-full bg-transparent px-3.5 text-[15px] text-ink-900 outline-none placeholder:text-ink-400"
-              />
+              {/* The dial code only earns its space once the number is whole.
+                  Showing it from the first keystroke crowds an empty field and
+                  pre-answers a question nobody has asked yet; showing it on
+                  completion confirms we read the number the way they meant it. */}
+              <AnimatePresence initial={false}>
+                {showDial && (
+                  <motion.button
+                    key="dial"
+                    type="button"
+                    onClick={() => setDialOpen(true)}
+                    initial={{ width: 0, opacity: 0 }}
+                    animate={{ width: 'auto', opacity: 1 }}
+                    exit={{ width: 0, opacity: 0 }}
+                    transition={{ duration: 0.26, ease: EASE }}
+                    className="flex shrink-0 items-center gap-1.5 overflow-hidden border-r-2 border-ink-200 bg-ink-50 px-3.5 text-[15px] font-bold text-ink-800"
+                  >
+                    <span className="whitespace-nowrap">{dial.code}</span>
+                    <ChevronDown size={15} className="text-ink-500" />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+
+              <span className="relative min-w-0 flex-1">
+                {/* Floating label — the placeholder has to go somewhere once
+                    there is a value, or the field loses its own name. */}
+                <AnimatePresence initial={false}>
+                  {value.length > 0 && (
+                    <motion.span
+                      key="label"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 6 }}
+                      transition={{ duration: 0.18 }}
+                      className="pointer-events-none absolute top-1.5 left-3.5 text-[11px] font-medium text-ink-400"
+                    >
+                      Phone number or email
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+                <input
+                  value={value}
+                  onChange={(e) => {
+                    setValue(e.target.value)
+                    setError(undefined)
+                  }}
+                  onKeyDown={(e) => e.key === 'Enter' && submit()}
+                  onFocus={() => setTouched(true)}
+                  inputMode={isEmail ? 'email' : 'tel'}
+                  autoComplete="tel"
+                  placeholder="Phone number or email"
+                  className={cn(
+                    'h-14 w-full bg-transparent px-3.5 text-[15px] text-ink-900 outline-none',
+                    'placeholder:text-ink-400',
+                    value.length > 0 && 'pt-4',
+                  )}
+                />
+              </span>
             </div>
 
             {error && (
@@ -140,6 +230,22 @@ export default function Login() {
             >
               {sending ? 'Sending code…' : 'Continue'}
             </button>
+
+            {/* Held back until the field is engaged. Shown up front it is one
+                more thing to read before the only thing that matters; shown on
+                focus it answers the question the user has just formed — what
+                happens when I press this? */}
+            {touched && (
+              <p className="anim-fade-in mt-3 text-[12px] leading-[1.5] text-ink-500">
+                We&apos;ll send a confirmation code by text. Message and data rates may apply.{' '}
+                <button
+                  onClick={() => setPolicyOpen(true)}
+                  className="pressable-sm font-bold text-ink-800 underline underline-offset-2"
+                >
+                  Privacy Policy
+                </button>
+              </p>
+            )}
           </div>
 
           <div className="my-6 flex items-center gap-3">
@@ -171,11 +277,92 @@ export default function Login() {
 
         <p className="mx-auto mt-6 max-w-[300px] text-center text-[11.5px] leading-relaxed text-ink-400">
           By continuing you agree to DikkiConnect&apos;s{' '}
-          <span className="font-semibold text-ink-600">Terms</span>,{' '}
-          <span className="font-semibold text-ink-600">Privacy Policy</span> and the{' '}
-          <span className="font-semibold text-ink-600">Prohibited Items</span> declaration.
+          <button
+            onClick={() => setPolicyOpen(true)}
+            className="pressable-sm font-semibold text-ink-600 underline underline-offset-2"
+          >
+            Terms
+          </button>
+          ,{' '}
+          <button
+            onClick={() => setPolicyOpen(true)}
+            className="pressable-sm font-semibold text-ink-600 underline underline-offset-2"
+          >
+            Privacy Policy
+          </button>{' '}
+          and the{' '}
+          <button
+            onClick={() => setPolicyOpen(true)}
+            className="pressable-sm font-semibold text-ink-600 underline underline-offset-2"
+          >
+            Prohibited Items
+          </button>{' '}
+          declaration.
         </p>
       </div>
+
+      <Sheet
+        open={dialOpen}
+        onClose={() => setDialOpen(false)}
+        title="Country code"
+        subtitle="DikkiConnect operates in India — other codes can still verify"
+      >
+        <div className="flex flex-col">
+          {DIAL_CODES.map((c) => (
+            <button
+              key={c.code}
+              onClick={() => {
+                setDial(c)
+                setDialOpen(false)
+              }}
+              className={cn(
+                'pressable flex items-center gap-3.5 rounded-(--radius-md) px-3 py-3.5 text-left transition-colors',
+                c.code === dial.code ? 'bg-brand-50' : 'hover:bg-ink-50',
+              )}
+            >
+              <span
+                className={cn(
+                  'grid h-9 min-w-[52px] place-items-center rounded-(--radius-sm) text-[13px] font-extrabold',
+                  c.code === dial.code ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-600',
+                )}
+              >
+                {c.code}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[14px] font-bold text-ink-900">{c.label}</span>
+                <span className="text-[12px] text-ink-500">{c.digits}-digit numbers</span>
+              </span>
+              {c.code === dial.code && (
+                <span className="text-[12px] font-bold text-brand-600">Selected</span>
+              )}
+            </button>
+          ))}
+        </div>
+      </Sheet>
+
+      <Sheet
+        open={policyOpen}
+        onClose={() => setPolicyOpen(false)}
+        title="Privacy & terms"
+        subtitle="The short version, in plain language"
+        fullHeight
+      >
+        <div className="flex flex-col gap-5 pb-4">
+          {POLICY.map((section) => (
+            <div key={section.title}>
+              <p className="text-[13.5px] font-bold text-ink-900">{section.title}</p>
+              <p className="mt-1.5 text-[13px] leading-[1.6] text-ink-600">{section.body}</p>
+            </div>
+          ))}
+          <div className="rounded-(--radius-md) border border-ink-200 bg-ink-50 p-3.5">
+            <p className="text-[12px] leading-relaxed text-ink-500">
+              This is a summary for the pilot. The binding Terms of Service and Privacy Policy are
+              issued by the registered entity operating DikkiConnect and will be linked here before
+              public launch.
+            </p>
+          </div>
+        </div>
+      </Sheet>
     </Screen>
   )
 }

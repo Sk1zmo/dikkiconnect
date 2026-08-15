@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import type { Map as MapLibreMap, LngLatBoundsLike } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { Layers, Minus, Navigation, Plus } from 'lucide-react'
+import { Layers, MapPin, Minus, Navigation, Plus } from 'lucide-react'
 import { IconButton } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import {
@@ -548,6 +548,96 @@ export function PickMap({
       <span className="pointer-events-none absolute inset-x-0 top-2 z-10 text-center text-[10.5px] font-bold text-ink-500">
         Drag the pin to the exact door
       </span>
+      <Attribution />
+    </div>
+  )
+}
+
+/* ── CentrePinMap ────────────────────────────────────────────────────────── */
+
+/**
+ * Full-bleed picker where the map moves under a fixed centre pin, rather than
+ * the pin being dragged around the map.
+ *
+ * This is the pattern every Indian delivery app uses, and for a good reason:
+ * on a phone your thumb covers a dragged marker at exactly the moment you need
+ * to see what is under it. Pinning the crosshair and panning the world keeps
+ * the target visible the whole time.
+ *
+ * `onSettle` fires when the map stops moving, not on every frame, so the
+ * reverse geocoder is called once per gesture rather than once per pixel.
+ */
+export function CentrePinMap({
+  at,
+  onSettle,
+  className,
+}: {
+  at: LngLat
+  onSettle: (p: LngLat) => void
+  className?: string
+}) {
+  const container = useRef<HTMLDivElement>(null)
+  const [moving, setMoving] = useState(false)
+  const { map, ready } = useMapLibre(container, {
+    dark: false,
+    center: at,
+    zoom: 16,
+    interactive: true,
+  })
+  const settle = useRef(onSettle)
+  settle.current = onSettle
+
+  useEffect(() => {
+    if (!map || !ready) return
+    const start = () => setMoving(true)
+    const end = () => {
+      setMoving(false)
+      const c = map.getCenter()
+      settle.current({ lng: c.lng, lat: c.lat })
+    }
+    map.on('movestart', start)
+    map.on('moveend', end)
+    return () => {
+      map.off('movestart', start)
+      map.off('moveend', end)
+    }
+  }, [map, ready])
+
+  // Recentre when the caller picks somewhere else (search result, GPS fix).
+  useEffect(() => {
+    if (!map || !ready) return
+    const c = map.getCenter()
+    if (Math.abs(c.lng - at.lng) < 1e-6 && Math.abs(c.lat - at.lat) < 1e-6) return
+    map.easeTo({ center: [at.lng, at.lat], zoom: 16, duration: 500 })
+  }, [map, ready, at])
+
+  return (
+    <div className={cn('relative overflow-hidden', className)}>
+      <div ref={container} className="size-full" />
+
+      {/* The crosshair. Lifts while panning so it reads as hovering over the
+          map rather than stuck to it, and drops a shadow to sell the height. */}
+      <div className="pointer-events-none absolute inset-0 grid place-items-center">
+        <div className="relative -mt-6 flex flex-col items-center">
+          <span
+            className={cn(
+              'grid size-9 place-items-center rounded-full bg-brand-600 text-white shadow-(--shadow-brand)',
+              'transition-transform duration-200',
+              moving ? '-translate-y-2.5' : 'translate-y-0',
+            )}
+          >
+            <MapPin size={18} className="fill-white/25" />
+          </span>
+          <span className="h-3 w-0.5 bg-brand-600" />
+          <span
+            className={cn(
+              'rounded-full bg-ink-900/25 transition-all duration-200',
+              moving ? 'size-1.5 blur-[1px]' : 'size-2.5',
+            )}
+          />
+        </div>
+      </div>
+
       <Attribution />
     </div>
   )

@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowRight, Box, ShieldCheck, Zap } from 'lucide-react'
 import { Logo } from '@/components/brand/Logo'
+import { LaunchAnimation } from '@/components/brand/LaunchAnimation'
 import { HeroImage } from '@/components/viz/HeroImage'
 import { FeatureRow, HeroHeadline, HeroSheet } from '@/components/ui'
 import { Screen } from '@/components/layout/Screen'
@@ -26,6 +27,16 @@ export default function Splash() {
   const { onboarded } = useApp()
   const [booted, setBooted] = useState(false)
 
+  /* The launch sequence plays once per app session, not once per visit to this
+     route — coming back here from Login should not replay it. */
+  const [launching, setLaunching] = useState(
+    () => sessionStorage.getItem('dikkiconnect.launched') !== '1',
+  )
+  const endLaunch = useCallback(() => {
+    sessionStorage.setItem('dikkiconnect.launched', '1')
+    setLaunching(false)
+  }, [])
+
   useEffect(() => {
     const t = setTimeout(() => setBooted(true), 900)
     return () => clearTimeout(t)
@@ -35,6 +46,10 @@ export default function Splash() {
 
   return (
     <Screen tone="dark" className="relative overflow-hidden">
+      <AnimatePresence>
+        {launching && <LaunchAnimation key="launch" onDone={endLaunch} />}
+      </AnimatePresence>
+
       {/* Hero fills the whole shell; the sheet sits on top of it */}
       <div className="absolute inset-0">
         <HeroImage />

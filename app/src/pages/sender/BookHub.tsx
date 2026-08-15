@@ -68,6 +68,7 @@ export default function BookHub() {
               onChange={(v) => patchDraft({ pickupAddress: v })}
               coord={draft.pickupCoord ?? undefined}
               onCoord={(p) => patchDraft({ pickupCoord: p })}
+              cityId={draft.fromCityId}
               hint="Shared with the traveler only after they accept the job."
             />
           </div>
@@ -80,6 +81,7 @@ export default function BookHub() {
               onChange={(v) => patchDraft({ dropAddress: v })}
               coord={draft.dropCoord ?? undefined}
               onCoord={(p) => patchDraft({ dropCoord: p })}
+              cityId={draft.toCityId}
               hint="The receiver gets an OTP to hand over at their door."
             />
           </div>

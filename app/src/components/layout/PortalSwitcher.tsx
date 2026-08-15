@@ -126,23 +126,6 @@ export function PortalSwitcher({ tone = 'onBrand' }: { tone?: 'onBrand' | 'light
           })}
         </div>
 
-        <button
-          onClick={() => {
-            setOpen(false)
-            navigate('/admin')
-          }}
-          className="springy mt-3 flex w-full items-center gap-3.5 rounded-(--radius-md) border-2 border-dashed border-ink-300 p-4 text-left"
-        >
-          <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-900 text-white">
-            <Building2 size={20} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[14.5px] font-bold text-ink-900">Admin console</span>
-            <span className="mt-0.5 block text-[12px] leading-snug text-ink-500">
-              Desktop ops — users, KYC, payments, disputes
-            </span>
-          </span>
-        </button>
       </Sheet>
     </>
   )
