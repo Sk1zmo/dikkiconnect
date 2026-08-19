@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronDown, ChevronsRight } from 'lucide-react'
 import { Screen, TopBar } from '@/components/layout/Screen'
 import { Sheet } from '@/components/ui'
@@ -8,13 +7,10 @@ import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 
 /**
- * Dial codes. India is the whole served network today, so it leads and the
- * rest are here because a login that cannot accept a foreign number turns an
- * NRI sender into a support ticket. Anything outside +91 still verifies — it
- * just cannot be a hub or driver account.
+ * Dial codes. India is the whole served network today, so it leads; the rest
+ * are here because a number that cannot be entered is a sender who cannot be
+ * called back.
  */
-const EASE = [0.16, 1, 0.3, 1] as const
-
 const DIAL_CODES = [
   { code: '+91', label: 'India', digits: 10 },
   { code: '+971', label: 'United Arab Emirates', digits: 9 },
@@ -26,126 +22,95 @@ const DIAL_CODES = [
 
 const POLICY = [
   {
-    title: 'Your number is your account',
-    body: 'We use it to send verification codes and to identify you across the sender, driver, passenger and hub portals. We never sell it, and we do not share it with other users — a driver sees a masked number, never yours in full.',
+    title: 'Your email is your account',
+    body: 'We use it to send verification codes and to identify you across the sender, driver, passenger and hub portals. We never sell it, and other users never see it.',
+  },
+  {
+    title: 'Why we also ask for your number',
+    body: 'So a driver can reach you at the door, and a hub can ring a receiver whose parcel has been waiting. It is contact information, not a password — nothing is granted on the strength of it, and codes are never sent to it.',
   },
   {
     title: 'What we keep',
-    body: 'Your name, email, the parcels and rides you book, and the OTP timestamps that form each delivery’s custody chain. That chain is what protects you in a dispute, so it is retained even after a delivery closes.',
+    body: 'Your name, email, number, the parcels and rides you book, and the OTP timestamps that form each delivery’s custody chain. That chain is what protects you in a dispute, so it is retained even after a delivery closes.',
   },
   {
     title: 'Verification documents',
     body: 'Aadhaar and licence checks run through a licensed verification partner. We store only the partner’s masked token and the pass/fail result — never the raw document number.',
   },
   {
-    title: 'Location',
-    body: 'Used only while you have a trip or parcel in progress, to show it on the map. Background tracking is off, and you can decline location and still use the app by typing addresses.',
-  },
-  {
-    title: 'Messages and rates',
-    body: 'Verification codes are sent by SMS. Your carrier’s standard message and data rates apply — DikkiConnect does not charge for them.',
+    title: 'Location and photos',
+    body: 'Location is used only while you have a trip or parcel in progress, to show it on the map — background tracking is off. The camera is used to scan parcel QR codes and photograph handovers, which is what protects both sides in a dispute. You can decline either and still use the app.',
   },
 ]
 
 /**
- * Phone-first auth. Per PRD §8.1 there is no password anywhere in
- * DikkiConnect — a code to your number is the only way in.
+ * Sign in.
  *
- * The layout is deliberately spare: one card, one field, one button. Every
- * other decision — which portal, what your name is, whether you drive — happens
- * after you are through the door, because none of it is needed to get you
- * there and all of it is friction in front of a first-run user.
+ * One credential — the email address — because that is where the code goes.
+ * The number is collected alongside it because every role in this product
+ * eventually needs to phone somebody, and asking once here is kinder than
+ * asking at the door.
  */
 export default function Login() {
   const navigate = useNavigate()
   const { requestCode } = useAuth()
 
-  const [value, setValue] = useState('')
-  const [email, setEmail] = useState<string | null>(null)
-  const [sending, setSending] = useState(false)
-  const [error, setError] = useState<string>()
-  const [notice, setNotice] = useState<string>()
-  const [touched, setTouched] = useState(false)
-  const [policyOpen, setPolicyOpen] = useState(false)
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [dial, setDial] = useState(DIAL_CODES[0])
   const [dialOpen, setDialOpen] = useState(false)
+  const [policyOpen, setPolicyOpen] = useState(false)
+  const [touched, setTouched] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [errors, setErrors] = useState<{ email?: string; phone?: string }>({})
 
-  const isEmail = value.includes('@')
-  const digits = value.replace(/\D/g, '')
-  const complete = digits.length === dial.digits
-  const valid = isEmail
-    ? /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim())
-    : complete
-  const showDial = !isEmail && complete
+  const digits = phone.replace(/\D/g, '')
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())
+  const phoneOk = digits.length === dial.digits
 
   const submit = () => {
-    if (!value.trim()) {
-      setError('Enter your mobile number to continue')
-      return
+    const next: typeof errors = {}
+    if (!emailOk) {
+      next.email = email.trim() ? 'That email doesn’t look right' : 'Enter your email address'
     }
+    if (!phoneOk) next.phone = `Enter your ${dial.digits}-digit mobile number`
+    setErrors(next)
+    if (Object.keys(next).length) return
 
-    if (isEmail) {
-      /* Every account is keyed to a mobile number: the OTP, the custody chain
-         and the payout account all hang off it. An email on its own cannot
-         open any of that — so keep it and ask for the number, rather than
-         dead-ending on a field we invited them to fill. */
-      if (!valid) {
-        setError('That email doesn’t look right')
-        return
-      }
-      setEmail(value.trim())
-      setValue('')
-      setError(undefined)
-      setNotice('Got it — now your mobile number, and we’ll attach that email to the account.')
-      return
-    }
-
-    if (!valid) {
-      setError(`Enter a valid ${dial.digits}-digit mobile number`)
-      return
-    }
-
-    setError(undefined)
     setSending(true)
-
-    /* The identifier the server keys on is whatever gets the code to a person:
-       an email if we have one, otherwise the number — and for a number the
-       server looks up the address on file. Asking here rather than on the next
-       screen means a rejection is shown against the field that caused it. */
     void (async () => {
-      const identifier = email ?? digits
-      const result = await requestCode(identifier)
+      const result = await requestCode(email.trim().toLowerCase())
       setSending(false)
 
       if (!result.ok) {
         if (result.reason === 'too-soon') {
-          setError(`A code was just sent. Try again in ${result.retryInSeconds ?? 30}s.`)
+          setErrors({ email: `A code was just sent. Try again in ${result.retryInSeconds ?? 30}s.` })
         } else if (result.reason === 'no-api') {
-          setError(
-            'This build has no sign-in server attached. Open the app at its current address, or reinstall the latest APK.',
-          )
+          setErrors({
+            email:
+              'This build has no sign-in server attached. Open the app at its current address, or reinstall the latest build.',
+          })
         } else if (result.reason === 'offline') {
-          setError('Could not reach DikkiConnect. Check your connection and try again.')
+          setErrors({ email: 'Could not reach DikkiConnect. Check your connection and try again.' })
         } else {
-          setError('That doesn’t look like a valid number or email.')
+          setErrors({ email: 'That email address was not accepted.' })
         }
         return
       }
 
       if (!result.delivered) {
-        setError(
-          result.reason === 'no-channel'
-            ? 'We have no way to reach that number yet. Sign in with your email address instead.'
-            : result.reason === 'unconfigured'
-              ? 'Message delivery isn’t switched on for this deployment yet.'
+        setErrors({
+          email:
+            result.reason === 'unconfigured'
+              ? 'Email delivery isn’t switched on for this deployment yet.'
               : 'We couldn’t send the code just now. Try again in a moment.',
-        )
+        })
         return
       }
 
-      const qs = new URLSearchParams({ id: identifier })
+      // The number rides along so signup can store it without asking twice.
+      const qs = new URLSearchParams({ id: email.trim().toLowerCase(), phone: digits })
       if (result.to) qs.set('to', result.to)
-      if (result.channel) qs.set('ch', result.channel)
       navigate(`/auth/otp?${qs.toString()}`)
     })()
   }
@@ -155,7 +120,7 @@ export default function Login() {
       <TopBar back backTo="/" className="pt-safe" />
 
       <div className="device-scroll flex flex-1 flex-col justify-center px-6 pb-10">
-        <div className="anim-scale-in mx-auto w-full max-w-[344px] rounded-(--radius-2xl) border border-ink-200/80 bg-white px-6 py-11 shadow-(--shadow-e2)">
+        <div className="anim-scale-in mx-auto w-full max-w-[344px] rounded-(--radius-2xl) border border-ink-200/80 bg-white px-6 py-10 shadow-(--shadow-e2)">
           <div className="flex justify-center">
             <span className="grid size-11 place-items-center rounded-(--radius-md) bg-brand-50 text-brand-600">
               <ChevronsRight size={22} strokeWidth={2.6} />
@@ -166,101 +131,92 @@ export default function Login() {
             Log in or sign up
           </h1>
 
-          <div className="mt-7">
-            <div
-              className={cn(
-                'flex items-stretch overflow-hidden rounded-(--radius-md) border-2 bg-white transition-colors',
-                error ? 'border-danger-400' : 'border-ink-200 focus-within:border-brand-500',
-              )}
-            >
-              {/* The dial code only earns its space once the number is whole.
-                  Showing it from the first keystroke crowds an empty field and
-                  pre-answers a question nobody has asked yet; showing it on
-                  completion confirms we read the number the way they meant it. */}
-              <AnimatePresence initial={false}>
-                {showDial && (
-                  <motion.button
-                    key="dial"
-                    type="button"
-                    onClick={() => setDialOpen(true)}
-                    initial={{ width: 0, opacity: 0 }}
-                    animate={{ width: 'auto', opacity: 1 }}
-                    exit={{ width: 0, opacity: 0 }}
-                    transition={{ duration: 0.26, ease: EASE }}
-                    className="flex shrink-0 items-center gap-1.5 overflow-hidden border-r-2 border-ink-200 bg-ink-50 px-3.5 text-[15px] font-bold text-ink-800"
-                  >
-                    <span className="whitespace-nowrap">{dial.code}</span>
-                    <ChevronDown size={15} className="text-ink-500" />
-                  </motion.button>
+          <div className="mt-7 flex flex-col gap-3">
+            {/* ── Email — the credential ────────────────────────────────── */}
+            <div>
+              <div
+                className={cn(
+                  'rounded-(--radius-md) border-2 bg-white transition-colors',
+                  errors.email ? 'border-danger-400' : 'border-ink-200 focus-within:border-brand-500',
                 )}
-              </AnimatePresence>
-
-              <span className="relative min-w-0 flex-1">
-                {/* Floating label — the placeholder has to go somewhere once
-                    there is a value, or the field loses its own name. */}
-                <AnimatePresence initial={false}>
-                  {value.length > 0 && (
-                    <motion.span
-                      key="label"
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 6 }}
-                      transition={{ duration: 0.18 }}
-                      className="pointer-events-none absolute top-1.5 left-3.5 text-[11px] font-medium text-ink-400"
-                    >
-                      Phone number or email
-                    </motion.span>
-                  )}
-                </AnimatePresence>
+              >
                 <input
-                  value={value}
+                  value={email}
                   onChange={(e) => {
-                    setValue(e.target.value)
-                    setError(undefined)
+                    setEmail(e.target.value)
+                    setErrors((x) => ({ ...x, email: undefined }))
                   }}
-                  onKeyDown={(e) => e.key === 'Enter' && submit()}
                   onFocus={() => setTouched(true)}
-                  inputMode={isEmail ? 'email' : 'tel'}
-                  autoComplete="tel"
-                  placeholder="Phone number or email"
-                  className={cn(
-                    'h-14 w-full bg-transparent px-3.5 text-[15px] text-ink-900 outline-none',
-                    'placeholder:text-ink-400',
-                    value.length > 0 && 'pt-4',
-                  )}
+                  onKeyDown={(e) => e.key === 'Enter' && submit()}
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="Email address"
+                  className="h-13 w-full bg-transparent px-3.5 text-[15px] text-ink-900 outline-none placeholder:text-ink-400"
                 />
-              </span>
+              </div>
+              {errors.email && (
+                <p className="anim-fade-in mt-1.5 text-[12.5px] font-semibold text-danger-600">
+                  {errors.email}
+                </p>
+              )}
             </div>
 
-            {error && (
-              <p className="anim-fade-in mt-2 text-[12.5px] font-semibold text-danger-600">
-                {error}
-              </p>
-            )}
-            {notice && !error && (
-              <p className="anim-fade-in mt-2 text-[12.5px] font-semibold text-brand-700">
-                {notice}
-              </p>
-            )}
+            {/* ── Phone — contact only ──────────────────────────────────── */}
+            <div>
+              <div
+                className={cn(
+                  'flex items-stretch overflow-hidden rounded-(--radius-md) border-2 bg-white transition-colors',
+                  errors.phone ? 'border-danger-400' : 'border-ink-200 focus-within:border-brand-500',
+                )}
+              >
+                <button
+                  type="button"
+                  onClick={() => setDialOpen(true)}
+                  className="flex shrink-0 items-center gap-1.5 border-r-2 border-ink-200 bg-ink-50 px-3.5 text-[15px] font-bold text-ink-800"
+                >
+                  {dial.code}
+                  <ChevronDown size={15} className="text-ink-500" />
+                </button>
+                <input
+                  value={phone}
+                  onChange={(e) => {
+                    setPhone(e.target.value.replace(/[^\d ]/g, ''))
+                    setErrors((x) => ({ ...x, phone: undefined }))
+                  }}
+                  onFocus={() => setTouched(true)}
+                  onKeyDown={(e) => e.key === 'Enter' && submit()}
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  maxLength={dial.digits + 2}
+                  placeholder="Mobile number"
+                  className="h-13 w-full min-w-0 bg-transparent px-3.5 text-[15px] text-ink-900 outline-none placeholder:text-ink-400"
+                />
+              </div>
+              {errors.phone && (
+                <p className="anim-fade-in mt-1.5 text-[12.5px] font-semibold text-danger-600">
+                  {errors.phone}
+                </p>
+              )}
+            </div>
 
             <button
               onClick={submit}
               disabled={sending}
               className={cn(
-                'pressable focus-ring mt-3.5 h-13 w-full rounded-full text-[15px] font-bold text-white',
+                'pressable focus-ring mt-1 h-13 w-full rounded-full text-[15px] font-bold text-white',
                 'bg-brand-600 shadow-(--shadow-brand-sm) hover:bg-brand-700 disabled:opacity-70',
               )}
             >
               {sending ? 'Sending code…' : 'Continue'}
             </button>
 
-            {/* Held back until the field is engaged. Shown up front it is one
-                more thing to read before the only thing that matters; shown on
-                focus it answers the question the user has just formed — what
-                happens when I press this? */}
+            {/* Held back until a field is engaged. Shown up front it is one
+                more thing to read before the only thing that matters. */}
             {touched && (
-              <p className="anim-fade-in mt-3 text-[12px] leading-[1.5] text-ink-500">
-                We&apos;ll send a confirmation code by text. Message and data rates may apply.{' '}
+              <p className="anim-fade-in text-[12px] leading-[1.5] text-ink-500">
+                We&apos;ll email you a 6-digit code. Your number is for delivery contact only — no
+                codes are sent to it.{' '}
                 <button
                   onClick={() => setPolicyOpen(true)}
                   className="pressable-sm font-bold text-ink-800 underline underline-offset-2"
@@ -286,9 +242,9 @@ export default function Login() {
                 key={p.id}
                 aria-label={p.label}
                 onClick={() =>
-                  setError(
-                    `${p.id === 'google' ? 'Google' : 'Apple'} sign-in needs its OAuth app registered under a company account — use your mobile number for now.`,
-                  )
+                  setErrors({
+                    email: `${p.id === 'google' ? 'Google' : 'Apple'} sign-in needs its OAuth app registered under a company account — use your email for now.`,
+                  })
                 }
                 className="pressable grid size-13 place-items-center rounded-(--radius-md) border border-ink-200 bg-white hover:bg-ink-50"
               >
@@ -328,7 +284,7 @@ export default function Login() {
         open={dialOpen}
         onClose={() => setDialOpen(false)}
         title="Country code"
-        subtitle="DikkiConnect operates in India — other codes can still verify"
+        subtitle="DikkiConnect operates in India — other codes are accepted for contact"
       >
         <div className="flex flex-col">
           {DIAL_CODES.map((c) => (

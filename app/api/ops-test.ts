@@ -2,7 +2,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { withCors } from './_lib/http.js'
 import { mask, parseIdentifier, record } from './_lib/auth.js'
 import { mailProvider, sendMail } from './_lib/mail.js'
-import { sendOtpSms, smsProvider } from './_lib/sms.js'
 
 /**
  * POST /api/ops-test   { key, to }
@@ -26,36 +25,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   if (String(req.body?.key ?? '') !== expected) return res.status(401).json({ error: 'unauthorised' })
 
   const id = parseIdentifier(String(req.body?.to ?? ''))
-  if (!id) return res.status(400).json({ error: 'bad-recipient' })
-
-  // A recognisable, obviously-not-real code, so a test can never be mistaken
-  // for a live one if it lands in a shared inbox.
-  const CODE = '123456'
-
-  if (id.kind === 'phone') {
-    if (!smsProvider()) {
-      return res.status(200).json({
-        ok: false,
-        channel: 'sms',
-        reason: 'unconfigured',
-        detail:
-          'No SMS gateway configured. Set MSG91_AUTH_KEY + MSG91_TEMPLATE_ID, or FAST2SMS_API_KEY, or the three TWILIO_ variables.',
-      })
-    }
-    const sms = await sendOtpSms(id.value, CODE)
-    await record({
-      kind: 'ops.test-sms',
-      identifier: mask(id.value),
-      ok: sms.sent,
-      detail: sms.sent ? sms.provider : `${sms.reason} · ${sms.detail ?? ''}`,
-    })
-    return res.status(200).json({
-      ok: sms.sent,
-      channel: 'sms',
-      provider: smsProvider(),
-      ...(sms.sent ? { id: sms.id } : { reason: sms.reason, detail: sms.detail }),
-    })
-  }
+  if (!id) return res.status(400).json({ error: 'bad-recipient', detail: 'Enter an email address.' })
 
   if (!mailProvider()) {
     return res.status(200).json({

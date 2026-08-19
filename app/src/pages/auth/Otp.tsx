@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle2, MailCheck, MessageSquare, RefreshCw, Smartphone } from 'lucide-react'
+import { CheckCircle2, MailCheck, RefreshCw } from 'lucide-react'
 import { Screen, TopBar } from '@/components/layout/Screen'
 import { Button, Note, OtpInput, useToast } from '@/components/ui'
 import { useCountdown } from '@/lib/hooks'
 import { OTP_RESEND_SECONDS, useAuth } from '@/lib/auth'
-import { awaitSmsCode, canAutofillSms } from '@/lib/sms'
 
 /**
  * Verification.
@@ -24,7 +23,7 @@ export default function Otp() {
 
   const identifier = params.get('id') ?? ''
   const sentTo = params.get('to') ?? identifier
-  const channel = params.get('ch') === 'sms' ? 'sms' : 'email'
+  const phone = params.get('phone') ?? ''
 
   const [code, setCode] = useState('')
   const [error, setError] = useState<string>()
@@ -32,8 +31,6 @@ export default function Otp() {
   const [verified, setVerified] = useState(false)
   const [attemptsLeft, setAttemptsLeft] = useState(5)
   const { label, restart, done } = useCountdown(OTP_RESEND_SECONDS)
-
-  const autofill = canAutofillSms()
 
   useEffect(() => {
     if (!identifier) navigate('/auth/login', { replace: true })
@@ -76,27 +73,13 @@ export default function Otp() {
     setVerified(true)
     setTimeout(() => {
       if (result.isNewUser) {
-        const qs = new URLSearchParams({ ticket: result.ticket, id: identifier })
+        const qs = new URLSearchParams({ ticket: result.ticket, id: identifier, phone })
         navigate(`/auth/signup?${qs.toString()}`, { replace: true })
       } else {
         navigate('/auth/role', { replace: true })
       }
     }, 720)
   }
-
-  /* WebOTP, for the day an SMS gateway is attached. Attached unconditionally
-     because it simply never fires where the platform lacks it. */
-  useEffect(() => {
-    if (!autofill || verified) return
-    const ctrl = new AbortController()
-    awaitSmsCode(ctrl.signal).then((sms) => {
-      if (!sms) return
-      setCode(sms)
-      void verify(sms)
-    })
-    return () => ctrl.abort()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autofill, verified])
 
   const resend = async () => {
     const result = await requestCode(identifier)
@@ -124,23 +107,16 @@ export default function Otp() {
 
       <div className="device-scroll flex-1 px-7">
         <div className="mb-6 grid size-14 place-items-center rounded-(--radius-lg) bg-brand-50 text-brand-600">
-          {channel === 'sms' ? <MessageSquare size={24} /> : <MailCheck size={24} />}
+          <MailCheck size={24} />
         </div>
 
         <h1 className="text-display text-[28px] leading-[1.14] font-extrabold text-ink-900">
-          {channel === 'sms' ? 'Check your messages' : 'Check your email'}
+          Check your email
         </h1>
         <p className="mt-2.5 text-[14.5px] leading-[1.55] text-ink-500">
-          We sent a 6-digit code {channel === 'sms' ? 'by SMS to' : 'to'}{' '}
-          <span className="font-bold text-ink-800">{sentTo}</span>
+          We sent a 6-digit code to <span className="font-bold text-ink-800">{sentTo}</span>
         </p>
 
-        {autofill && !verified && (
-          <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-success-50 px-3 py-1.5 text-[11.5px] font-bold text-success-700">
-            <Smartphone size={12} />
-            We&apos;ll fill it in automatically if it arrives by SMS
-          </p>
-        )}
 
         <div className="mt-9">
           {verified ? (
@@ -199,9 +175,7 @@ export default function Otp() {
 
         {!verified && (
           <Note tone="neutral" className="mt-8" title="Not arrived?">
-            {channel === 'sms'
-              ? `Check that ${sentTo} is right.`
-              : `Check spam, and that ${sentTo} is right.`}{' '} The code is valid for 5 minutes, works once,
+            Check spam, and that {sentTo} is right.{' '} The code is valid for 5 minutes, works once,
             and you have {attemptsLeft} attempt{attemptsLeft === 1 ? '' : 's'} left before it locks.
           </Note>
         )}

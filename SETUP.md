@@ -61,60 +61,28 @@ the SMTP variables.
 
 ---
 
-## 2. SMS authentication
+## 2. Why there is no SMS
 
-This is the one with real paperwork, because India regulates it.
+There deliberately isn't any. Sign-in is email, and only email.
 
-**Why it is not just an API key:** TRAI requires every commercial SMS sender to
-register on a DLT platform with a registered business — PAN, GST, an authorised
-signatory — and to get each message template approved. It exists to stop spam,
-and it applies to OTPs too.
+**The reason:** texting an Indian number commercially requires DLT
+registration — a registered business, PAN, GST, an authorised signatory — plus
+per-template approval, and it applies to OTPs as much as to marketing. That is
+weeks of paperwork before a single code can be sent, and until it clears the
+login simply does not work.
 
-Three routes, in the order worth trying:
+A login that depends on paperwork is a login that is sometimes broken. One
+channel that always works beats two where one silently is not there.
 
-### Fast2SMS — fastest to a working code
+**The number is still collected**, at sign-in, alongside the email. It is
+stored on the account so a driver can reach a sender at the door and a hub can
+ring a receiver whose parcel has been sitting. It authenticates nothing, and no
+code is ever sent to it — so nothing has to be true about it for the login to
+be sound.
 
-| Name | Value |
-| --- | --- |
-| `FAST2SMS_API_KEY` | fast2sms.com → Dev API |
-
-Its `otp` route sends a numeric code without per-template DLT approval on
-several plans, which is why it is first. Indian company, pay as you go, roughly
-₹0.20–0.25 per SMS. Good enough to launch a pilot on.
-
-### MSG91 — the proper route
-
-| Name | Value |
-| --- | --- |
-| `MSG91_AUTH_KEY` | msg91.com → Auth Key |
-| `MSG91_TEMPLATE_ID` | the approved OTP template's id |
-| `MSG91_SENDER_ID` | your 6-character sender, e.g. `DIKKIC` |
-
-Needs DLT registration (through Jio/Airtel/Vodafone's DLT portal — allow a week
-or two) and template approval. Once you have it this is the cheapest and most
-reliable option, and the one to be on at volume.
-
-### Twilio — no Indian paperwork, but
-
-| Name | Value |
-| --- | --- |
-| `TWILIO_ACCOUNT_SID` | |
-| `TWILIO_AUTH_TOKEN` | |
-| `TWILIO_FROM_NUMBER` | e.g. `+14155551234` |
-
-**Be aware:** messages to Indian numbers route internationally, cost far more
-(~₹5 against ₹0.20), and DND-registered numbers frequently drop them silently.
-Use it to test the plumbing, not to launch.
-
-### How the app behaves either way
-
-- A **phone number** goes by SMS if a gateway is configured; otherwise to the
-  email on that account.
-- An **email address** goes by email.
-- If the first choice fails at the provider, the other is tried.
-- The verification screen says which channel carried it.
-
-So SMS is an upgrade, not a prerequisite. Sign-in works on email alone.
+If you later want SMS codes as well, the place to add them is
+`api/auth/request-code.ts`: it is a single delivery call, and the challenge
+machinery around it is channel-agnostic.
 
 ---
 
@@ -136,7 +104,7 @@ Free tier is 10,000 commands a day, far more than a pilot needs. The storage
 layer detects the variables and switches over — no code change — and `/ops`
 flips from a warning to `upstash-redis`.
 
-**What gets stored:** accounts keyed by email and phone, session tokens, live
+**What gets stored:** accounts keyed by email, session tokens, live
 verification challenges (hashed, five-minute TTL) and the ops event log. All of
 it small, none of it relational, which is why Redis rather than Postgres.
 
@@ -309,16 +277,47 @@ are publishing as a company rather than as an individual.
 
 ---
 
-## 7. Priority
+## 7. Permissions
+
+Both apps declare the same four things, and each is requested at the moment it
+is first needed rather than in a wall at launch. The download page explains
+each one to the user in the same words.
+
+| | Android | iOS |
+| --- | --- | --- |
+| Location | `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` | `NSLocationWhenInUseUsageDescription` |
+| Camera | `CAMERA` + optional `hardware.camera` | `NSCameraUsageDescription` |
+| Photos | `READ_MEDIA_IMAGES` (13+), `READ_EXTERNAL_STORAGE` (≤32) | `NSPhotoLibraryAddUsageDescription` |
+| Network | `INTERNET`, `ACCESS_NETWORK_STATE` | granted implicitly |
+| Screen awake | `WAKE_LOCK` | not needed |
+
+Three details that are easy to get wrong and fail silently:
+
+- **iOS terminates the app** if geolocation is called with no usage string. It
+  does not refuse the permission — the process dies. The strings are the ones
+  the user reads in the sheet, and App Review rejects vague ones.
+- **Android 13 split storage** into per-type permissions. Both spellings are
+  declared, the old one capped at `maxSdkVersion="32"`, or the app can read
+  nothing on one half of the devices in the field.
+- **`LSApplicationQueriesSchemes`** must list every UPI scheme on iOS, or
+  `canOpenURL` reports each app as not installed and the pay button looks
+  broken rather than absent.
+
+The camera is declared `required="false"` so the app still installs on a device
+without one — a hub terminal, say — instead of being filtered out of the Play
+Store for it.
+
+---
+
+## 8. Priority
 
 If it were my money and my week:
 
 1. **Gmail SMTP + `OPS_KEY`** — sign-in works today, costs nothing
 2. **Upstash Redis** — accounts stop evaporating; ten minutes
-3. **Fast2SMS** — SMS codes without waiting on DLT
-4. **Razorpay onboarding** — start early, it is the slowest
-5. **Apple Developer** — also slow, run it in parallel
-6. **DLT registration** — for MSG91, once the pilot proves the idea
+3. **Razorpay onboarding** — start early, it is the slowest
+4. **Apple Developer** — also slow, run it in parallel
+5. **Resend + a sending domain** — before real users arrive
 
 The first two are an afternoon and unblock real testing. Everything else can
 run in the background while people are already using the thing.

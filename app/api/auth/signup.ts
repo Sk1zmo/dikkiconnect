@@ -6,6 +6,7 @@ import {
   findAccount,
   mask,
   parseIdentifier,
+  parsePhone,
   record,
 } from '../_lib/auth.js'
 import { sendMail, welcomeEmail } from '../_lib/mail.js'
@@ -23,7 +24,7 @@ const TICKET_TTL_MS = 10 * 60_000
 async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method-not-allowed' })
 
-  const { ticket, name, email, phone, role } = req.body ?? {}
+  const { ticket, name, phone, role } = req.body ?? {}
 
   let verified: { kind: string; value: string; at: number }
   try {
@@ -41,15 +42,18 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (String(name ?? '').trim().length < 2) return res.status(400).json({ error: 'bad-name' })
 
-  // The verified identifier always wins over whatever the form claimed, so a
-  // ticket for one address can never create an account for another.
-  const suppliedEmail = String(email ?? '').trim().toLowerCase()
-  const suppliedPhone = String(phone ?? '').replace(/\D/g, '').slice(-10)
-  const finalEmail = verified.kind === 'email' ? verified.value : suppliedEmail
-  const finalPhone = verified.kind === 'phone' ? verified.value : suppliedPhone
+  /* The verified address always wins over whatever the form claimed — a ticket
+     for one address can never create an account for another. The phone is
+     taken at face value because it is contact information rather than a
+     credential: nothing is granted on the strength of it. */
+  const finalEmail = verified.value
+  const finalPhone = parsePhone(String(phone ?? ''))
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(finalEmail)) {
     return res.status(400).json({ error: 'bad-email' })
+  }
+  if (!finalPhone) {
+    return res.status(400).json({ error: 'bad-phone', detail: 'A 10-digit mobile number is required.' })
   }
 
   const id = parseIdentifier(verified.value)

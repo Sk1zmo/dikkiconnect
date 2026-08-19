@@ -50,4 +50,26 @@
     <!-- Vector tiles are cached to disk; without this the map re-downloads the
          whole viewport on every cold start. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Camera: the parcel QR scanner and the photo evidence captured at every
+         handover. `required="false"` so the app still installs on a device
+         without one — a hub terminal, say — rather than being filtered out of
+         the Play Store for it. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
+    <!-- Photos. Android 13 split READ_EXTERNAL_STORAGE into per-type
+         permissions, so both spellings are needed: the new one for 13+, the
+         old one capped below it, or the app can read nothing on one half of
+         the devices in the field. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <!-- Keeps the screen awake during turn-by-turn navigation. A driver who has
+         to poke the phone at a junction is a driver not watching the road. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
 </manifest>

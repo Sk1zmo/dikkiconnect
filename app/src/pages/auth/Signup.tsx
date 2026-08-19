@@ -29,13 +29,11 @@ export default function Signup() {
 
   const ticket = params.get('ticket') ?? ''
   const identifier = params.get('id') ?? ''
-  const identifierIsEmail = identifier.includes('@')
-  const phone = identifierIsEmail ? '' : identifier
+  const phone = params.get('phone') ?? ''
 
   const [name, setName] = useState('')
-  const [email, setEmail] = useState(identifierIsEmail ? identifier : '')
   const [role, setChosenRole] = useState<Role>('sender')
-  const [errors, setErrors] = useState<{ name?: string; email?: string }>({})
+  const [errors, setErrors] = useState<{ name?: string }>({})
   const [creating, setCreating] = useState(false)
 
   /* The ticket is the server's proof that this identifier just passed
@@ -49,13 +47,12 @@ export default function Signup() {
   const submit = () => {
     const next: typeof errors = {}
     if (name.trim().length < 2) next.name = 'Enter your full name'
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) next.email = 'Enter a valid email'
     setErrors(next)
     if (Object.keys(next).length) return
 
     setCreating(true)
     void (async () => {
-      const account = await completeSignup({ ticket, name, email, phone, role })
+      const account = await completeSignup({ ticket, name, phone, role })
       setCreating(false)
       if (!account) {
         setErrors({ name: 'Could not create the account. Ask for a new code and try again.' })
@@ -76,10 +73,9 @@ export default function Signup() {
           Almost there
         </h1>
         <p className="mt-2 text-[14px] leading-[1.55] text-ink-500">
-          <span className="font-bold text-ink-800">
-            {identifierIsEmail ? identifier : maskPhone(phone)}
-          </span>{' '}
-          is verified. Tell us who you are — this name appears on your parcels and rides.
+          <span className="font-bold text-ink-800">{identifier}</span> is verified
+          {phone ? ` and we have ${maskPhone(phone)} for contact` : ''}. Tell us who you are — this
+          name appears on your parcels and rides.
         </p>
 
         <div className="mt-7 flex flex-col gap-4">
@@ -94,19 +90,6 @@ export default function Signup() {
               setErrors((x) => ({ ...x, name: undefined }))
             }}
             prefix={<UserRound size={15} />}
-          />
-          <Field
-            label="Email"
-            type="email"
-            placeholder="you@example.com"
-            autoComplete="email"
-            value={email}
-            error={errors.email}
-            onChange={(e) => {
-              setEmail(e.target.value)
-              setErrors((x) => ({ ...x, email: undefined }))
-            }}
-            hint="Receipts and delivery proofs are sent here."
           />
         </div>
 

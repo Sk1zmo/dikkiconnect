@@ -3,7 +3,6 @@ import { withCors } from './_lib/http.js'
 import { readEvents } from './_lib/auth.js'
 import { K, kvList, storageBackend, storageDurable } from './_lib/store.js'
 import { mailConfigured, mailProvider } from './_lib/mail.js'
-import { smsConfigured, smsProvider } from './_lib/sms.js'
 
 /**
  * GET /api/ops?key=…   — the monitoring feed.
@@ -46,8 +45,6 @@ async function handler(req: VercelRequest, res: VercelResponse) {
       storageDurable: storageDurable(),
       mailConfigured: mailConfigured(),
       mailProvider: mailProvider(),
-      smsConfigured: smsConfigured(),
-      smsProvider: smsProvider(),
       // Said plainly, because a dashboard that looks green while running on a
       // Map that dies with the instance is worse than no dashboard.
       warnings: [
@@ -58,11 +55,6 @@ async function handler(req: VercelRequest, res: VercelResponse) {
           ? []
           : [
               'No mail provider: codes cannot be emailed. Set SMTP_USER + SMTP_PASS (a Gmail App Password works), or RESEND_API_KEY.',
-            ]),
-        ...(smsConfigured()
-          ? []
-          : [
-              'No SMS gateway: codes cannot be texted, so phone sign-in falls back to the email on the account. Set FAST2SMS_API_KEY, or MSG91_AUTH_KEY + MSG91_TEMPLATE_ID, or the three TWILIO_ variables.',
             ]),
       ],
     },

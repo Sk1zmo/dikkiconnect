@@ -27,7 +27,7 @@ const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30
 
 export interface Challenge {
   identifier: string
-  channel: 'email' | 'sms'
+  channel: 'email'
   hash: string
   salt: string
   issuedAt: number
@@ -46,17 +46,26 @@ export interface Account {
   avatarTone: number
 }
 
-export type Identifier = { kind: 'email' | 'phone'; value: string }
+/**
+ * An account is identified by its email address and nothing else.
+ *
+ * The phone number is still collected and stored — a driver has to be
+ * reachable, and a hub manager has to be able to ring a receiver — but it is
+ * contact information, not a credential. Nobody signs in with it, so nothing
+ * has to be true about it for the login to be sound.
+ */
+export type Identifier = { kind: 'email'; value: string }
 
-/** Normalises whatever the user typed into a stable key. */
 export function parseIdentifier(raw: string): Identifier | null {
   const v = (raw ?? '').trim().toLowerCase()
   if (!v) return null
-  if (v.includes('@')) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) ? { kind: 'email', value: v } : null
-  }
-  const digits = v.replace(/\D/g, '')
-  return digits.length >= 8 ? { kind: 'phone', value: digits.slice(-10) } : null
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) ? { kind: 'email', value: v } : null
+}
+
+/** Ten digits, or null. Stored on the account; never used to authenticate. */
+export const parsePhone = (raw: string): string | null => {
+  const digits = (raw ?? '').replace(/\D/g, '').slice(-10)
+  return digits.length === 10 ? digits : null
 }
 
 const sixDigits = () => String(randomInt(0, 1_000_000)).padStart(6, '0')
@@ -81,14 +90,13 @@ export async function record(e: Omit<AppEvent, 'at'>) {
 
 export const readEvents = (limit = 120) => kvList<AppEvent>(K.events, limit)
 
-/** Identifiers are masked everywhere they are shown or logged. */
+/** Addresses are masked everywhere they are shown or logged. */
 export function mask(identifier: string) {
-  if (identifier.includes('@')) {
-    const [user, domain] = identifier.split('@')
-    const head = user.slice(0, 2)
-    return `${head}${'•'.repeat(Math.max(1, user.length - 2))}@${domain}`
+  if (!identifier.includes('@')) {
+    return `${identifier.slice(0, 2)}${'•'.repeat(Math.max(0, identifier.length - 4))}${identifier.slice(-2)}`
   }
-  return `${identifier.slice(0, 2)}${'•'.repeat(Math.max(0, identifier.length - 4))}${identifier.slice(-2)}`
+  const [user, domain] = identifier.split('@')
+  return `${user.slice(0, 2)}${'•'.repeat(Math.max(1, user.length - 2))}@${domain}`
 }
 
 /* ── Challenges ──────────────────────────────────────────────────────────── */
@@ -117,7 +125,7 @@ export async function issueChallenge(id: Identifier): Promise<IssueResult> {
   const salt = randomBytes(16).toString('hex')
   const challenge: Challenge = {
     identifier: id.value,
-    channel: id.kind === 'email' ? 'email' : 'sms',
+    channel: 'email',
     hash: hashCode(code, salt),
     salt,
     issuedAt: now,
@@ -194,10 +202,7 @@ export async function createAccount(details: {
     avatarTone: randomInt(0, 6),
   }
 
-  // Indexed under both identifiers, so either one signs the same person in.
-  await kvSet(K.account(accountKey(details.id)), account)
-  if (account.email) await kvSet(K.account(`email:${account.email}`), account)
-  if (account.phone) await kvSet(K.account(`phone:${account.phone}`), account)
+  await kvSet(K.account(`email:${account.email}`), account)
   await kvPush(K.accountIndex, { id: account.id, at: account.createdAt }, 1000)
 
   return account
@@ -205,8 +210,7 @@ export async function createAccount(details: {
 
 export async function updateAccount(account: Account, patch: Partial<Account>): Promise<Account> {
   const next = { ...account, ...patch }
-  if (next.email) await kvSet(K.account(`email:${next.email}`), next)
-  if (next.phone) await kvSet(K.account(`phone:${next.phone}`), next)
+  await kvSet(K.account(`email:${next.email}`), next)
   return next
 }
 
@@ -219,8 +223,11 @@ export async function updateAccount(account: Account, patch: Partial<Account>): 
  */
 export async function createSession(account: Account): Promise<string> {
   const token = randomBytes(24).toString('base64url')
-  const key = account.email ? `email:${account.email}` : `phone:${account.phone}`
-  await kvSet(K.session(token), { key, accountId: account.id, at: Date.now() }, SESSION_TTL_SECONDS)
+  await kvSet(
+    K.session(token),
+    { key: `email:${account.email}`, accountId: account.id, at: Date.now() },
+    SESSION_TTL_SECONDS,
+  )
   return token
 }
 

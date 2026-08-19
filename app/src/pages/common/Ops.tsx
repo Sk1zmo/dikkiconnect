@@ -5,7 +5,6 @@ import {
   Database,
   KeyRound,
   Mail,
-  MessageSquare,
   RefreshCw,
   Send,
   ShieldCheck,
@@ -37,8 +36,6 @@ interface OpsFeed {
     storageDurable: boolean
     mailConfigured: boolean
     mailProvider: string | null
-    smsConfigured: boolean
-    smsProvider: string | null
     warnings: string[]
   }
   counts: Record<string, number>
@@ -188,7 +185,7 @@ export default function Ops() {
               </div>
             )}
 
-            <div className="mb-6 grid gap-3 sm:grid-cols-4">
+            <div className="mb-6 grid gap-3 sm:grid-cols-3">
               <Health
                 icon={<Database size={16} />}
                 label="Storage"
@@ -200,12 +197,6 @@ export default function Ops() {
                 label="Email"
                 value={feed.health.mailProvider ?? 'not configured'}
                 good={feed.health.mailConfigured}
-              />
-              <Health
-                icon={<MessageSquare size={16} />}
-                label="SMS"
-                value={feed.health.smsProvider ?? 'not configured'}
-                good={feed.health.smsConfigured}
               />
               <Health
                 icon={<ShieldCheck size={16} />}
@@ -222,15 +213,15 @@ export default function Ops() {
                 Send a test
               </h2>
               <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-500">
-                Delivers one real message and shows the provider&apos;s own answer, including its
-                error text. An email address goes by email; a 10-digit number goes by SMS.
+                Sends one real email and shows the provider&apos;s own answer, including its
+                error text when it refuses.
               </p>
               <div className="mt-3.5 flex flex-wrap gap-2.5">
                 <input
                   value={testTo}
                   onChange={(e) => setTestTo(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && void sendTest()}
-                  placeholder="you@example.com or 9812345678"
+                  placeholder="you@example.com"
                   className="focus-ring h-11 min-w-[240px] flex-1 rounded-(--radius-md) border-2 border-ink-200 px-3.5 text-[13.5px] outline-none focus:border-brand-500"
                 />
                 <button

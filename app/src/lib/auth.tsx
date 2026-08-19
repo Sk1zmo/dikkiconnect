@@ -13,10 +13,14 @@ import type { KycTier, Role } from './types'
 /* ═══════════════════════════════════════════════════════════════════════════
    Accounts and verification — client side.
 
-   This file used to generate the code itself. It no longer knows how. Codes
-   are issued, hashed, counted and compared by the API; the only copy that
-   leaves the server goes to the user's inbox. Everything here does is ask, and
-   report what the server said.
+   An account is an email address. The code is issued, hashed, counted and
+   compared by the API; the only copy that leaves the server goes to that
+   inbox. All this file does is ask, and report what the server said.
+
+   The mobile number is collected at sign-in and stored on the account, but it
+   authenticates nothing — no code is ever sent to it. That is deliberate:
+   texting an Indian number needs DLT registration and an approved template,
+   and a login that depends on paperwork is a login that is sometimes broken.
 
    That is the difference between a verification step and a piece of theatre:
    the check now happens somewhere the person being checked cannot reach.
@@ -41,15 +45,7 @@ export const OTP_MAX_ATTEMPTS = 5
 export const OTP_RESEND_SECONDS = 30
 
 export type RequestResult =
-  | {
-      ok: true
-      /** Which channel actually carried it — the server decides, not the app. */
-      channel: 'email' | 'sms' | null
-      delivered: boolean
-      to?: string
-      reason?: string
-      provider?: string
-    }
+  | { ok: true; delivered: boolean; to?: string; reason?: string; provider?: string }
   | {
       ok: false
       reason: 'bad-identifier' | 'too-soon' | 'offline' | 'no-api'
@@ -121,7 +117,7 @@ interface AuthState {
   completeSignup: (details: {
     ticket: string
     name: string
-    email: string
+    /** Contact only — the verified email comes from the ticket, server-side. */
     phone: string
     role: Role
   }) => Promise<Account | null>
@@ -148,7 +144,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ok?: boolean
       error?: string
       retryInSeconds?: number
-      channel?: 'email' | 'sms'
       delivered?: boolean
       to?: string
       reason?: string
@@ -163,7 +158,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return {
       ok: true,
-      channel: res.channel ?? null,
       delivered: Boolean(res.delivered),
       to: res.to,
       reason: res.reason,
