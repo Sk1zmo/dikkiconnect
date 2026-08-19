@@ -37,7 +37,7 @@ env:
 jobs:
   simulator:
     name: Compile for simulator
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -103,7 +103,7 @@ jobs:
 
   device:
     name: Signed .ipa
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 40
     # Everything needed to sign. Missing any one of them skips the job rather
     # than failing the workflow.
