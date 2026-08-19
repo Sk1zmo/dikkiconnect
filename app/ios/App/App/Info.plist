@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CAPACITOR_DEBUG</key>
+	<string>$(CAPACITOR_DEBUG)</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+        <string>DikkiConnect</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+    <false/>
+    <key>UISceneConfigurations</key>
+    <dict>
+      <key>UIWindowSceneSessionRoleApplication</key>
+      <array>
+        <dict>
+            <key>UISceneConfigurationName</key>
+            <string>Default Configuration</string>
+            <key>UISceneDelegateClassName</key>
+            <string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+            <key>UISceneStoryboardFile</key>
+            <string>Main</string>
+        </dict>
+      </array>
+    </dict>
+	</dict>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>armv7</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<!-- Location. iOS terminates the app outright if geolocation is called
+	     without these strings present, so they are not optional: the pickup
+	     address field and the tracking map both use it. The wording is what the
+	     user actually sees in the permission sheet, and App Review rejects
+	     vague ones. -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>DikkiConnect uses your location to set the pickup point for a parcel and to show where your delivery or ride is on the map.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>DikkiConnect uses your location to set the pickup point for a parcel and to show where your delivery or ride is on the map.</string>
+
+	<!-- Camera and photos: the QR scanner and parcel photo evidence. Declared
+	     now so enabling the native camera later needs no plist change. -->
+	<key>NSCameraUsageDescription</key>
+	<string>DikkiConnect uses the camera to scan parcel QR codes and to photograph parcels at each handover.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>DikkiConnect saves delivery proof photos to your library when you ask it to.</string>
+
+	<!-- iOS refuses canOpenURL for any scheme not declared here, so without
+	     this list every UPI app looks uninstalled and the pay button appears
+	     broken rather than absent. -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>upi</string>
+		<string>tez</string>
+		<string>phonepe</string>
+		<string>paytmmp</string>
+		<string>bhim</string>
+		<string>gpay</string>
+	</array>
+
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
+</dict>
+</plist>

@@ -13,13 +13,17 @@
     "android:sync": "npm run build && cap sync android",
     "android:apk": "npm run android:sync && cd android && gradlew assembleDebug",
     "android:release": "npm run android:sync && cd android && gradlew assembleRelease",
-    "android:open": "cap open android"
+    "android:open": "cap open android",
+    "ios:sync": "npm run build && cap sync ios",
+    "ios:open": "cap open ios",
+    "check:api": "tsc -p api/tsconfig.json --noEmit"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
     "@capacitor/app": "^8.1.1",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
+    "@capacitor/ios": "^8.5.0",
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.3",
     "@phosphor-icons/react": "^2.1.10",

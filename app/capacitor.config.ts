@@ -24,6 +24,14 @@ const config: CapacitorConfig = {
     // is no white flash on rotate or resume.
     backgroundColor: '#F7F8FC',
   },
+  ios: {
+    backgroundColor: '#F7F8FC',
+    // Stops the whole WebView bouncing past the content on an overscroll —
+    // the app has its own scroll containers and the rubber-band underneath
+    // them reads as a bug.
+    scrollEnabled: false,
+    contentInset: 'never',
+  },
   plugins: {
     SplashScreen: {
       launchShowDuration: 900,

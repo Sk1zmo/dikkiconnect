@@ -1,0 +1,209 @@
+name: iOS build
+
+# Building an iOS app needs macOS and Xcode, which is the one thing a Windows
+# machine cannot provide. GitHub's macOS runners can, so the whole toolchain
+# lives here instead of on somebody's desk.
+#
+# Two jobs, deliberately separate:
+#
+#   simulator  — always runs, needs no Apple account, and answers the only
+#                question that matters day to day: does the project still
+#                compile and link? Signing failures are a different problem and
+#                should not mask a broken build.
+#   device     — produces an installable .ipa, and only runs when the signing
+#                secrets exist. Skipped rather than failed when they do not,
+#                because a red X on every push trains people to ignore red Xs.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+    inputs:
+      api_origin:
+        description: 'API origin to compile into the app'
+        required: false
+        default: 'https://dikkiconnect-auth.vercel.app'
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  API_ORIGIN: ${{ github.event.inputs.api_origin || 'https://dikkiconnect-auth.vercel.app' }}
+
+jobs:
+  simulator:
+    name: Compile for simulator
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Build the web bundle
+        working-directory: app
+        # The bundled app is served from capacitor://localhost, so a relative
+        # /api path resolves nowhere. This is the same reason the Android build
+        # takes VITE_API_ORIGIN.
+        run: VITE_API_ORIGIN="$API_ORIGIN" npm run build
+
+      - name: Sync into the iOS project
+        working-directory: app
+        run: npx cap sync ios
+
+      - name: Resolve Swift packages
+        working-directory: app/ios/App
+        run: xcodebuild -resolvePackageDependencies -project App.xcodeproj -scheme App
+
+      - name: Build
+        working-directory: app/ios/App
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build | xcpretty || xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package the simulator build
+        working-directory: app/ios/App
+        run: |
+          cd build/Build/Products/Debug-iphonesimulator
+          zip -qry "$GITHUB_WORKSPACE/DikkiConnect-simulator.zip" App.app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DikkiConnect-simulator
+          path: DikkiConnect-simulator.zip
+          retention-days: 14
+
+  device:
+    name: Signed .ipa
+    runs-on: macos-14
+    timeout-minutes: 40
+    # Everything needed to sign. Missing any one of them skips the job rather
+    # than failing the workflow.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for signing secrets
+        id: secrets
+        env:
+          CERT: ${{ secrets.IOS_DIST_CERT_P12 }}
+          PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+        run: |
+          if [ -n "$CERT" ] && [ -n "$PROFILE" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Signing secrets not set — skipping the .ipa. Add IOS_DIST_CERT_P12, IOS_DIST_CERT_PASSWORD, IOS_PROVISIONING_PROFILE and IOS_TEAM_ID to build an installable app."
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: app
+        run: npm ci
+
+      - name: Build the web bundle
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: app
+        run: VITE_API_ORIGIN="$API_ORIGIN" npm run build
+
+      - name: Sync into the iOS project
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: app
+        run: npx cap sync ios
+
+      - name: Import the signing certificate
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          CERT: ${{ secrets.IOS_DIST_CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+        run: |
+          # A throwaway keychain, so nothing is left behind on a shared runner.
+          KEYCHAIN=$RUNNER_TEMP/build.keychain
+          KEYCHAIN_PASSWORD=$(uuidgen)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+
+          echo "$CERT" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$CERT_PASSWORD" \
+            -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychain -d user -s "$KEYCHAIN"
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$PROFILE" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/build.mobileprovision
+
+      - name: Archive and export
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: app/ios/App
+        env:
+          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+        run: |
+          set -o pipefail
+          xcodebuild -project App.xcodeproj -scheme App \
+            -configuration Release -sdk iphoneos \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            archive
+
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>ad-hoc</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>compileBitcode</key><false/>
+          </dict>
+          </plist>
+          PLIST
+
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          name: DikkiConnect-ipa
+          path: ${{ runner.temp }}/export/*.ipa
+          retention-days: 14
