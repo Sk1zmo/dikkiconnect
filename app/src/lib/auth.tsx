@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useLocalStorage } from './hooks'
+import { DEMO, DEMO_ACCOUNT } from './demo'
 import type { KycTier, Role } from './types'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -139,6 +140,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (token && !account) setToken(null)
   }, [token, account, setToken])
 
+  /* A demo build signs itself in. The branch is compiled out of the real
+     bundle entirely, so this is not a bypass sitting dormant in production. */
+  useEffect(() => {
+    if (!DEMO) return
+    if (!account) setAccount(DEMO_ACCOUNT as unknown as Account)
+    if (!token) setToken('demo-session')
+  }, [account, token, setAccount, setToken])
+
   const requestCode = useCallback<AuthState['requestCode']>(async (identifier) => {
     const res = await api<{
       ok?: boolean
@@ -233,7 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthState>(
     () => ({
       account,
-      authed: Boolean(account && token),
+      authed: DEMO || Boolean(account && token),
       loading,
       requestCode,
       verifyCode,

@@ -51,3 +51,4 @@ app/ios/App/App/capacitor.config.json
 app/ios/App/DerivedData/
 *.xcuserstate
 xcuserdata/
+app/dist-demo/

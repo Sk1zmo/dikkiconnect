@@ -2,6 +2,8 @@ import { lazy, Suspense } from 'react'
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { AppProvider, useApp } from '@/lib/store'
 import { AuthProvider, useAuth } from '@/lib/auth'
+import { DEMO } from '@/lib/demo'
+import { DemoBadge } from '@/components/brand/DemoBadge'
 import { ToastProvider } from '@/components/ui'
 import { DeviceShell, FlowLayout, RoleLayout, ScrollReset } from '@/components/layout/AppShell'
 
@@ -88,6 +90,7 @@ export default function App() {
   return (
     <AuthProvider>
       <AppProvider>
+        <DemoBadge />
         <DeviceShell>
         <ToastProvider>
           <ScrollReset />
@@ -201,7 +204,7 @@ export default function App() {
 function RequireAuth() {
   const { authed } = useAuth()
   const location = useLocation()
-  if (!authed) {
+  if (!DEMO && !authed) {
     return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />
   }
   return <Outlet />

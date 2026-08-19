@@ -4,7 +4,16 @@ android {
     namespace = "in.dikkiconnect.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "in.dikkiconnect.app"
+        /* Passing -PdemoBuild gives the demo a package id and a name of its
+           own, so a tester can hold both apps at once. Same id would make
+           installing one silently replace the other, and the one they end up
+           with would depend on which they installed last. */
+        applicationId project.hasProperty('demoBuild')
+            ? "in.dikkiconnect.app.demo"
+            : "in.dikkiconnect.app"
+        resValue "string", "app_name", project.hasProperty('demoBuild')
+            ? "DikkiConnect Demo"
+            : "DikkiConnect"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

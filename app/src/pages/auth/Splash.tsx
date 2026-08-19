@@ -8,6 +8,7 @@ import { HeroImage } from '@/components/viz/HeroImage'
 import { FeatureRow, HeroHeadline, HeroSheet } from '@/components/ui'
 import { Screen } from '@/components/layout/Screen'
 import { useApp } from '@/lib/store'
+import { DEMO } from '@/lib/demo'
 
 const FEATURES = [
   { icon: ShieldCheck, label: 'Safe & Secure', detail: 'Your trust, our priority' },
@@ -42,7 +43,10 @@ export default function Splash() {
     return () => clearTimeout(t)
   }, [])
 
-  const start = () => navigate(onboarded ? '/auth/login' : '/auth/onboarding')
+  /* A demo build has nothing to sign in to, so Get Started goes straight to
+     the portal picker rather than to a login that would immediately pass. */
+  const start = () =>
+    navigate(DEMO ? '/auth/role' : onboarded ? '/auth/login' : '/auth/onboarding')
 
   return (
     <Screen tone="dark" className="relative overflow-hidden">
@@ -104,7 +108,7 @@ export default function Splash() {
             <p className="mt-4 text-center text-[13.5px] text-ink-500">
               Already have an account?{' '}
               <button
-                onClick={() => navigate('/auth/login')}
+                onClick={() => navigate(DEMO ? '/auth/role' : '/auth/login')}
                 className="pressable-sm font-bold text-brand-600 hover:text-brand-700"
               >
                 Sign In

@@ -16,7 +16,8 @@
     "android:open": "cap open android",
     "ios:sync": "npm run build && cap sync ios",
     "ios:open": "cap open ios",
-    "check:api": "tsc -p api/tsconfig.json --noEmit"
+    "check:api": "tsc -p api/tsconfig.json --noEmit",
+    "build:demo": "cross-env VITE_DEMO_MODE=1 vite build --outDir dist-demo"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
