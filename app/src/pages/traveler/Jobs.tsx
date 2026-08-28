@@ -97,7 +97,7 @@ export default function TravelerJobs() {
           className="mb-3"
           options={[
             { value: 'all', label: 'All', badge: jobs.length },
-            { value: 'hub', label: 'Hub ↔ Hub', badge: jobs.filter((j) => j.mode === 'hub').length },
+            { value: 'hub', label: 'Hub to hub', badge: jobs.filter((j) => j.mode === 'hub').length },
             { value: 'p2p', label: 'Door to door', badge: jobs.filter((j) => j.mode === 'p2p').length },
           ]}
         />

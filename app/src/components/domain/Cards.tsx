@@ -18,6 +18,7 @@ import { MiniTimeline } from '@/components/viz/Timeline'
 import { categoryById, cityName, travelerById } from '@/lib/data'
 import { ageInHub, inr, kg, relative, shortDate, time } from '@/lib/format'
 import type { Hub, Parcel, ParcelJob, Trip } from '@/lib/types'
+import { CategoryIcon } from '@/components/domain/CategoryIcon'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Domain cards — the repeated content units across the whole app.
@@ -41,8 +42,8 @@ export function ParcelCard({
   return (
     <Card to={to} onClick={onClick} className="overflow-hidden">
       <div className="mb-3 flex items-start gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-50 text-[19px]">
-          {cat.emoji}
+        <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-ink-700">
+          <CategoryIcon id={cat.id} />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -186,8 +187,8 @@ export function JobCard({
     <Card padded={false} className="overflow-hidden">
       <button onClick={onView} className="w-full px-4 pt-4 text-left">
         <div className="flex items-start gap-3">
-          <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-50 text-[19px]">
-            {cat.emoji}
+          <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-ink-700">
+            <CategoryIcon id={cat.id} />
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
@@ -229,7 +230,7 @@ export function JobCard({
                 : 'bg-ink-100 text-ink-600',
             )}
           >
-            {job.mode === 'p2p' ? 'Door to door' : 'Hub ↔ Hub'}
+            {job.mode === 'p2p' ? 'Door to door' : 'Hub to hub'}
           </span>
           <span className="inline-flex items-center gap-1.5">
             <Fuel size={12} className="text-ink-400" />
@@ -257,7 +258,7 @@ export function JobCard({
         <button
           onClick={onAccept}
           disabled={accepting}
-          className="pressable h-10 flex-[1.4] rounded-(--radius-sm) bg-action text-[13px] font-bold text-white shadow-(--shadow-action) hover:bg-action-hover disabled:opacity-60"
+          className="pressable h-10 flex-[1.4] rounded-(--radius-sm) bg-action text-[13px] font-bold text-white hover:bg-action-hover disabled:opacity-60"
         >
           {accepting ? 'Accepting…' : 'Accept job'}
         </button>
@@ -420,11 +421,9 @@ export function PromoBanner({
   return (
     <button
       onClick={onClick}
-      className="pressable relative flex w-full items-center gap-4 overflow-hidden rounded-(--radius-lg) bg-gradient-to-br from-brand-600 to-brand-800 p-4 text-left text-white shadow-(--shadow-brand)"
+      className="pressable relative flex w-full items-center gap-4 overflow-hidden rounded-(--radius-lg) bg-brand-600 p-4 text-left text-white"
     >
-      <span className="pointer-events-none absolute -top-8 -right-6 size-28 rounded-full bg-white/10" />
-      <span className="pointer-events-none absolute -bottom-10 right-10 size-20 rounded-full bg-white/8" />
-      <span className="relative grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-white/20">
+      <span className="relative grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-white/15">
         {icon ?? <Zap size={20} />}
       </span>
       <span className="relative min-w-0 flex-1">

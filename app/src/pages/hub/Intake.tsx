@@ -21,6 +21,7 @@ import { useApp } from '@/lib/store'
 import { useOtpGate } from '@/lib/otp'
 import { OtpHelper } from '@/components/domain/OtpHelper'
 import { inr, kg } from '@/lib/format'
+import { CategoryIcon } from '@/components/domain/CategoryIcon'
 
 const STEPS = ['Weigh', 'Photos', 'OTP', 'Done']
 const SHELVES = ['A-01', 'A-04', 'A-09', 'B-01', 'B-05', 'C-02', 'C-07', 'D-03']
@@ -152,8 +153,8 @@ export default function HubIntake() {
           <div className="anim-fade-up">
             <Card className="mb-4">
               <div className="flex items-center gap-3">
-                <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-50 text-[20px]">
-                  {cat.emoji}
+                <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-ink-700">
+                  <CategoryIcon id={cat.id} />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="tabular truncate text-[14.5px] font-extrabold text-ink-900">{id}</p>

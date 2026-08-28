@@ -37,7 +37,7 @@ export function Sheet({
       {open && (
         <div className="absolute inset-0 z-90 flex items-end justify-center">
           <motion.div
-            className="absolute inset-0 bg-ink-950/45 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-ink-950/45"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -49,7 +49,7 @@ export function Sheet({
             aria-modal="true"
             aria-label={title}
             className={cn(
-              'relative flex w-full max-w-[430px] flex-col overflow-hidden rounded-t-[26px] bg-white shadow-(--shadow-e4)',
+              'relative flex w-full max-w-[430px] flex-col overflow-hidden rounded-t-(--radius-xl) bg-white shadow-(--shadow-e4)',
               fullHeight ? 'h-[92%]' : 'max-h-[88%]',
             )}
             initial={{ y: '100%' }}
@@ -119,7 +119,7 @@ export function Modal({
       {open && (
         <div className="absolute inset-0 z-90 flex items-center justify-center p-6">
           <motion.div
-            className="absolute inset-0 bg-ink-950/50 backdrop-blur-[3px]"
+            className="absolute inset-0 bg-ink-950/50"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -251,7 +251,7 @@ export function ActionSheet({
             exit={{ y: 40, opacity: 0 }}
             transition={SPRING}
           >
-            <div className="glass overflow-hidden rounded-(--radius-xl) shadow-(--shadow-e4)">
+            <div className="overflow-hidden rounded-(--radius-xl) bg-white shadow-(--shadow-e4)">
               {title && (
                 <p className="border-b border-ink-200/60 px-4 py-3 text-center text-[12px] font-semibold text-ink-500">
                   {title}

@@ -16,7 +16,7 @@ export function HeroSheet({
   return (
     <div
       className={cn(
-        'pb-safe-5 relative z-10 shrink-0 rounded-t-[30px] bg-white px-5 pt-5 shadow-(--shadow-sheet)',
+        'pb-safe-5 relative z-10 shrink-0 rounded-t-(--radius-xl) bg-white px-5 pt-5 shadow-(--shadow-sheet)',
         className,
       )}
     >

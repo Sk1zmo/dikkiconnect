@@ -7,6 +7,7 @@ import { ScannerViewfinder } from '@/components/viz/Scanner'
 import { categoryById, jobFromParcel } from '@/lib/data'
 import { kg } from '@/lib/format'
 import { useApp, useManifest, useMe, useOpenJobs } from '@/lib/store'
+import { CategoryIcon } from '@/components/domain/CategoryIcon'
 
 type Mode = 'pickup' | 'dropoff'
 
@@ -107,7 +108,7 @@ export default function TravelerScan() {
       >
         <div className="flex items-center gap-3.5 rounded-(--radius-lg) border border-ink-100 bg-ink-50 p-4">
           <span className="grid size-12 shrink-0 place-items-center rounded-(--radius-md) bg-white text-[22px] shadow-(--shadow-e1)">
-            {cat.emoji}
+            <CategoryIcon id={cat.id} />
           </span>
           <div className="min-w-0 flex-1">
             <p className="tabular truncate text-[15px] font-extrabold text-ink-900">

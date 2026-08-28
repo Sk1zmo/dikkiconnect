@@ -75,13 +75,21 @@ const NotFound = lazy(() => import('@/pages/common/NotFound'))
    gate, because it authenticates with its own server-side key. */
 const Ops = lazy(() => import('@/pages/common/Ops'))
 
+/* Download — read by somebody who does not have the app yet, so it is outside
+   the shell and the gate for the plainer reason that there is no account to
+   check and no phone frame to sit in. */
+const Download = lazy(() => import('@/pages/common/Download'))
+
 export default function App() {
-  // Ops renders full-width: it is read on a laptop, not a phone.
-  if (location.pathname.startsWith('/ops')) {
+  /* Both of these render full-width, outside the device shell: one is read on
+     a laptop, the other by somebody deciding whether to install at all. */
+  const bare = ['/ops', '/download'].some((p) => location.pathname.startsWith(p))
+  if (bare) {
     return (
       <Suspense fallback={null}>
         <Routes>
           <Route path="/ops" element={<Ops />} />
+          <Route path="/download" element={<Download />} />
         </Routes>
       </Suspense>
     )

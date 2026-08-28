@@ -468,20 +468,20 @@ export const TRAVELERS: Traveler[] = [
 /* ── Parcel categories & pricing inputs ───────────────────────────────────── */
 
 export const PARCEL_CATEGORIES = [
-  { id: 'documents', label: 'Documents', emoji: '📄', hint: 'Papers, files, certificates' },
-  { id: 'electronics', label: 'Electronics', emoji: '📱', hint: 'Phones, laptops, gadgets' },
-  { id: 'clothing', label: 'Clothing', emoji: '👕', hint: 'Apparel, footwear, textiles' },
-  { id: 'food', label: 'Packaged Food', emoji: '🍱', hint: 'Sealed, non-perishable only' },
-  { id: 'medicine', label: 'Medicine', emoji: '💊', hint: 'Non-refrigerated only' },
-  { id: 'gifts', label: 'Gifts', emoji: '🎁', hint: 'Presents, hampers' },
-  { id: 'spares', label: 'Spare Parts', emoji: '🔧', hint: 'Tools, hardware, components' },
-  { id: 'other', label: 'Other', emoji: '📦', hint: 'Anything else permitted' },
+  { id: 'documents', label: 'Documents', hint: 'Papers, files, certificates' },
+  { id: 'electronics', label: 'Electronics', hint: 'Phones, laptops, gadgets' },
+  { id: 'clothing', label: 'Clothing', hint: 'Apparel, footwear, textiles' },
+  { id: 'food', label: 'Packaged Food', hint: 'Sealed, non-perishable only' },
+  { id: 'medicine', label: 'Medicine', hint: 'Non-refrigerated only' },
+  { id: 'gifts', label: 'Gifts', hint: 'Presents, hampers' },
+  { id: 'spares', label: 'Spare Parts', hint: 'Tools, hardware, components' },
+  { id: 'other', label: 'Other', hint: 'Anything else permitted' },
 ] as const
 
 export const PARCEL_SIZES = [
-  { id: 'S' as const, label: 'Small', dims: 'Up to 30×20×15 cm', maxKg: 3, base: 79, emoji: '🥡' },
-  { id: 'M' as const, label: 'Medium', dims: 'Up to 45×35×25 cm', maxKg: 10, base: 139, emoji: '📦' },
-  { id: 'L' as const, label: 'Large', dims: 'Up to 60×45×40 cm', maxKg: 20, base: 249, emoji: '🗄️' },
+  { id: 'S' as const, label: 'Small', dims: 'Up to 30×20×15 cm', maxKg: 3, base: 79 },
+  { id: 'M' as const, label: 'Medium', dims: 'Up to 45×35×25 cm', maxKg: 10, base: 139 },
+  { id: 'L' as const, label: 'Large', dims: 'Up to 60×45×40 cm', maxKg: 20, base: 249 },
 ]
 
 /** Per the PRD's trust & safety layer — sender must accept this before booking. */
@@ -983,17 +983,17 @@ export const NOTIFICATIONS: NotificationItem[] = [
 
 export const SUPPORT_THREAD: ChatMessage[] = [
   { id: 'c0', from: 'system', text: 'Connected to DikkiConnect Support · avg reply 2 min', at: hoursFromNow(-0.5) },
-  { id: 'c1', from: 'them', text: 'Hi Aditi 👋 I can see DKC-4821 is in transit with Arjun. How can I help?', at: hoursFromNow(-0.48) },
+  { id: 'c1', from: 'them', text: 'Hi Aditi — I can see DKC-4821 is in transit with Arjun. How can I help?', at: hoursFromNow(-0.48) },
   { id: 'c2', from: 'me', text: 'The receiver wants to collect from a different Mysore hub. Is that possible?', at: hoursFromNow(-0.4) },
   { id: 'c3', from: 'them', text: 'Yes — while the parcel is still in transit we can re-route it to Vijayanagar Hub at no extra cost. Want me to do that?', at: hoursFromNow(-0.36) },
   { id: 'c4', from: 'me', text: 'Please do. Thanks!', at: hoursFromNow(-0.3) },
-  { id: 'c5', from: 'them', text: 'Done ✅ Destination updated to DikkiConnect Hub · Vijayanagar. A fresh receiver OTP will be sent once it lands.', at: hoursFromNow(-0.26) },
+  { id: 'c5', from: 'them', text: 'Done. Destination updated to DikkiConnect Hub · Vijayanagar. A fresh receiver OTP will be sent once it lands.', at: hoursFromNow(-0.26) },
 ]
 
 export const RIDE_CHAT: ChatMessage[] = [
   { id: 'r1', from: 'them', text: 'Hi! I\'m starting from Silk Board in about 20 minutes.', at: hoursFromNow(-1.2) },
   { id: 'r2', from: 'me', text: 'Perfect. I\'ll be at the Central Silk Board bus stop.', at: hoursFromNow(-1.1) },
-  { id: 'r3', from: 'them', text: 'Great — white Swift, KA 03 NB 8821. See you shortly 🚗', at: hoursFromNow(-1.05) },
+  { id: 'r3', from: 'them', text: 'Great — white Swift, KA 03 NB 8821. See you shortly.', at: hoursFromNow(-1.05) },
 ]
 
 /* ── Lookups ──────────────────────────────────────────────────────────────── */

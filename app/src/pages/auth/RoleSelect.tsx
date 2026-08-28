@@ -77,7 +77,7 @@ export default function RoleSelect() {
       <div className="device-scroll flex-1 px-6 pt-safe">
         <div className="pt-6">
           <p className="text-[13px] font-semibold text-brand-600">
-            Welcome, {user.name.split(' ')[0]} 👋
+            Welcome, {user.name.split(' ')[0]}
           </p>
           <h1 className="text-display mt-2 text-[28px] leading-[1.14] font-extrabold text-ink-900">
             What brings you to DikkiConnect?

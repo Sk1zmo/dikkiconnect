@@ -21,6 +21,7 @@ import { inr, phone as fmtPhone, relative } from '@/lib/format'
 import { useApp, useAwaitingPickup } from '@/lib/store'
 import { useOtpGate } from '@/lib/otp'
 import { OtpHelper } from '@/components/domain/OtpHelper'
+import { CategoryIcon } from '@/components/domain/CategoryIcon'
 
 const STEPS = ['Verify', 'Evidence', 'Delivered']
 
@@ -131,8 +132,8 @@ export default function ReceiverPickup() {
       <ScreenBody>
         <Card className="mb-4">
           <div className="flex items-center gap-3">
-            <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-50 text-[20px]">
-              {cat.emoji}
+            <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-ink-700">
+              <CategoryIcon id={cat.id} />
             </span>
             <div className="min-w-0 flex-1">
               <p className="tabular truncate text-[14.5px] font-extrabold text-ink-900">

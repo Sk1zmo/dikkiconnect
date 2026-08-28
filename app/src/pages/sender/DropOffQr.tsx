@@ -8,6 +8,7 @@ import { hubById, otpFor } from '@/lib/data'
 import { kg } from '@/lib/format'
 import { useApp } from '@/lib/store'
 import { categoryById } from '@/lib/data'
+import { CategoryIcon } from '@/components/domain/CategoryIcon'
 
 /** The screen you hold up at the hub counter. Brightness hint included. */
 export default function DropOffQr() {
@@ -63,7 +64,7 @@ export default function DropOffQr() {
         <Card className="mt-3">
           <div className="flex items-center gap-3">
             <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-[20px]">
-              {cat.emoji}
+              <CategoryIcon id={cat.id} />
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[14px] font-bold text-ink-900">

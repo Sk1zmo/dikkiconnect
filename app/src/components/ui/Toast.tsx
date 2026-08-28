@@ -72,7 +72,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               exit={{ opacity: 0, y: -18, scale: 0.96 }}
               transition={{ type: 'spring', stiffness: 460, damping: 34 }}
               className={cn(
-                'pointer-events-auto flex w-full max-w-[380px] items-start gap-3 rounded-(--radius-md) bg-ink-900/95 px-4 py-3 text-white shadow-(--shadow-e4) ring-1 backdrop-blur-lg',
+                'pointer-events-auto flex w-full max-w-[380px] items-start gap-3 rounded-(--radius-md) bg-ink-900/95 px-4 py-3 text-white shadow-(--shadow-e4) ring-1',
                 TONE_META[t.tone].ring,
               )}
             >

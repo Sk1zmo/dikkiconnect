@@ -6,8 +6,8 @@ type Elevation = 0 | 1 | 2 | 3
 
 const ELEVATION: Record<Elevation, string> = {
   0: '',
-  1: 'shadow-(--shadow-e1)',
-  2: 'shadow-(--shadow-e2)',
+  1: '',
+  2: '',
   3: 'shadow-(--shadow-e3)',
 }
 
@@ -35,11 +35,10 @@ export function Card({
   const clickable = Boolean(onClick || to || interactive)
   const classes = cn(
     'block rounded-(--radius-lg) bg-white text-left',
-    bordered && 'border border-ink-100',
+    bordered && 'border border-ink-200',
     ELEVATION[elevation],
     padded && 'p-4',
-    clickable &&
-      'springy focus-ring cursor-pointer hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-(--shadow-e3)',
+    clickable && 'springy focus-ring cursor-pointer hover:bg-ink-50',
     className,
   )
 
@@ -79,7 +78,7 @@ export function SectionHeader({
   return (
     <div className={cn('mb-3 flex items-end justify-between gap-3', className)}>
       <div className="min-w-0">
-        <h2 className="text-display text-[17px] font-bold text-ink-900">{title}</h2>
+        <h2 className="text-display text-[17px] font-bold tracking-title text-ink-900">{title}</h2>
         {subtitle && <p className="mt-0.5 text-[12.5px] text-ink-500">{subtitle}</p>}
       </div>
       {action &&
@@ -127,7 +126,7 @@ export function Note({
   return (
     <div
       className={cn(
-        'flex gap-2.5 rounded-(--radius-md) border p-3.5 text-[12.5px] leading-[1.5]',
+        'flex gap-2.5 rounded-(--radius-md) border p-3.5 text-[12.5px] leading-[1.55]',
         tones[tone],
         className,
       )}
@@ -146,7 +145,7 @@ export function Group({ children, className }: { children: ReactNode; className?
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-(--radius-lg) border border-ink-100 bg-white shadow-(--shadow-e1)',
+        'overflow-hidden rounded-(--radius-lg) border border-ink-200 bg-white',
         '[&>*+*]:border-t [&>*+*]:border-ink-100',
         className,
       )}

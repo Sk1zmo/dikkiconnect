@@ -47,7 +47,7 @@ export function SkeletonCard({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'rounded-(--radius-lg) border border-ink-100 bg-white p-4 shadow-(--shadow-e1)',
+        'rounded-(--radius-lg) border border-ink-200 bg-white p-4 shadow-(--shadow-e1)',
         className,
       )}
     >
@@ -116,7 +116,7 @@ export function SkeletonStat({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'rounded-(--radius-lg) border border-ink-100 bg-white p-4 shadow-(--shadow-e1)',
+        'rounded-(--radius-lg) border border-ink-200 bg-white p-4 shadow-(--shadow-e1)',
         className,
       )}
     >

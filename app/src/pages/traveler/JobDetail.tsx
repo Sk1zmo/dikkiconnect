@@ -25,6 +25,7 @@ import { RouteMap } from '@/components/viz/Map'
 import { categoryById, hubById, jobFromParcel } from '@/lib/data'
 import { inr, kg, relative } from '@/lib/format'
 import { useApp, useMe, useOpenJobs } from '@/lib/store'
+import { CategoryIcon } from '@/components/domain/CategoryIcon'
 
 
 export default function JobDetail() {
@@ -80,7 +81,7 @@ export default function JobDetail() {
         <Card elevation={3}>
           <div className="flex items-start gap-3.5">
             <span className="grid size-12 shrink-0 place-items-center rounded-(--radius-md) bg-brand-50 text-[22px]">
-              {cat.emoji}
+              <CategoryIcon id={cat.id} />
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[16px] font-extrabold text-ink-900">{cat.label}</p>
@@ -101,7 +102,7 @@ export default function JobDetail() {
               tone={isP2P ? 'brand' : 'neutral'}
               icon={isP2P ? <Home size={11} /> : <Building2 size={11} />}
             >
-              {isP2P ? 'Door to door' : 'Hub ↔ Hub'}
+              {isP2P ? 'Door to door' : 'Hub to hub'}
             </Badge>
             <Badge tone="neutral" icon={<Fuel size={11} />}>
               {job.detourKm} km detour

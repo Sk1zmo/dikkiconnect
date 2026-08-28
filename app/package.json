@@ -10,11 +10,11 @@
     "package": "npm run build && npm run build:single && node scripts/package-demo.mjs",
     "typecheck": "tsc -b --noEmit",
     "preview": "vite preview",
-    "android:sync": "npm run build && cap sync android",
+    "android:sync": "npm run build && node scripts/strip-apk.mjs && cap sync android",
     "android:apk": "npm run android:sync && cd android && gradlew assembleDebug",
     "android:release": "npm run android:sync && cd android && gradlew assembleRelease",
     "android:open": "cap open android",
-    "ios:sync": "npm run build && cap sync ios",
+    "ios:sync": "npm run build && node scripts/strip-apk.mjs && cap sync ios",
     "ios:open": "cap open ios",
     "check:api": "tsc -p api/tsconfig.json --noEmit",
     "build:demo": "cross-env VITE_DEMO_MODE=1 vite build --outDir dist-demo"

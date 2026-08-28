@@ -17,6 +17,7 @@ import { categoryById, hubShort, jobFromParcel } from '@/lib/data'
 import { inr, kg } from '@/lib/format'
 import { useCountdown } from '@/lib/hooks'
 import { useManifest, useMe } from '@/lib/store'
+import { CategoryIcon } from '@/components/domain/CategoryIcon'
 
 const STEPS = [
   { in: '400 m', instruction: 'Turn right onto Hosur Road', icon: CornerUpRight },
@@ -154,8 +155,8 @@ export default function TravelerNavigation() {
                 key={j.id}
                 className="flex items-center gap-3 rounded-(--radius-md) border border-ink-100 bg-white p-3.5"
               >
-                <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-50 text-[19px]">
-                  {cat.emoji}
+                <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-ink-700">
+                  <CategoryIcon id={cat.id} />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="tabular truncate text-[13.5px] font-bold text-ink-900">

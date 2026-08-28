@@ -20,16 +20,14 @@ type Size = 'sm' | 'md' | 'lg'
  * brand (upgrade prompts, on-colour surfaces). Everything else is quiet.
  */
 const VARIANTS: Record<Variant, string> = {
-  primary:
-    'bg-action text-white shadow-(--shadow-action) hover:bg-action-hover active:bg-action-hover disabled:shadow-none',
-  brand:
-    'bg-brand-600 text-white shadow-(--shadow-brand) hover:bg-brand-700 active:bg-brand-700 disabled:shadow-none',
-  secondary: 'bg-ink-100 text-ink-800 hover:bg-ink-200',
+  primary: 'bg-action text-white hover:bg-action-hover active:bg-action-hover',
+  brand: 'bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-700',
+  secondary: 'bg-ink-100 text-ink-900 hover:bg-ink-200',
   tonal: 'bg-brand-50 text-brand-700 hover:bg-brand-100',
   ghost: 'bg-transparent text-ink-600 hover:bg-ink-100',
-  outline: 'bg-white text-ink-800 border border-ink-200 hover:bg-ink-50 shadow-(--shadow-e1)',
+  outline: 'bg-white text-ink-900 border border-ink-300 hover:bg-ink-50',
   danger: 'bg-danger-50 text-danger-600 hover:bg-danger-100',
-  onBrand: 'bg-white text-action shadow-(--shadow-e3) hover:bg-ink-50',
+  onBrand: 'bg-white text-action hover:bg-ink-50',
 }
 
 /** Variants that paint a dark field, so the spinner has to invert. */
@@ -37,8 +35,8 @@ const DARK_VARIANTS = new Set<Variant>(['primary', 'brand'])
 
 const SIZES: Record<Size, string> = {
   sm: 'h-9 px-3.5 text-[13px] gap-1.5 rounded-(--radius-sm)',
-  md: 'h-12 px-5 text-[15px] gap-2 rounded-(--radius-md)',
-  lg: 'h-[56px] px-6 text-[16px] gap-2.5 rounded-(--radius-lg)',
+  md: 'h-[52px] px-5 text-[15px] gap-2 rounded-(--radius-md)',
+  lg: 'h-[56px] px-6 text-[16px] gap-2.5 rounded-(--radius-md)',
 }
 
 export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'prefix'> {
@@ -67,10 +65,8 @@ export function Button({
   ...rest
 }: ButtonProps) {
   const classes = cn(
-    'springy focus-ring relative inline-flex select-none items-center justify-center font-semibold tracking-[-0.01em]',
-    'disabled:pointer-events-none disabled:opacity-45',
-    // Dark fields get a light sweep on hover — reads as a physical surface.
-    DARK_VARIANTS.has(variant) && 'sheen',
+    'springy focus-ring relative inline-flex select-none items-center justify-center font-semibold tracking-[-0.012em]',
+    'disabled:pointer-events-none disabled:opacity-40',
     SIZES[size],
     VARIANTS[variant],
     pill && 'rounded-full',
@@ -120,10 +116,10 @@ export function IconButton({
   size?: number
 }) {
   const tones = {
-    default: 'bg-white text-ink-700 shadow-(--shadow-e1) border border-ink-100 hover:bg-ink-50',
-    onBrand: 'bg-white/15 text-white hover:bg-white/25 backdrop-blur-md',
-    solid: 'bg-brand-600 text-white shadow-(--shadow-brand-sm) hover:bg-brand-700',
-    glass: 'glass text-ink-800 shadow-(--shadow-e2) hover:bg-white/85',
+    default: 'bg-white text-ink-800 border border-ink-200 hover:bg-ink-50',
+    onBrand: 'bg-white/15 text-white hover:bg-white/25',
+    solid: 'bg-brand-600 text-white hover:bg-brand-700',
+    glass: 'bg-white text-ink-800 border border-ink-200 hover:bg-ink-50',
   }
   return (
     <button
@@ -155,7 +151,7 @@ export function ActionBar({
   return (
     <div
       className={cn(
-        'glass pb-safe-4 sticky bottom-0 z-30 border-t border-ink-200/70 px-5 pt-3',
+        'pb-safe-4 sticky bottom-0 z-30 border-t border-ink-200 bg-white px-5 pt-3',
         className,
       )}
     >

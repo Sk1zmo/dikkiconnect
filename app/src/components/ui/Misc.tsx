@@ -130,7 +130,7 @@ export function Stat({
     <Comp
       onClick={onClick}
       className={cn(
-        'rounded-(--radius-lg) border border-ink-100 bg-white p-3.5 text-left shadow-(--shadow-e1)',
+        'rounded-(--radius-lg) border border-ink-200 bg-white p-3.5 text-left shadow-(--shadow-e1)',
         onClick && 'pressable hover:border-brand-200',
         className,
       )}

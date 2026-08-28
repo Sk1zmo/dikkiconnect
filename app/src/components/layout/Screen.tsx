@@ -38,7 +38,7 @@ export function TopBar({
       className={cn(
         'z-40 flex shrink-0 items-center gap-3 px-4 py-3',
         floating ? 'absolute inset-x-0 top-0' : 'relative',
-        tone === 'light' && !floating && 'bg-ink-50',
+        tone === 'light' && !floating && 'bg-white',
         bordered && 'border-b border-ink-200',
         className,
       )}
@@ -50,8 +50,8 @@ export function TopBar({
           className={cn(
             'pressable-sm focus-ring grid size-10 shrink-0 place-items-center rounded-full transition-colors',
             onBrand
-              ? 'bg-white/15 text-white backdrop-blur-md hover:bg-white/25'
-              : 'bg-white text-ink-800 shadow-(--shadow-e1) ring-1 ring-ink-100 hover:bg-ink-50',
+              ? 'bg-white/15 text-white hover:bg-white/25'
+              : 'text-ink-900 hover:bg-ink-100',
           )}
         >
           <ArrowLeft size={19} strokeWidth={2.2} />
@@ -98,7 +98,7 @@ export function LargeTitle({
   return (
     <div className={cn('flex items-start justify-between gap-3 px-5 pt-4 pb-3', className)}>
       <div className="min-w-0">
-        <h1 className="text-display text-[27px] font-extrabold text-ink-900">{title}</h1>
+        <h1 className="text-display tracking-display text-[27px] font-extrabold text-ink-900">{title}</h1>
         {subtitle && <p className="mt-1 text-[13px] text-ink-500">{subtitle}</p>}
       </div>
       {action && <div className="flex shrink-0 items-center gap-2 pt-1.5">{action}</div>}

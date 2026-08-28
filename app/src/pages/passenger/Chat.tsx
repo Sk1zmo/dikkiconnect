@@ -59,7 +59,7 @@ export default function Chat() {
           from: 'them',
           text: isSupport
             ? "Got it — I'm checking that for you now. One moment."
-            : 'Noted 👍 See you there.',
+            : 'Noted. See you there.',
           at: new Date().toISOString(),
         },
       ])

@@ -33,6 +33,7 @@ import { categoryById, cityName, hubById, otpFor, travelerById } from '@/lib/dat
 import { inr, kg, time } from '@/lib/format'
 import { useApp } from '@/lib/store'
 import { useLoaded } from '@/lib/hooks'
+import { CategoryIcon } from '@/components/domain/CategoryIcon'
 
 export default function Tracking() {
   const { id } = useParams()
@@ -213,7 +214,7 @@ export default function Tracking() {
           className="pressable mt-3 flex w-full items-center gap-3 rounded-(--radius-lg) border border-ink-200 bg-white p-4 text-left"
         >
           <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-[19px]">
-            {cat.emoji}
+            <CategoryIcon id={cat.id} />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-[13.5px] font-bold text-ink-900">Parcel details</span>

@@ -21,6 +21,7 @@ import { inr, kg } from '@/lib/format'
 import { useApp } from '@/lib/store'
 import { useLoaded } from '@/lib/hooks'
 import { bookSteps } from './BookRoute'
+import { CategoryIcon } from '@/components/domain/CategoryIcon'
 
 const PROMOS = ['MYSORE20', 'FIRSTDROP', 'DIKKI10']
 
@@ -121,8 +122,8 @@ export default function BookReview() {
         {/* Parcel summary */}
         <Card className="mt-3">
           <div className="flex items-center gap-3">
-            <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-50 text-[20px]">
-              {cat.emoji}
+            <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-ink-700">
+              <CategoryIcon id={cat.id} />
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[14.5px] font-bold text-ink-900">

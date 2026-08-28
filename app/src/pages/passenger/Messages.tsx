@@ -19,7 +19,7 @@ const THREADS = [
     id: TRIPS[1].id,
     kind: 'driver' as const,
     travelerId: TRIPS[1].travelerId,
-    last: { text: 'See you at the pickup point 👍', at: RIDE_CHAT[0].at },
+    last: { text: 'See you at the pickup point.', at: RIDE_CHAT[0].at },
     unread: 0,
   },
   {

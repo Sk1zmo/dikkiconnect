@@ -1,5 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { NavLink } from 'react-router-dom'
 import {
   Archive,
   CalendarCheck,
@@ -64,57 +63,38 @@ export const ROLE_TABS: Record<Role, NavTab[]> = {
  * The selected tab swaps to a genuinely filled glyph rather than tinting an
  * outline — that solid-vs-outline contrast is what makes a bar read as native
  * (it is what Instagram, Airbnb and Uber all do) and no amount of colour on a
- * stroked icon substitutes for it. On top of that: a tonal pill that springs
- * between positions, and an icon that overshoots on selection so the tap feels
- * answered rather than merely registered.
+ * stroked icon substitutes for it.
+ *
+ * That contrast is also the whole indicator. A tonal pill used to slide along
+ * behind the icons; with fill and weight already saying which tab is live, it
+ * was a third signal doing the job twice and moving while it did it.
  */
 export function BottomNav({ role }: { role: Role }) {
   const tabs = ROLE_TABS[role]
-  const location = useLocation()
   const { unread } = useApp()
-
-  const activeIndex = tabs.findIndex((t) =>
-    t.end ? location.pathname === t.to : location.pathname.startsWith(t.to),
-  )
 
   return (
     <nav
-      className="pb-safe glass relative z-50 shrink-0 border-t border-ink-200/70"
+      className="pb-safe relative z-50 shrink-0 border-t border-ink-200 bg-white"
       aria-label="Primary"
     >
-      {/* Sliding indicator — a touch under-damped so it settles with a nudge */}
-      {activeIndex >= 0 && (
-        <motion.span
-          className="pointer-events-none absolute top-1.5 h-[42px] rounded-full bg-brand-50"
-          style={{ width: `calc(${100 / tabs.length}% - 14px)` }}
-          initial={false}
-          animate={{ left: `calc(${(activeIndex * 100) / tabs.length}% + 7px)` }}
-          transition={{ type: 'spring', stiffness: 520, damping: 30, mass: 0.8 }}
-        />
-      )}
-
       <div className="relative flex">
         {tabs.map(({ to, label, icon: Icon, end, badge }) => (
           <NavLink
             key={to + label}
             to={to}
             end={end}
-            className="focus-ring springy-sm relative flex flex-1 flex-col items-center justify-center gap-[3px] rounded-2xl pt-2.5 pb-2"
+            className="focus-ring springy-sm relative flex flex-1 flex-col items-center justify-center gap-[3px] pt-2.5 pb-2"
           >
             {({ isActive }) => (
               <>
-                <motion.span
-                  className="relative"
-                  initial={false}
-                  animate={{ scale: isActive ? 1 : 0.92, y: isActive ? -1 : 0 }}
-                  transition={{ type: 'spring', stiffness: 600, damping: 16, mass: 0.6 }}
-                >
+                <span className="relative">
                   <Icon
                     size={22}
                     weight={isActive ? 'fill' : 'regular'}
                     className={cn(
-                      'transition-colors duration-200',
-                      isActive ? 'text-brand-600' : 'text-ink-400',
+                      'transition-colors duration-150',
+                      isActive ? 'text-ink-900' : 'text-ink-400',
                     )}
                   />
                   {badge === 'unread' && unread > 0 && (
@@ -122,11 +102,11 @@ export function BottomNav({ role }: { role: Role }) {
                       {unread > 9 ? '9+' : unread}
                     </span>
                   )}
-                </motion.span>
+                </span>
                 <span
                   className={cn(
-                    'text-[10px] leading-none font-bold tracking-[0.01em] transition-colors duration-200',
-                    isActive ? 'text-brand-700' : 'text-ink-400',
+                    'text-[10px] leading-none font-semibold tracking-[0.01em] transition-colors duration-150',
+                    isActive ? 'text-ink-900' : 'text-ink-400',
                   )}
                 >
                   {label}

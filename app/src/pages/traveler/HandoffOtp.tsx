@@ -19,6 +19,7 @@ import { inr, kg } from '@/lib/format'
 import { useApp, useManifest, useMe, useOpenJobs } from '@/lib/store'
 import { useOtpGate } from '@/lib/otp'
 import { OtpHelper } from '@/components/domain/OtpHelper'
+import { CategoryIcon } from '@/components/domain/CategoryIcon'
 
 
 type Stage = 'otp' | 'photos' | 'done'
@@ -129,7 +130,7 @@ export default function HandoffOtp() {
           <Card className="mt-8">
             <div className="flex items-center gap-3">
               <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-[20px]">
-                {cat.emoji}
+                <CategoryIcon id={cat.id} />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="tabular truncate text-[14px] font-bold text-ink-900">
@@ -221,8 +222,8 @@ export default function HandoffOtp() {
       <ScreenBody>
         <Card className="mb-6">
           <div className="flex items-center gap-3">
-            <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-50 text-[20px]">
-              {cat.emoji}
+            <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-ink-700">
+              <CategoryIcon id={cat.id} />
             </span>
             <div className="min-w-0 flex-1">
               <p className="tabular truncate text-[14.5px] font-extrabold text-ink-900">

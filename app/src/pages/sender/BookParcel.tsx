@@ -20,6 +20,7 @@ import { inr, kg } from '@/lib/format'
 import { useApp } from '@/lib/store'
 import { cn } from '@/lib/cn'
 import { bookSteps } from './BookRoute'
+import { CategoryIcon, SizeIcon } from '@/components/domain/CategoryIcon'
 
 /** Step 2 — what is in the box. Enforces the PRD's declared-value cap. */
 export default function BookParcel() {
@@ -59,7 +60,7 @@ export default function BookParcel() {
                     : 'border-ink-200 hover:border-ink-300',
                 )}
               >
-                <span className="text-[20px] leading-none">{c.emoji}</span>
+                <CategoryIcon id={c.id} className="size-[20px] text-ink-700" />
                 <span
                   className={cn(
                     'text-center text-[10px] leading-tight font-bold',
@@ -96,7 +97,7 @@ export default function BookParcel() {
                     : 'border-ink-200 hover:border-ink-300',
                 )}
               >
-                <span className="text-[24px]">{s.emoji}</span>
+                <SizeIcon id={s.id} className="size-[22px] text-ink-700" />
                 <span className="min-w-0 flex-1">
                   <span className="block text-[14.5px] font-bold text-ink-900">
                     {s.label} · up to {s.maxKg} kg
