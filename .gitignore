@@ -55,3 +55,6 @@ app/dist-demo/
 
 # The pilot APK is served from the download page, so this one is tracked.
 !app/public/*.apk
+
+# Font-comparison screenshots — generated output, like app/demo-out/
+app/font-demo/
