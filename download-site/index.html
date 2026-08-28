@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>DikkiConnect — get the app</title>
+    <meta
+      name="description"
+      content="Install DikkiConnect on Android or iPhone — intercity parcel delivery and cost-shared travel."
+    />
+    <meta name="theme-color" content="#ffffff" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='11' fill='%230b0e15'/%3E%3Cpath d='M3 11.5h9.8L23 24 12.8 36.5H3L13.2 24Z' fill='%237ba5ff'/%3E%3Cpath d='M21.5 6h11.9L45.5 24 33.4 42H21.5L33.6 24Z' fill='%23ffffff'/%3E%3C/svg%3E"
+    />
+
+    <!--
+      Restyled to the app's system: white field, hairline rules, one flat
+      accent, no gradient, no glow, no emoji, no platform logos. The copy is
+      the copy that was already here and earned its place; the surface is what
+      changed, so the page and the app it hands you now look like one product.
+    -->
+    <style>
+      @font-face {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 400 900;
+        font-display: swap;
+        src: url('/inter-latin.woff2') format('woff2');
+      }
+      *, *::before, *::after { box-sizing: border-box; }
+      :root {
+        --ink: #0b0e15;
+        --ink-700: #384463;
+        --ink-500: #6b7896;
+        --ink-400: #97a3bd;
+        --ink-300: #cbd3e4;
+        --ink-200: #e2e7f2;
+        --ink-100: #eef1f8;
+        --ink-50: #f7f8fc;
+        --brand: #1650e0;
+        --radius: 14px;
+      }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: #fff;
+        color: var(--ink);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        line-height: 1.55;
+        letter-spacing: -0.006em;
+      }
+      .wrap { max-width: 660px; margin: 0 auto; padding: 52px 22px 90px; }
+
+      header { display: flex; align-items: center; gap: 11px; margin-bottom: 52px; }
+      header svg { width: 30px; height: 30px; }
+      header b { font-size: 19px; font-weight: 800; letter-spacing: -0.035em; }
+
+      h1 {
+        font-size: clamp(34px, 8vw, 50px); line-height: 1.04;
+        letter-spacing: -0.045em; font-weight: 800; margin: 0 0 18px;
+      }
+      .lede { color: var(--ink-500); font-size: 16px; margin: 0; max-width: 46ch; }
+
+      h2 {
+        font-size: 12.5px; font-weight: 700; letter-spacing: 0.14em;
+        text-transform: uppercase; color: var(--ink-400);
+        margin: 54px 0 18px;
+      }
+      h3 { font-size: 15px; font-weight: 700; margin: 0; letter-spacing: -0.015em; }
+
+      .card {
+        border: 1px solid var(--ink-200); border-radius: var(--radius); padding: 22px;
+        display: flex; flex-direction: column;
+      }
+      /* Equal-height cards with the button pushed to the floor of each, so the
+         two calls to action sit on one line however the copy above them runs. */
+      .cards { display: grid; gap: 14px; }
+      .cards .btn { margin-top: auto; }
+      .cards .card > p:first-of-type { margin-bottom: 20px; }
+      @media (min-width: 640px) { .cards { grid-template-columns: 1fr 1fr; } }
+
+      .tag {
+        display: inline-block; font-size: 10.5px; font-weight: 700;
+        letter-spacing: 0.07em; text-transform: uppercase;
+        color: var(--ink-500); background: var(--ink-100);
+        padding: 3px 8px; border-radius: 5px; margin-left: 8px; vertical-align: 2px;
+      }
+      .card p { color: var(--ink-500); font-size: 13.5px; margin: 10px 0 0; }
+
+      .btn {
+        display: flex; align-items: center; justify-content: center;
+        width: 100%; height: 52px; margin-top: 20px;
+        border-radius: 12px; background: var(--ink); color: #fff;
+        font-size: 15px; font-weight: 600; text-decoration: none;
+        transition: transform 0.16s cubic-bezier(0.4, 0, 0.2, 1), background 0.16s;
+      }
+      .btn:hover { background: #1d2331; }
+      .btn:active { transform: scale(0.98); }
+      .btn.ghost { background: #fff; color: var(--ink); border: 1px solid var(--ink-300); }
+      .btn.ghost:hover { background: var(--ink-50); }
+      .meta { font-size: 12px; color: var(--ink-400); margin-top: 10px; text-align: center; }
+
+      ol { margin: 0; padding: 0; list-style: none; counter-reset: s; }
+      ol li {
+        display: flex; gap: 14px; align-items: flex-start;
+        margin-bottom: 14px; font-size: 14.5px; color: var(--ink-700);
+      }
+      ol li::before {
+        counter-increment: s; content: counter(s);
+        flex: 0 0 auto; width: 24px; height: 24px; margin-top: 2px;
+        display: grid; place-items: center;
+        background: var(--ink-100); border-radius: 999px;
+        font-size: 12px; font-weight: 700; color: var(--ink-700);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .grid {
+        display: grid; gap: 1px; background: var(--ink-200);
+        border: 1px solid var(--ink-200); border-radius: var(--radius); overflow: hidden;
+      }
+      @media (min-width: 640px) { .grid { grid-template-columns: 1fr 1fr; } }
+      .grid > div { background: #fff; padding: 20px; }
+      .grid p { color: var(--ink-500); font-size: 13px; margin: 7px 0 0; }
+
+      .note { font-size: 14px; color: var(--ink-700); margin: 0 0 16px; }
+      .note b { font-weight: 700; color: var(--ink); }
+
+      footer {
+        margin-top: 72px; padding-top: 24px;
+        border-top: 1px solid var(--ink-200);
+        font-size: 12.5px; color: var(--ink-400);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrap">
+      <header>
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <path d="M3 11.5h9.8L23 24 12.8 36.5H3L13.2 24Z" fill="#96b8ff" />
+          <path d="M21.5 6h11.9L45.5 24 33.4 42H21.5L33.6 24Z" fill="#1650e0" />
+        </svg>
+        <b>DikkiConnect</b>
+      </header>
+
+      <h1>Get the app.</h1>
+      <p class="lede">
+        Intercity parcels in the boot space of a car that was already making the trip, and
+        cost-shared travel alongside them. Sign in with your email — a six-digit code
+        arrives in your inbox.
+      </p>
+
+      <h2>Android</h2>
+      <div class="cards">
+        <div class="card">
+          <h3>Demo<span class="tag">No sign-in</span></h3>
+          <p>
+            Opens straight into the app — no email, no code, nothing to set up. Every
+            portal is unlocked, so you can walk somebody through the whole thing in a
+            minute. Accounts and bookings are yours alone and only on that phone.
+          </p>
+          <a class="btn" href="/DikkiConnect-demo.apk" download>Download the demo</a>
+          <p class="meta">5.3 MB · installs alongside the full app</p>
+        </div>
+
+        <div class="card">
+          <h3>Full version<span class="tag">Real accounts</span></h3>
+          <p>
+            The real product. Sign in with your email, and your account, parcels and rides
+            are held on the server rather than on the handset.
+          </p>
+          <a class="btn" href="/DikkiConnect-full.apk" download>Download the full app</a>
+          <p class="meta">5.3 MB · Android 7.0 and above</p>
+        </div>
+      </div>
+
+      <h2>Installing either one</h2>
+      <ol>
+        <li>Open this page on the phone itself, and tap a download above.</li>
+        <li>Open the file from your notifications or the Files app.</li>
+        <li>
+          Android will warn that it came from an unknown source. Tap Settings, allow
+          installs from your browser, go back, then tap Install.
+        </li>
+        <li>
+          They install side by side under different names, so you can keep both and
+          compare.
+        </li>
+      </ol>
+
+      <h2>iPhone</h2>
+      <div class="card">
+        <h3>TestFlight only</h3>
+        <p>
+          The iPhone app is built and compiling — every change is compiled on a Mac
+          automatically. What is missing is not code. Apple does not allow sideloading: an
+          iPhone can only install through the App Store or TestFlight, and both require a
+          paid Apple Developer account belonging to the company. Once that account exists,
+          testers get an invite by email and this page will carry the link.
+        </p>
+        <p>
+          In the meantime the web app works fully in Safari, including maps and sign-in.
+          Open it, then tap Share, then Add to Home Screen, and it behaves almost exactly
+          like the installed app.
+        </p>
+        <a class="btn ghost" href="https://dikkiconnect-demo.vercel.app/">Open the web app</a>
+      </div>
+
+      <h2>What the app asks for, and why</h2>
+      <div class="grid">
+        <div>
+          <h3>Location</h3>
+          <p>
+            Sets the pickup point for a door-to-door parcel and shows where your delivery
+            or ride is. Asked the first time you tap "Use my location" or open a live map.
+            Only while the app is open — there is no background tracking. Decline it and
+            you can still type addresses.
+          </p>
+        </div>
+        <div>
+          <h3>Camera</h3>
+          <p>
+            Scans the parcel QR at a hub and photographs the parcel at each handover. Those
+            photos are what protect both sides if a delivery is ever disputed. Asked the
+            first time you open the scanner.
+          </p>
+        </div>
+        <div>
+          <h3>Photos</h3>
+          <p>
+            Attaches an existing picture to a damage report, and saves delivery proof to
+            your gallery when you ask it to. Asked only when you pick or save an image.
+          </p>
+        </div>
+        <div>
+          <h3>Network</h3>
+          <p>
+            Maps, sign-in codes and live tracking all need a connection. The app caches map
+            tiles so a cold start does not re-download the whole city. Granted at install.
+          </p>
+        </div>
+      </div>
+
+      <h2>Worth knowing</h2>
+      <p class="note">
+        <b>Which one should I install?</b> The demo, if you are showing the app to somebody
+        or trying it yourself — it needs nothing set up. The full version, if you want a
+        real account that persists and is shared with the people you deliver to. The demo
+        carries a permanent badge across the top so the two can never be confused, and that
+        badge is compiled into the demo build — it does not exist in the full one.
+      </p>
+      <p class="note">
+        <b>Signing in.</b> DikkiConnect uses your email address and sends a six-digit code,
+        so there is no password to remember or lose. Your mobile number is asked for at the
+        same time, but only so a driver can reach you at the door: no code is ever sent to
+        it.
+      </p>
+      <p class="note">
+        <b>Why Android warns you.</b> This build is debug-signed, which is exactly what lets
+        you install it directly rather than through the Play Store. A Play Store release
+        needs a signing keystore held under your own developer account — that keystore
+        permanently controls who can ship updates, so it should be generated by you and
+        never handed over.
+      </p>
+      <p class="note">
+        <b>Not connected yet.</b> UPI settlement confirmation and Aadhaar KYC each need
+        commercial onboarding under a registered company — a payment gateway account and a
+        licensed KYC partner. Both are already wired to adapters in the app, so supplying
+        the credentials switches them on without further code changes.
+      </p>
+
+      <footer>DikkiConnect · pilot build · Bangalore to Mysore</footer>
+    </div>
+  </body>
+</html>
