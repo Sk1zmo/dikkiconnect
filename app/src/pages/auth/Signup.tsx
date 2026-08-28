@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowRight, Building2, Car, Package, UserRound, Users } from 'lucide-react'
+import { ArrowRight, Building2, Car, Package, Phone, UserRound, Users } from 'lucide-react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import { ActionBar, Button, Field, Note, useToast } from '@/components/ui'
-import { maskPhone } from '@/lib/format'
 import { useAuth } from '@/lib/auth'
 import { useApp } from '@/lib/store'
 import { cn } from '@/lib/cn'
@@ -17,8 +16,12 @@ const ROLES: Array<{ id: Role; icon: typeof Package; label: string; blurb: strin
 ]
 
 /**
- * Account creation. Only new numbers land here — an existing account signs
- * straight in from the OTP screen.
+ * Account creation. Only addresses with no account behind them land here — an
+ * existing one signs straight in from the OTP screen.
+ *
+ * The number is asked for here rather than at the door, because this is the
+ * one moment it is genuinely needed and the only moment it is asked at all.
+ * Signing in later takes either the address or the number, and never both.
  */
 export default function Signup() {
   const navigate = useNavigate()
@@ -29,11 +32,11 @@ export default function Signup() {
 
   const ticket = params.get('ticket') ?? ''
   const identifier = params.get('id') ?? ''
-  const phone = params.get('phone') ?? ''
 
   const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
   const [role, setChosenRole] = useState<Role>('sender')
-  const [errors, setErrors] = useState<{ name?: string }>({})
+  const [errors, setErrors] = useState<{ name?: string; phone?: string }>({})
   const [creating, setCreating] = useState(false)
 
   /* The ticket is the server's proof that this identifier just passed
@@ -44,22 +47,34 @@ export default function Signup() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const digits = phone.replace(/\D/g, '')
+
   const submit = () => {
     const next: typeof errors = {}
     if (name.trim().length < 2) next.name = 'Enter your full name'
+    if (!/^[6-9]\d{9}$/.test(digits)) {
+      next.phone = digits ? 'That doesn’t look like a mobile number' : 'Enter your mobile number'
+    }
     setErrors(next)
     if (Object.keys(next).length) return
 
     setCreating(true)
     void (async () => {
-      const account = await completeSignup({ ticket, name, phone, role })
+      const result = await completeSignup({ ticket, name, phone: digits, role })
       setCreating(false)
-      if (!account) {
-        setErrors({ name: 'Could not create the account. Ask for a new code and try again.' })
+      if (!result.ok) {
+        setErrors(
+          result.reason === 'phone-taken'
+            ? { phone: 'That number is already on another account. Sign in with it instead.' }
+            : { name: 'Could not create the account. Ask for a new code and try again.' },
+        )
         return
       }
       setRole(role)
-      toast.success('Account created', `Welcome to DikkiConnect, ${account.name.split(' ')[0]}.`)
+      toast.success(
+        'Account created',
+        `Welcome to DikkiConnect, ${result.account.name.split(' ')[0]}.`,
+      )
       navigate('/auth/role', { replace: true })
     })()
   }
@@ -73,9 +88,8 @@ export default function Signup() {
           Almost there
         </h1>
         <p className="mt-2 text-[14px] leading-[1.55] text-ink-500">
-          <span className="font-bold text-ink-800">{identifier}</span> is verified
-          {phone ? ` and we have ${maskPhone(phone)} for contact` : ''}. Tell us who you are — this
-          name appears on your parcels and rides.
+          <span className="font-bold text-ink-800">{identifier}</span> is verified. Two more things:
+          the name that goes on your parcels and rides, and a number somebody can call at the door.
         </p>
 
         <div className="mt-7 flex flex-col gap-4">
@@ -90,6 +104,27 @@ export default function Signup() {
               setErrors((x) => ({ ...x, name: undefined }))
             }}
             prefix={<UserRound size={15} />}
+          />
+
+          <Field
+            label="Mobile number"
+            placeholder="10-digit number"
+            inputMode="numeric"
+            autoComplete="tel"
+            maxLength={11}
+            value={phone}
+            error={errors.phone}
+            hint="For delivery contact — and it signs you in without typing your email."
+            onChange={(e) => {
+              setPhone(e.target.value.replace(/[^\d ]/g, ''))
+              setErrors((x) => ({ ...x, phone: undefined }))
+            }}
+            prefix={
+              <span className="flex items-center gap-1.5 text-[14px] font-bold text-ink-700">
+                <Phone size={15} className="text-ink-400" />
+                +91
+              </span>
+            }
           />
         </div>
 

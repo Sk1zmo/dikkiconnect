@@ -23,7 +23,6 @@ export default function Otp() {
 
   const identifier = params.get('id') ?? ''
   const sentTo = params.get('to') ?? identifier
-  const phone = params.get('phone') ?? ''
 
   const [code, setCode] = useState('')
   const [error, setError] = useState<string>()
@@ -73,7 +72,7 @@ export default function Otp() {
     setVerified(true)
     setTimeout(() => {
       if (result.isNewUser) {
-        const qs = new URLSearchParams({ ticket: result.ticket, id: identifier, phone })
+        const qs = new URLSearchParams({ ticket: result.ticket, id: identifier })
         navigate(`/auth/signup?${qs.toString()}`, { replace: true })
       } else {
         navigate('/auth/role', { replace: true })

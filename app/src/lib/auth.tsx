@@ -14,14 +14,16 @@ import type { KycTier, Role } from './types'
 /* ═══════════════════════════════════════════════════════════════════════════
    Accounts and verification — client side.
 
-   An account is an email address. The code is issued, hashed, counted and
-   compared by the API; the only copy that leaves the server goes to that
+   An account lives at an email address. The code is issued, hashed, counted
+   and compared by the API; the only copy that leaves the server goes to that
    inbox. All this file does is ask, and report what the server said.
 
-   The mobile number is collected at sign-in and stored on the account, but it
-   authenticates nothing — no code is ever sent to it. That is deliberate:
-   texting an Indian number needs DLT registration and an approved template,
-   and a login that depends on paperwork is a login that is sometimes broken.
+   Sign-in takes one thing: an address, or the mobile number of an account that
+   already has one. The number is an alias, not a second credential — the
+   server resolves it to the account's address and mails the code there. No
+   code is ever sent to a phone, and that is deliberate: texting an Indian
+   number needs DLT registration and an approved template, and a login that
+   depends on paperwork is a login that is sometimes broken.
 
    That is the difference between a verification step and a piece of theatre:
    the check now happens somewhere the person being checked cannot reach.
@@ -49,9 +51,13 @@ export type RequestResult =
   | { ok: true; delivered: boolean; to?: string; reason?: string; provider?: string }
   | {
       ok: false
-      reason: 'bad-identifier' | 'too-soon' | 'offline' | 'no-api'
+      reason: 'bad-identifier' | 'no-account' | 'too-soon' | 'offline' | 'no-api'
       retryInSeconds?: number
     }
+
+export type SignupResult =
+  | { ok: true; account: Account }
+  | { ok: false; reason: 'phone-taken' | 'failed' }
 
 export type VerifyResult =
   | { ok: true; isNewUser: false }
@@ -118,10 +124,10 @@ interface AuthState {
   completeSignup: (details: {
     ticket: string
     name: string
-    /** Contact only — the verified email comes from the ticket, server-side. */
+    /** Contact, and a sign-in alias. The verified email comes from the ticket. */
     phone: string
     role: Role
-  }) => Promise<Account | null>
+  }) => Promise<SignupResult>
 
   updateAccount: (patch: Partial<Omit<Account, 'id'>>) => void
   addRole: (role: Role) => void
@@ -163,6 +169,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (res.error === 'too-soon') {
       return { ok: false, reason: 'too-soon', retryInSeconds: res.retryInSeconds }
     }
+    // A number with no account behind it: there is no inbox to mail.
+    if (res.error === 'no-account') return { ok: false, reason: 'no-account' }
     if (!res.ok) return { ok: false, reason: 'bad-identifier' }
 
     return {
@@ -210,15 +218,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const completeSignup = useCallback<AuthState['completeSignup']>(
     async (details) => {
       setLoading(true)
-      const res = await api<{ ok?: boolean; token?: string; account?: Account }>(
+      const res = await api<{ ok?: boolean; error?: string; token?: string; account?: Account }>(
         '/api/auth/signup',
         details,
       )
       setLoading(false)
-      if (failed(res) || !res?.ok || !res.account || !res.token) return null
+      if (failed(res)) return { ok: false, reason: 'failed' }
+      if (res.error === 'phone-taken') return { ok: false, reason: 'phone-taken' }
+      if (!res.ok || !res.account || !res.token) return { ok: false, reason: 'failed' }
       setToken(res.token)
       setAccount(res.account)
-      return res.account
+      return { ok: true, account: res.account }
     },
     [setToken, setAccount],
   )

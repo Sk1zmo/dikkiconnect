@@ -47,19 +47,32 @@ export interface Account {
 }
 
 /**
- * An account is identified by its email address and nothing else.
+ * What somebody can type into the one sign-in field.
  *
- * The phone number is still collected and stored — a driver has to be
- * reachable, and a hub manager has to be able to ring a receiver — but it is
- * contact information, not a credential. Nobody signs in with it, so nothing
- * has to be true about it for the login to be sound.
+ * An account still *lives* at an email address — that is the key it is stored
+ * under, and the only place a code is ever delivered. A number is an alias:
+ * accepted at the door, resolved to the account that registered it, and then
+ * forgotten. So a returning driver types the number they know by heart, and
+ * the code still lands in a channel that works without DLT paperwork.
+ *
+ * A number nobody has signed up with resolves to nothing, which is the honest
+ * answer — there is no inbox to mail.
  */
-export type Identifier = { kind: 'email'; value: string }
+export type Identifier = { kind: 'email' | 'phone'; value: string }
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
 export function parseIdentifier(raw: string): Identifier | null {
   const v = (raw ?? '').trim().toLowerCase()
   if (!v) return null
-  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) ? { kind: 'email', value: v } : null
+  if (EMAIL_RE.test(v)) return { kind: 'email', value: v }
+
+  /* +91 98765 43210, 09876543210 and 9876543210 are one number. Anything
+     outside 10–13 digits is a typo rather than a number worth guessing at. */
+  const digits = v.replace(/\D/g, '')
+  if (digits.length < 10 || digits.length > 13) return null
+  const last10 = digits.slice(-10)
+  return /^[6-9]\d{9}$/.test(last10) ? { kind: 'phone', value: last10 } : null
 }
 
 /** Ten digits, or null. Stored on the account; never used to authenticate. */
@@ -109,8 +122,8 @@ export type IssueResult =
  * Creates a challenge and returns the plaintext code to the caller *inside the
  * server* so it can be mailed. It is deliberately not part of any response.
  */
-export async function issueChallenge(id: Identifier): Promise<IssueResult> {
-  const key = K.challenge(id.value)
+export async function issueChallenge(email: string): Promise<IssueResult> {
+  const key = K.challenge(email)
   const existing = await kvGet<Challenge>(key)
   const now = Date.now()
 
@@ -124,7 +137,7 @@ export async function issueChallenge(id: Identifier): Promise<IssueResult> {
   const code = sixDigits()
   const salt = randomBytes(16).toString('hex')
   const challenge: Challenge = {
-    identifier: id.value,
+    identifier: email,
     channel: 'email',
     hash: hashCode(code, salt),
     salt,
@@ -140,8 +153,8 @@ export type VerifyResult =
   | { ok: true; account: Account | null }
   | { ok: false; reason: 'no-challenge' | 'expired' | 'locked' | 'wrong'; attemptsLeft: number }
 
-export async function verifyChallenge(id: Identifier, code: string): Promise<VerifyResult> {
-  const key = K.challenge(id.value)
+export async function verifyChallenge(email: string, code: string): Promise<VerifyResult> {
+  const key = K.challenge(email)
   const challenge = await kvGet<Challenge>(key)
 
   if (!challenge) return { ok: false, reason: 'no-challenge', attemptsLeft: 0 }
@@ -172,16 +185,41 @@ export async function verifyChallenge(id: Identifier, code: string): Promise<Ver
 
   // Correct — destroy it so it cannot be replayed.
   await kvDel(key)
-  const account = await findAccount(id)
+  const account = await findAccountByEmail(email)
   return { ok: true, account }
 }
 
 /* ── Accounts ────────────────────────────────────────────────────────────── */
 
-export const accountKey = (id: Identifier) => `${id.kind}:${id.value}`
+export const findAccountByEmail = (email: string): Promise<Account | null> =>
+  kvGet<Account>(K.account(`email:${email.trim().toLowerCase()}`))
 
-export async function findAccount(id: Identifier): Promise<Account | null> {
-  return kvGet<Account>(K.account(accountKey(id)))
+/**
+ * Numbers are stored as a pointer at the number's own key rather than as a
+ * second copy of the account, so there is still exactly one record to update
+ * and no way for the two to disagree about anything but which inbox they name.
+ */
+export const findAccountByPhone = async (phone: string): Promise<Account | null> => {
+  const pointer = await kvGet<{ email: string }>(K.account(`phone:${phone}`))
+  return pointer?.email ? findAccountByEmail(pointer.email) : null
+}
+
+/**
+ * Turns whatever was typed into the inbox the code goes to.
+ *
+ * An email resolves to itself whether or not an account exists — that is what
+ * lets a new person sign up. A number can only resolve through an account, so
+ * an unrecognised one comes back with no email at all, and the caller says so
+ * rather than mailing nobody.
+ */
+export async function resolveIdentifier(
+  id: Identifier,
+): Promise<{ email: string | null; account: Account | null }> {
+  if (id.kind === 'email') {
+    return { email: id.value, account: await findAccountByEmail(id.value) }
+  }
+  const account = await findAccountByPhone(id.value)
+  return { email: account?.email ?? null, account }
 }
 
 export async function createAccount(details: {
@@ -203,6 +241,7 @@ export async function createAccount(details: {
   }
 
   await kvSet(K.account(`email:${account.email}`), account)
+  if (account.phone) await kvSet(K.account(`phone:${account.phone}`), { email: account.email })
   await kvPush(K.accountIndex, { id: account.id, at: account.createdAt }, 1000)
 
   return account
@@ -211,6 +250,13 @@ export async function createAccount(details: {
 export async function updateAccount(account: Account, patch: Partial<Account>): Promise<Account> {
   const next = { ...account, ...patch }
   await kvSet(K.account(`email:${next.email}`), next)
+
+  /* A changed number has to stop pointing at this account, or the old one
+     still signs in and the new one does not. */
+  if (next.phone !== account.phone) {
+    if (account.phone) await kvDel(K.account(`phone:${account.phone}`))
+    if (next.phone) await kvSet(K.account(`phone:${next.phone}`), { email: next.email })
+  }
   return next
 }
 

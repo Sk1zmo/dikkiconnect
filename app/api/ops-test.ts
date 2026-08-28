@@ -24,8 +24,11 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   if (!expected) return res.status(503).json({ error: 'ops-disabled' })
   if (String(req.body?.key ?? '') !== expected) return res.status(401).json({ error: 'unauthorised' })
 
+  // A number is a valid sign-in identifier but not a valid mail recipient.
   const id = parseIdentifier(String(req.body?.to ?? ''))
-  if (!id) return res.status(400).json({ error: 'bad-recipient', detail: 'Enter an email address.' })
+  if (!id || id.kind !== 'email') {
+    return res.status(400).json({ error: 'bad-recipient', detail: 'Enter an email address.' })
+  }
 
   if (!mailProvider()) {
     return res.status(200).json({

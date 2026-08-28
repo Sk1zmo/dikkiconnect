@@ -3,7 +3,8 @@ import { withCors } from '../_lib/http.js'
 import {
   createAccount,
   createSession,
-  findAccount,
+  findAccountByEmail,
+  findAccountByPhone,
   mask,
   parseIdentifier,
   parsePhone,
@@ -28,8 +29,12 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
   let verified: { kind: string; value: string; at: number }
   try {
-    const [kind, value, at] = Buffer.from(String(ticket), 'base64url').toString().split(':')
-    verified = { kind, value, at: Number(at) }
+    /* kind:value:issuedAt, where value is an address that may itself contain a
+       colon. Take the ends and let the middle be whatever it is. */
+    const parts = Buffer.from(String(ticket), 'base64url').toString().split(':')
+    const at = Number(parts.pop())
+    const kind = String(parts.shift())
+    verified = { kind, value: parts.join(':'), at }
   } catch {
     return res.status(400).json({ error: 'bad-ticket' })
   }
@@ -43,9 +48,11 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   if (String(name ?? '').trim().length < 2) return res.status(400).json({ error: 'bad-name' })
 
   /* The verified address always wins over whatever the form claimed — a ticket
-     for one address can never create an account for another. The phone is
-     taken at face value because it is contact information rather than a
-     credential: nothing is granted on the strength of it. */
+     for one address can never create an account for another. The number is
+     taken at face value: it is contact information, and although it doubles as
+     a sign-in alias afterwards, the code for it still only ever goes to this
+     address. Claiming somebody else's number buys you nothing you did not
+     already have. */
   const finalEmail = verified.value
   const finalPhone = parsePhone(String(phone ?? ''))
 
@@ -57,13 +64,19 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const id = parseIdentifier(verified.value)
-  if (!id) return res.status(400).json({ error: 'bad-ticket' })
+  if (!id || id.kind !== 'email') return res.status(400).json({ error: 'bad-ticket' })
 
-  const existing = await findAccount(id)
+  const existing = await findAccountByEmail(id.value)
   if (existing) {
     const token = await createSession(existing)
     return res.status(200).json({ ok: true, token, account: existing, existed: true })
   }
+
+  /* The number doubles as a sign-in alias, so it can only point at one
+     account. Letting a second signup claim a number already in use would
+     quietly take sign-in-by-number away from whoever registered it first. */
+  const numberInUse = await findAccountByPhone(finalPhone)
+  if (numberInUse) return res.status(409).json({ error: 'phone-taken' })
 
   const account = await createAccount({
     id,
