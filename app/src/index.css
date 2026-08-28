@@ -27,6 +27,63 @@
     U+2C60-2C7F, U+A720-A7FF;
 }
 
+/* ═══ Demo alternates ══════════════════════════════════════════════════════
+   Two more grotesques cut from the same cloth, self-hosted the same way, so a
+   demo can be shown in three typefaces without the network deciding what the
+   screenshots look like.
+
+     · Geist — Inter's neutrality with straighter terminals and a tighter
+       spine. Colder, more machined; reads as infrastructure.
+     · Plus Jakarta Sans — wider apertures, rounder bowls, a little more
+       humanist. Reads as a consumer brand rather than a control panel.
+
+   Declaring a face costs nothing: a @font-face is a promise, not a download,
+   and the browser only fetches the family something actually paints. Inter
+   stays the default and the face the product ships in.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url('/fonts/geist-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url('/fonts/geist-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/jakarta-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/jakarta-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DIKKI DESIGN SYSTEM
@@ -143,6 +200,44 @@
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ═══ Typeface swap ════════════════════════════════════════════════════════
+   One attribute on <html> re-points the whole type system. It works because
+   `html[data-font=…]` scores (0,1,1) against the (0,1,0) of the `:root` rule
+   @theme compiles to, so it wins without !important and without touching a
+   single component — every size, weight and tracking token downstream reads
+   --font-sans and inherits the new answer.
+
+   Feature settings have to travel with the family. `cv11` and `ss01` are
+   Inter's single-storey g and its alternate punctuation; asking a different
+   face for the same slots gets whatever that designer happened to put there,
+   which is how a swap that should be neutral ends up looking like a bug.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+html[data-font='geist'] {
+  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+html[data-font='jakarta'] {
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    sans-serif;
+  --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Neither alternate ships Inter's character variants, so they run plain —
+   except tabular figures, which every fare, weight and countdown depends on
+   not shifting width mid-tick. */
+html[data-font='geist'] body,
+html[data-font='jakarta'] body,
+html[data-font='geist'] .text-display,
+html[data-font='jakarta'] .text-display {
+  font-feature-settings: normal;
+}
+html[data-font='geist'] .tabular,
+html[data-font='jakarta'] .tabular {
+  font-feature-settings: 'tnum';
 }
 
 /* ═══ Base ═════════════════════════════════════════════════════════════════

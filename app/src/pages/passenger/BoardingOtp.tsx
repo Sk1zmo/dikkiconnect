@@ -1,6 +1,5 @@
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { Car, Check, MapPin, MessageCircle, Phone, ShieldCheck } from 'lucide-react'
+import { Car, MapPin, MessageCircle, Phone, ShieldCheck } from 'lucide-react'
 import { Screen, ScreenBody } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -13,6 +12,7 @@ import {
   OtpDisplay,
 } from '@/components/ui'
 import { Confetti } from '@/components/viz/Illustrations'
+import { LottieMark } from '@/components/brand/LottieMark'
 import { cityName, otpFor, travelerById } from '@/lib/data'
 import { useRideForTrip } from '@/lib/store'
 import { useTrip } from '@/lib/store'
@@ -38,14 +38,7 @@ export default function BoardingOtp() {
 
       <ScreenBody className="pt-safe">
         <div className="flex flex-col items-center pt-8 pb-6 text-center">
-          <motion.span
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 280, damping: 18 }}
-            className="grid size-16 place-items-center rounded-full bg-success-500 shadow-lg shadow-success-500/35"
-          >
-            <Check size={32} strokeWidth={3.2} className="text-white" />
-          </motion.span>
+          <LottieMark name="otp-verified" size={104} />
           <h1 className="text-display mt-5 text-[25px] font-extrabold text-ink-900">
             Seat confirmed
           </h1>

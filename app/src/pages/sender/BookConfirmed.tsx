@@ -4,7 +4,8 @@ import { motion } from 'framer-motion'
 import { Clock, Home, MapPin, QrCode, Share2 } from 'lucide-react'
 import { Screen, ScreenBody } from '@/components/layout/Screen'
 import { ActionBar, Button, Card, KeyValue, Note, OtpDisplay } from '@/components/ui'
-import { Confetti, SuccessBurst, SuccessMark } from '@/components/viz/Illustrations'
+import { Confetti } from '@/components/viz/Illustrations'
+import { LottieMark } from '@/components/brand/LottieMark'
 import { hubById, otpFor } from '@/lib/data'
 import { inr, shortDate } from '@/lib/format'
 import { useApp } from '@/lib/store'
@@ -41,10 +42,7 @@ export default function BookConfirmed() {
 
       <ScreenBody className="pt-safe">
         <div className="flex flex-col items-center pt-10 pb-6 text-center">
-          <div className="relative grid size-[120px] place-items-center">
-            <SuccessBurst />
-            <SuccessMark size={86} />
-          </div>
+          <LottieMark name="order-confirmed" size={132} />
 
           <motion.div
             initial={{ opacity: 0, y: 14 }}

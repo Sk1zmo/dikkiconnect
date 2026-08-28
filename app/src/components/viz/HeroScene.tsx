@@ -277,10 +277,10 @@ export function HeroScene({
           <rect width="132" height="44" rx="7" fill="#0c2a63" />
           <rect width="132" height="44" rx="7" fill="none" stroke="#8fb2ff" strokeWidth="1.3" opacity="0.75" />
           <rect x="0" y="0" width="132" height="1.6" rx="0.8" fill="#ffffff" opacity="0.18" />
-          <text x="12" y="19" fill="#ffffff" fontSize="11.5" fontWeight="700" fontFamily="Inter, sans-serif">
+          <text x="12" y="19" fill="#ffffff" fontSize="11.5" fontWeight="700" fontFamily="var(--font-sans)">
             Smarter Logistics
           </text>
-          <text x="12" y="34" fill="#ffffff" fontSize="11.5" fontWeight="700" fontFamily="Inter, sans-serif">
+          <text x="12" y="34" fill="#ffffff" fontSize="11.5" fontWeight="700" fontFamily="var(--font-sans)">
             Stronger India
           </text>
           <path
@@ -357,7 +357,7 @@ export function HeroScene({
         <g transform="translate(24 49)">
           <path d="M0 4.5h4.4L9 10l-4.6 5.5H0L4.4 10Z" fill="#7ba5ff" />
           <path d="M8.6 1.5h5.4L19.8 10l-5.8 8.5H8.6L14.4 10Z" fill="#ffffff" />
-          <text x="25" y="14" fill="#ffffff" fontSize="11.5" fontWeight="800" fontFamily="Inter, sans-serif">
+          <text x="25" y="14" fill="#ffffff" fontSize="11.5" fontWeight="800" fontFamily="var(--font-sans)">
             DikkiConnect
           </text>
         </g>

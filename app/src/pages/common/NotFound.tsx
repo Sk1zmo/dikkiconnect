@@ -33,7 +33,7 @@ export default function NotFound() {
             fontSize="11"
             fontWeight="800"
             textAnchor="middle"
-            fontFamily="Inter, sans-serif"
+            fontFamily="var(--font-sans)"
           >
             404
           </text>

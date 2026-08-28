@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { Camera, PenLine, ShieldCheck, User } from 'lucide-react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
@@ -16,7 +15,7 @@ import {
   useToast,
 } from '@/components/ui'
 import { PhotoCapture } from '@/components/viz/Scanner'
-import { SuccessBurst, SuccessMark } from '@/components/viz/Illustrations'
+import { LottieMark } from '@/components/brand/LottieMark'
 import { HUB_HANDLING_FEE, categoryById, otpFor } from '@/lib/data'
 import { inr, phone as fmtPhone, relative } from '@/lib/format'
 import { useApp, useAwaitingPickup } from '@/lib/store'
@@ -78,15 +77,7 @@ export default function ReceiverPickup() {
       <Screen tone="white">
         <ScreenBody className="pt-safe">
           <div className="flex flex-col items-center pt-14 text-center">
-            <motion.div
-              initial={{ scale: 0.4, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 16 }}
-              className="relative grid size-[116px] place-items-center"
-            >
-              <SuccessBurst />
-              <SuccessMark size={82} />
-            </motion.div>
+            <LottieMark name="parcel-delivered" size={128} />
             <h1 className="text-display mt-6 text-[24px] font-extrabold text-ink-900">Delivered</h1>
             <p className="mt-2 max-w-[290px] text-[14px] leading-relaxed text-ink-500">
               The delivery loop is closed. The sender has been notified and payment released from

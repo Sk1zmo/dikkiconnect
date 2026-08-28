@@ -15,6 +15,7 @@ import type {
   WalletTxn,
 } from './types'
 import { hoursFromNow, minutesFromNow } from './format'
+import { HUB_COORDS, cityCoord, haversineKm, hubCoord } from './geo'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Mock dataset. MVP corridor per the PRD: Bangalore ↔ Mysore, with the
@@ -22,18 +23,31 @@ import { hoursFromNow, minutesFromNow } from './format'
    to talk about.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-export const CITIES: City[] = [
-  { id: 'blr', name: 'Bangalore', state: 'Karnataka', hubCount: 6 },
-  { id: 'mys', name: 'Mysore', state: 'Karnataka', hubCount: 3 },
-  { id: 'mng', name: 'Mangalore', state: 'Karnataka', hubCount: 2 },
-  { id: 'hbl', name: 'Hubballi', state: 'Karnataka', hubCount: 1 },
-  { id: 'cbe', name: 'Coimbatore', state: 'Tamil Nadu', hubCount: 2 },
-  { id: 'che', name: 'Chennai', state: 'Tamil Nadu', hubCount: 4 },
-  { id: 'hyd', name: 'Hyderabad', state: 'Telangana', hubCount: 3 },
-  { id: 'goa', name: 'Goa', state: 'Goa', hubCount: 1 },
+const CITY_SEED: Array<Omit<City, 'hubCount'>> = [
+  { id: 'blr', name: 'Bangalore', state: 'Karnataka' },
+  { id: 'mys', name: 'Mysore', state: 'Karnataka' },
+  { id: 'mng', name: 'Mangalore', state: 'Karnataka' },
+  { id: 'hbl', name: 'Hubballi', state: 'Karnataka' },
+  { id: 'cbe', name: 'Coimbatore', state: 'Tamil Nadu' },
+  { id: 'che', name: 'Chennai', state: 'Tamil Nadu' },
+  { id: 'hyd', name: 'Hyderabad', state: 'Telangana' },
+  { id: 'goa', name: 'Goa', state: 'Goa' },
 ]
 
-export const HUBS: Hub[] = [
+/**
+ * Every hub on the network.
+ *
+ * Each id here is also its key in `HUB_COORDS`, and the two lists are checked
+ * against each other below. A hub that exists in one and not the other used to
+ * fail silently — it rendered at the centre of its city, several kilometres
+ * from where it actually is, and nothing said so.
+ *
+ * `distanceKm` is measured from the hub's own city centre rather than invented.
+ * It is only the fallback shown before the app knows where the user is
+ * standing; once it does, `rankHubs` replaces it with the real distance.
+ */
+const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
+  /* ── Bangalore ─────────────────────────────────────────────────────────── */
   {
     id: 'hub-blr-kor',
     name: 'DikkiConnect Hub · Koramangala',
@@ -42,25 +56,36 @@ export const HUBS: Hub[] = [
     landmark: 'Next to Sony World Signal',
     openFrom: '7:00 AM',
     openTo: '10:00 PM',
-    distanceKm: 1.2,
     rating: 4.8,
     manager: 'Ravi Shetty',
     capacity: 120,
     held: 38,
   },
   {
-    id: 'hub-blr-elc',
-    name: 'DikkiConnect Hub · Electronic City',
+    id: 'hub-blr-ind',
+    name: 'DikkiConnect Hub · Indiranagar',
     cityId: 'blr',
-    address: 'Phase 1, Hosur Rd, Electronic City',
-    landmark: 'Inside HP Petrol Pump',
-    openFrom: '6:30 AM',
-    openTo: '11:00 PM',
-    distanceKm: 4.6,
-    rating: 4.6,
-    manager: 'Prakash N.',
-    capacity: 90,
-    held: 24,
+    address: '100 Feet Rd, Indiranagar',
+    landmark: 'Opposite CMH Road Junction',
+    openFrom: '7:30 AM',
+    openTo: '10:30 PM',
+    rating: 4.7,
+    manager: 'Nikhil Bhat',
+    capacity: 100,
+    held: 44,
+  },
+  {
+    id: 'hub-blr-whf',
+    name: 'DikkiConnect Hub · Whitefield',
+    cityId: 'blr',
+    address: 'ITPL Main Rd, Whitefield',
+    landmark: 'Beside Forum Value Mall',
+    openFrom: '7:00 AM',
+    openTo: '10:00 PM',
+    rating: 4.5,
+    manager: 'Anitha Reddy',
+    capacity: 110,
+    held: 61,
   },
   {
     id: 'hub-blr-jay',
@@ -70,12 +95,39 @@ export const HUBS: Hub[] = [
     landmark: 'Above Sri Krishna Stores',
     openFrom: '8:00 AM',
     openTo: '9:00 PM',
-    distanceKm: 3.1,
     rating: 4.9,
     manager: 'Lakshmi Rao',
     capacity: 60,
     held: 12,
   },
+  {
+    id: 'hub-blr-hbr',
+    name: 'DikkiConnect Hub · Hebbal',
+    cityId: 'blr',
+    address: 'Bellary Rd, Hebbal',
+    landmark: 'Under the Hebbal Flyover',
+    openFrom: '6:30 AM',
+    openTo: '11:00 PM',
+    rating: 4.4,
+    manager: 'Imran Pasha',
+    capacity: 95,
+    held: 52,
+  },
+  {
+    id: 'hub-blr-ele',
+    name: 'DikkiConnect Hub · Electronic City',
+    cityId: 'blr',
+    address: 'Phase 1, Hosur Rd, Electronic City',
+    landmark: 'Inside HP Petrol Pump',
+    openFrom: '6:30 AM',
+    openTo: '11:00 PM',
+    rating: 4.6,
+    manager: 'Prakash N.',
+    capacity: 90,
+    held: 24,
+  },
+
+  /* ── Mysore ────────────────────────────────────────────────────────────── */
   {
     id: 'hub-mys-sar',
     name: 'DikkiConnect Hub · Saraswathipuram',
@@ -84,7 +136,6 @@ export const HUBS: Hub[] = [
     landmark: 'Opposite Ayyappa Temple',
     openFrom: '7:30 AM',
     openTo: '9:30 PM',
-    distanceKm: 0.9,
     rating: 4.7,
     manager: 'Suresh Gowda',
     capacity: 80,
@@ -98,12 +149,97 @@ export const HUBS: Hub[] = [
     landmark: 'Beside Ring Road Junction',
     openFrom: '8:00 AM',
     openTo: '10:00 PM',
-    distanceKm: 2.4,
     rating: 4.5,
     manager: 'Deepa Kulkarni',
     capacity: 70,
     held: 31,
   },
+  {
+    id: 'hub-mys-nan',
+    name: 'DikkiConnect Hub · Nanjangud Road',
+    cityId: 'mys',
+    address: 'Nanjangud Rd, Bannimantap, Mysore',
+    landmark: 'Near the APMC Yard gate',
+    openFrom: '7:00 AM',
+    openTo: '9:00 PM',
+    rating: 4.3,
+    manager: 'Mahesh Urs',
+    capacity: 55,
+    held: 9,
+  },
+
+  /* ── Mangalore ─────────────────────────────────────────────────────────── */
+  {
+    id: 'hub-mng-hmp',
+    name: 'DikkiConnect Hub · Hampankatta',
+    cityId: 'mng',
+    address: 'Kadri Rd, Hampankatta, Mangalore',
+    landmark: 'Next to Hampankatta Circle',
+    openFrom: '7:30 AM',
+    openTo: '9:30 PM',
+    rating: 4.6,
+    manager: 'Vinod Kamath',
+    capacity: 75,
+    held: 28,
+  },
+  {
+    id: 'hub-mng-kad',
+    name: 'DikkiConnect Hub · Kadri',
+    cityId: 'mng',
+    address: 'Kadri Temple Rd, Kadri, Mangalore',
+    landmark: 'Opposite the Kadri Park gate',
+    openFrom: '8:00 AM',
+    openTo: '9:00 PM',
+    rating: 4.4,
+    manager: 'Shalini Pai',
+    capacity: 50,
+    held: 16,
+  },
+
+  /* ── Hubballi ──────────────────────────────────────────────────────────── */
+  {
+    id: 'hub-hbl-vid',
+    name: 'DikkiConnect Hub · Vidyanagar',
+    cityId: 'hbl',
+    address: 'Gokul Rd, Vidyanagar, Hubballi',
+    landmark: 'Near Vidyanagar Circle',
+    openFrom: '7:30 AM',
+    openTo: '9:30 PM',
+    rating: 4.5,
+    manager: 'Basavaraj Hiremath',
+    capacity: 65,
+    held: 21,
+  },
+
+  /* ── Coimbatore ────────────────────────────────────────────────────────── */
+  {
+    id: 'hub-cbe-gan',
+    name: 'DikkiConnect Hub · Gandhipuram',
+    cityId: 'cbe',
+    address: 'Cross Cut Rd, Gandhipuram, Coimbatore',
+    landmark: 'Beside the Central Bus Stand',
+    openFrom: '6:30 AM',
+    openTo: '10:30 PM',
+    rating: 4.5,
+    manager: 'Karthik Raja',
+    capacity: 105,
+    held: 47,
+  },
+  {
+    id: 'hub-cbe-pee',
+    name: 'DikkiConnect Hub · Peelamedu',
+    cityId: 'cbe',
+    address: 'Avinashi Rd, Peelamedu, Coimbatore',
+    landmark: 'Opposite the PSG Tech gate',
+    openFrom: '7:30 AM',
+    openTo: '10:00 PM',
+    rating: 4.6,
+    manager: 'Divya Shankar',
+    capacity: 70,
+    held: 23,
+  },
+
+  /* ── Chennai ───────────────────────────────────────────────────────────── */
   {
     id: 'hub-che-tnr',
     name: 'DikkiConnect Hub · T. Nagar',
@@ -112,13 +248,139 @@ export const HUBS: Hub[] = [
     landmark: 'Near Panagal Park',
     openFrom: '7:00 AM',
     openTo: '10:00 PM',
-    distanceKm: 6.8,
     rating: 4.4,
     manager: 'Arun Kumar',
     capacity: 100,
     held: 41,
   },
+  {
+    id: 'hub-che-vel',
+    name: 'DikkiConnect Hub · Velachery',
+    cityId: 'che',
+    address: '100 Feet Rd, Velachery, Chennai',
+    landmark: 'Beside Phoenix MarketCity',
+    openFrom: '7:30 AM',
+    openTo: '10:30 PM',
+    rating: 4.6,
+    manager: 'Priya Balan',
+    capacity: 90,
+    held: 35,
+  },
+  {
+    id: 'hub-che-anv',
+    name: 'DikkiConnect Hub · Anna Nagar',
+    cityId: 'che',
+    address: '2nd Avenue, Anna Nagar, Chennai',
+    landmark: 'Near Anna Nagar Tower Park',
+    openFrom: '8:00 AM',
+    openTo: '9:30 PM',
+    rating: 4.7,
+    manager: 'Vignesh Iyer',
+    capacity: 80,
+    held: 18,
+  },
+  {
+    id: 'hub-che-omr',
+    name: 'DikkiConnect Hub · OMR Perungudi',
+    cityId: 'che',
+    address: 'Rajiv Gandhi Salai, Perungudi, Chennai',
+    landmark: 'Opposite the Thoraipakkam toll',
+    openFrom: '6:30 AM',
+    openTo: '11:00 PM',
+    rating: 4.3,
+    manager: 'Fathima Noor',
+    capacity: 115,
+    held: 72,
+  },
+
+  /* ── Hyderabad ─────────────────────────────────────────────────────────── */
+  {
+    id: 'hub-hyd-gac',
+    name: 'DikkiConnect Hub · Gachibowli',
+    cityId: 'hyd',
+    address: 'Gachibowli–Miyapur Rd, Hyderabad',
+    landmark: 'Near DLF Cyber City',
+    openFrom: '7:00 AM',
+    openTo: '10:30 PM',
+    rating: 4.6,
+    manager: 'Rohit Varma',
+    capacity: 110,
+    held: 49,
+  },
+  {
+    id: 'hub-hyd-sec',
+    name: 'DikkiConnect Hub · Secunderabad',
+    cityId: 'hyd',
+    address: 'SD Rd, Secunderabad',
+    landmark: 'Near the Clock Tower',
+    openFrom: '6:30 AM',
+    openTo: '10:30 PM',
+    rating: 4.4,
+    manager: 'Sridhar Rao',
+    capacity: 95,
+    held: 58,
+  },
+  {
+    id: 'hub-hyd-ban',
+    name: 'DikkiConnect Hub · Banjara Hills',
+    cityId: 'hyd',
+    address: 'Road No. 12, Banjara Hills, Hyderabad',
+    landmark: 'Above Karachi Bakery',
+    openFrom: '8:00 AM',
+    openTo: '9:30 PM',
+    rating: 4.8,
+    manager: 'Ayesha Sultana',
+    capacity: 65,
+    held: 14,
+  },
+
+  /* ── Goa ───────────────────────────────────────────────────────────────── */
+  {
+    id: 'hub-goa-pan',
+    name: 'DikkiConnect Hub · Panjim',
+    cityId: 'goa',
+    address: '18th June Rd, Panjim, Goa',
+    landmark: 'Near the Municipal Garden',
+    openFrom: '8:00 AM',
+    openTo: '9:00 PM',
+    rating: 4.7,
+    manager: 'Rajesh Naik',
+    capacity: 55,
+    held: 17,
+  },
 ]
+
+export const HUBS: Hub[] = HUB_SEED.map((h) => ({
+  ...h,
+  distanceKm: haversineKm(cityCoord(h.cityId), hubCoord(h.id, h.cityId)),
+}))
+
+/**
+ * Hub counts are counted, not claimed. They were hand-written before, drifted
+ * from the real list, and left five cities advertising hubs that did not exist
+ * — the picker then fell through to a hub in another state.
+ */
+export const CITIES: City[] = CITY_SEED.map((c) => ({
+  ...c,
+  hubCount: HUBS.filter((h) => h.cityId === c.id).length,
+}))
+
+/* Every hub must have a real position and a city that exists. In development
+   this is loud, because both failures are invisible at runtime: the hub simply
+   renders at the centre of its city and nothing looks wrong. */
+if (import.meta.env.DEV) {
+  const orphans = HUB_SEED.filter((h) => !(h.id in HUB_COORDS))
+  if (orphans.length) {
+    console.error(
+      `[data] ${orphans.length} hub(s) have no entry in HUB_COORDS and will render at their city centre:`,
+      orphans.map((h) => h.id),
+    )
+  }
+  const strays = HUB_SEED.filter((h) => !CITY_SEED.some((c) => c.id === h.cityId))
+  if (strays.length) {
+    console.error('[data] hub(s) in an unknown city:', strays.map((h) => h.id))
+  }
+}
 
 export const TRAVELERS: Traveler[] = [
   {

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { Camera, Scale, ShieldCheck } from 'lucide-react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
@@ -16,7 +15,7 @@ import {
   useToast,
 } from '@/components/ui'
 import { PhotoCapture } from '@/components/viz/Scanner'
-import { SuccessBurst, SuccessMark } from '@/components/viz/Illustrations'
+import { LottieMark } from '@/components/brand/LottieMark'
 import { HUB_HANDLING_FEE, categoryById, otpFor } from '@/lib/data'
 import { useApp } from '@/lib/store'
 import { useOtpGate } from '@/lib/otp'
@@ -85,15 +84,7 @@ export default function HubIntake() {
       <Screen tone="white">
         <ScreenBody className="pt-safe">
           <div className="flex flex-col items-center pt-14 text-center">
-            <motion.div
-              initial={{ scale: 0.4, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 16 }}
-              className="relative grid size-[116px] place-items-center"
-            >
-              <SuccessBurst />
-              <SuccessMark size={82} />
-            </motion.div>
+            <LottieMark name="parcel-received" size={128} />
             <h1 className="text-display mt-6 text-[24px] font-extrabold text-ink-900">
               Parcel accepted
             </h1>

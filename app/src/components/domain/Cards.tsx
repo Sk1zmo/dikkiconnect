@@ -5,6 +5,7 @@ import {
   Fuel,
   Home,
   MapPin,
+  Navigation,
   Package,
   ShieldCheck,
   Timer,
@@ -271,14 +272,27 @@ export function HubCard({
   selected,
   onSelect,
   showLoad,
+  km,
+  minutes,
+  road,
+  nearest,
 }: {
   hub: Hub
   selected?: boolean
   onSelect?: () => void
   showLoad?: boolean
+  /** Measured distance from the user. Falls back to distance from city centre. */
+  km?: number
+  /** Drive time, when the router has answered. */
+  minutes?: number | null
+  /** True when `km` is a road distance rather than a straight line. */
+  road?: boolean
+  /** Marks the closest hub in the list. */
+  nearest?: boolean
 }) {
   const loadPct = Math.round((hub.held / hub.capacity) * 100)
   const busy = loadPct > 70
+  const shownKm = km ?? hub.distanceKm
 
   return (
     <button
@@ -301,17 +315,28 @@ export function HubCard({
           <Package size={18} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-bold text-ink-900">
-            {hub.name.split('·').pop()?.trim()}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="truncate text-[14px] font-bold text-ink-900">
+              {hub.name.split('·').pop()?.trim()}
+            </p>
+            {nearest && (
+              <Badge tone="brand" size="sm">
+                Nearest
+              </Badge>
+            )}
+          </div>
           <p className="mt-0.5 truncate text-[12px] text-ink-500">{hub.address}</p>
           <p className="mt-0.5 truncate text-[11.5px] text-ink-400">{hub.landmark}</p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="tabular text-[13.5px] font-extrabold text-ink-900">{hub.distanceKm} km</p>
-          <p className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold text-warn-600">
-            ★ {hub.rating}
-          </p>
+          <p className="tabular text-[13.5px] font-extrabold text-ink-900">{shownKm} km</p>
+          {minutes != null ? (
+            <p className="tabular mt-0.5 text-[11px] font-bold text-brand-600">{minutes} min</p>
+          ) : (
+            <p className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold text-warn-600">
+              ★ {hub.rating}
+            </p>
+          )}
         </div>
       </div>
 
@@ -320,6 +345,12 @@ export function HubCard({
           <Clock size={11.5} className="text-ink-400" />
           {hub.openFrom} – {hub.openTo}
         </span>
+        {road && (
+          <span className="inline-flex items-center gap-1.5 font-semibold text-ink-500">
+            <Navigation size={11} className="text-ink-400" />
+            By road
+          </span>
+        )}
         {showLoad && (
           <Badge tone={busy ? 'warn' : 'success'} size="sm" dot>
             {busy ? 'Busy' : 'Free'} · {loadPct}%

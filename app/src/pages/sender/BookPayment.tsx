@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CreditCard, Landmark, Lock, Smartphone, Wallet as WalletIcon, XCircle } from 'lucide-react'
+import { CreditCard, Landmark, Lock, Smartphone, Wallet as WalletIcon } from 'lucide-react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -17,6 +17,7 @@ import {
 import { inr } from '@/lib/format'
 import { useApp } from '@/lib/store'
 import { UPI_APPS, buildUpiUrl, canPayByUpi, launchUpi, upiReference } from '@/lib/upi'
+import { LottieMark } from '@/components/brand/LottieMark'
 import { useFakeProgress } from '@/lib/hooks'
 import { bookSteps } from './BookRoute'
 
@@ -29,6 +30,7 @@ export default function BookPayment() {
   const { draft, patchDraft, price, balance, commitBooking } = useApp()
 
   const [processing, setProcessing] = useState(false)
+  const [paidId, setPaidId] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
   const [upiApp, setUpiApp] = useState(UPI_APPS[0])
   const [handoff, setHandoff] = useState<null | { url: string; reference: string }>(null)
@@ -37,9 +39,10 @@ export default function BookPayment() {
   const walletShort = balance < price.total
 
   /** Wallet and card settle in-app; UPI hands off to the user's own bank app. */
-  const settle = () => {
-    const id = commitBooking()
-    toast.success('Payment successful', `${inr(price.total)} paid · ${id}`)
+  const settle = () => setPaidId(commitBooking())
+
+  const leaveForReceipt = () => {
+    toast.success('Payment successful', `${inr(price.total)} paid · ${paidId}`)
     navigate('/sender/book/confirmed', { replace: true })
   }
 
@@ -77,6 +80,22 @@ export default function BookPayment() {
 
     setProcessing(true)
     setTimeout(settle, 2300)
+  }
+
+  if (paidId) {
+    return (
+      <Screen tone="white">
+        <div className="flex flex-1 flex-col items-center justify-center px-10 text-center">
+          <LottieMark name="payment-success" size={148} onComplete={leaveForReceipt} />
+          <h2 className="text-display mt-5 text-[22px] font-extrabold text-ink-900">
+            Payment successful
+          </h2>
+          <p className="tabular mt-2 text-[14px] text-ink-500">
+            {inr(price.total)} paid · {paidId}
+          </p>
+        </div>
+      </Screen>
+    )
   }
 
   if (processing) {
@@ -296,7 +315,15 @@ export default function BookPayment() {
             I&apos;ve paid — book my parcel
           </Button>
           <button
-            onClick={() => setHandoff(null)}
+            onClick={() => {
+              // Saying the payment did not go through has to surface the failure,
+              // not quietly dismiss the sheet. The other trigger — a wallet
+              // payment larger than the balance — is unreachable, because the
+              // wallet option stops being selectable at exactly the moment it
+              // would decline. Without this the decline path had no way in.
+              setHandoff(null)
+              setFailed(true)
+            }}
             className="pressable-sm w-full py-1 text-center text-[13px] font-semibold text-ink-500"
           >
             Payment didn&apos;t go through
@@ -312,7 +339,8 @@ export default function BookPayment() {
           pay()
         }}
         tone="danger"
-        icon={<XCircle size={30} />}
+        icon={<LottieMark name="payment-failed" size={92} />}
+        plainIcon
         title="Payment failed"
         body={
           <>

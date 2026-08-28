@@ -4,6 +4,7 @@ import {
   Bell,
   Building2,
   Car,
+  Check,
   ChevronRight,
   CreditCard,
   FileText,
@@ -15,33 +16,123 @@ import {
   Phone,
   Settings as SettingsIcon,
   ShieldCheck,
-  Star,
   Users,
 } from 'lucide-react'
-import { Screen, ScreenBody, BrandHeader } from '@/components/layout/Screen'
-import {
-  Avatar,
-  Badge,
-  Card,
-  ConfirmDialog,
-  Group,
-  ListRow,
-  Note,
-  Sheet,
-  useToast,
-} from '@/components/ui'
+import { Screen, ScreenBody } from '@/components/layout/Screen'
+import { ConfirmDialog, Sheet, useToast } from '@/components/ui'
 import { useApp } from '@/lib/store'
 import { maskPhone } from '@/lib/format'
 import type { Role } from '@/lib/types'
 import { cn } from '@/lib/cn'
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Profile — minimal.
+
+   The rest of the app is built on tinted cards, elevation and a blue gradient
+   hero. This screen deliberately is not, because a settings list is the one
+   place where decoration has nothing to decorate: it is forty words and
+   fourteen destinations, and every shadow drawn around them is a shadow the
+   eye has to discount before it can read.
+
+   Three colours, and each one has exactly one job:
+
+     · white   — every surface, without exception. No cards, no tints, no
+                 second grey to signal grouping; whitespace groups instead.
+     · black   — anything you are meant to read.
+     · blue    — anything you are meant to act on, plus identity. Used at most
+                 twice per viewport; the moment a third blue thing appears the
+                 colour stops meaning "here" and starts meaning nothing.
+
+   Structure is carried by hairlines and space, not containers. Rules run
+   full-bleed rather than inset, because an inset rule is a card outline that
+   lost its nerve — either the row is a discrete object or the list is one
+   surface, and this list is one surface.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 const ROLE_META: Record<Role, { icon: typeof Package; label: string; home: string; blurb: string }> =
   {
-    sender: { icon: Package, label: 'Send parcels', home: '/sender', blurb: 'Book intercity delivery' },
-    traveler: { icon: Car, label: 'Drive & earn', home: '/traveler', blurb: 'Carry parcels and riders' },
+    sender: {
+      icon: Package,
+      label: 'Send parcels',
+      home: '/sender',
+      blurb: 'Book intercity delivery',
+    },
+    traveler: {
+      icon: Car,
+      label: 'Drive & earn',
+      home: '/traveler',
+      blurb: 'Carry parcels and riders',
+    },
     passenger: { icon: Users, label: 'Book rides', home: '/passenger', blurb: 'Share a car seat' },
     hub: { icon: Building2, label: 'Manage a hub', home: '/hub', blurb: 'Intake and handoffs' },
   }
+
+/** Initials, capped at two — three reads as an acronym rather than a person. */
+const initials = (name: string) =>
+  name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+
+/* ── Row ───────────────────────────────────────────────────────────────────
+   One row type for the whole screen. The icon is a 17px line glyph in mid
+   grey and never gets a tile behind it: a tinted square around an icon exists
+   to separate it from a busy background, and there is no busy background
+   left to separate it from.                                                  */
+function Row({
+  icon: Icon,
+  title,
+  meta,
+  to,
+  onClick,
+  tone = 'default',
+}: {
+  icon: typeof Package
+  title: string
+  meta?: string
+  to?: string
+  onClick?: () => void
+  tone?: 'default' | 'accent'
+}) {
+  const navigate = useNavigate()
+  return (
+    <button
+      onClick={() => (to ? navigate(to) : onClick?.())}
+      className="group flex w-full items-center gap-4 py-[15px] text-left transition-opacity active:opacity-55"
+    >
+      <Icon
+        size={17}
+        strokeWidth={1.75}
+        className={cn('shrink-0', tone === 'accent' ? 'text-brand-600' : 'text-black/40')}
+      />
+      <span
+        className={cn(
+          'min-w-0 flex-1 truncate text-[15px] font-medium',
+          tone === 'accent' ? 'text-brand-600' : 'text-black',
+        )}
+      >
+        {title}
+      </span>
+      {meta && <span className="shrink-0 text-[13.5px] text-black/40">{meta}</span>}
+      <ChevronRight size={16} strokeWidth={1.75} className="shrink-0 text-black/25" />
+    </button>
+  )
+}
+
+/** Section label. Sentence case, not uppercase — caps are a second voice. */
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <p className="pt-7 pb-1 text-[12.5px] font-semibold tracking-[-0.005em] text-black/40">
+      {children}
+    </p>
+  )
+}
+
+/** Full-bleed hairline. Pulled out to the shell edges by negative margin. */
+const Rule = () => <span className="-mx-5 block h-px bg-black/[0.07]" />
 
 export default function Profile() {
   const navigate = useNavigate()
@@ -58,191 +149,159 @@ export default function Profile() {
     navigate(ROLE_META[next].home)
   }
 
+  const STATS = [
+    { value: '18', label: 'Parcels sent' },
+    { value: '7', label: 'Rides taken' },
+    { value: '2025', label: 'Member since' },
+  ]
+
   return (
-    <Screen>
-      <BrandHeader className="pt-safe">
-        <div className="flex items-center gap-4">
-          <Avatar name={user.name} size={64} onBrand />
+    <Screen tone="white">
+      <ScreenBody className="px-5 pb-8" padded={false}>
+        {/* ── Identity ──────────────────────────────────────────────────────
+            The avatar is the screen's one saturated element. It is a square
+            with a soft radius rather than a circle, because a circle here
+            competes with the tab bar's circular glyphs for the same meaning. */}
+        <div className="flex items-center gap-4 pt-8 pb-7">
+          <span className="grid size-[62px] shrink-0 place-items-center rounded-[19px] bg-brand-600 text-[21px] font-bold tracking-[-0.02em] text-white">
+            {initials(user.name)}
+          </span>
+
           <div className="min-w-0 flex-1">
-            <p className="text-display truncate text-[21px] font-extrabold">{user.name}</p>
-            <p className="tabular mt-0.5 truncate text-[13px] text-white/70">
-              {maskPhone(user.phone)}
-            </p>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[10.5px] font-bold backdrop-blur-md">
-                <ShieldCheck size={11} />
+            <h1 className="text-display truncate text-[25px] leading-tight font-bold text-black">
+              {user.name}
+            </h1>
+            <div className="mt-1 flex items-center gap-2">
+              <p className="tabular truncate text-[14px] text-black/50">{maskPhone(user.phone)}</p>
+              <span className="inline-flex shrink-0 items-center gap-1 text-[12.5px] font-semibold text-brand-600">
+                <ShieldCheck size={13} strokeWidth={2} />
                 Verified
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[10.5px] font-bold backdrop-blur-md">
-                <Star size={11} className="fill-current" />
-                4.9
               </span>
             </div>
           </div>
+
           <button
             onClick={() => navigate('/profile/edit')}
             aria-label="Edit profile"
-            className="pressable-sm grid size-10 shrink-0 place-items-center rounded-full bg-white/15 backdrop-blur-md"
+            className="grid size-9 shrink-0 place-items-center rounded-full transition-opacity active:opacity-55"
           >
-            <Pencil size={17} />
+            <Pencil size={17} strokeWidth={1.75} className="text-black/40" />
           </button>
         </div>
 
-        <div className="mt-5 grid grid-cols-3 gap-2.5">
-          {[
-            { label: 'Parcels sent', value: '18' },
-            { label: 'Rides taken', value: '7' },
-            { label: 'Member since', value: '2025' },
-          ].map((s) => (
-            <div key={s.label} className="rounded-(--radius-md) bg-white/12 px-3 py-2.5 backdrop-blur-md">
-              <p className="tabular text-[17px] leading-none font-extrabold">{s.value}</p>
-              <p className="mt-1.5 text-[10px] font-semibold text-white/65">{s.label}</p>
+        {/* ── Stats ─────────────────────────────────────────────────────────
+            Numbers get the weight, labels get the grey. Divided by hairlines
+            rather than boxed, so three figures read as one row of facts. */}
+        <Rule />
+        <div className="grid grid-cols-3 py-5">
+          {STATS.map((s, i) => (
+            <div key={s.label} className={cn(i > 0 && 'border-l border-black/[0.07] pl-4')}>
+              <p className="tabular text-[22px] leading-none font-bold tracking-[-0.03em] text-black">
+                {s.value}
+              </p>
+              <p className="mt-1.5 text-[12.5px] text-black/40">{s.label}</p>
             </div>
           ))}
         </div>
-      </BrandHeader>
+        <Rule />
 
-      <ScreenBody className="pt-5">
-        {/* Mode switcher */}
-        <Card onClick={() => setSwitcherOpen(true)} className="flex items-center gap-3.5">
-          <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-50 text-brand-600">
-            {(() => {
-              const Icon = ROLE_META[role].icon
-              return <Icon size={19} />
-            })()}
-          </span>
-          <div className="min-w-0 flex-1 text-left">
-            <p className="text-[11px] font-bold tracking-wide text-ink-400 uppercase">
-              Current mode
-            </p>
-            <p className="mt-0.5 truncate text-[14.5px] font-bold text-ink-900">
+        {/* ── Mode ──────────────────────────────────────────────────────────
+            The only row that carries a real action word, so it is the only
+            row allowed to be blue. */}
+        <button
+          onClick={() => setSwitcherOpen(true)}
+          className="flex w-full items-center gap-4 py-[18px] text-left transition-opacity active:opacity-55"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block text-[12.5px] text-black/40">Current mode</span>
+            <span className="mt-1 block truncate text-[16px] font-semibold text-black">
               {ROLE_META[role].label}
-            </p>
-          </div>
-          <Badge tone="brand" size="sm">
-            Switch
-          </Badge>
-          <ChevronRight size={17} className="shrink-0 text-ink-300" />
-        </Card>
-
-        {/* KYC prompt for drivers */}
-        {role === 'traveler' && (
-          <Card to="/traveler/kyc" className="mt-3 flex items-center gap-3.5 border-warn-100 bg-warn-50">
-            <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-warn-500/15 text-warn-600">
-              <ShieldCheck size={19} />
             </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[13.5px] font-bold text-warn-800">Verification: 5 of 7 complete</p>
-              <p className="mt-0.5 text-[12px] text-warn-700/85">Licence and RC still pending</p>
-            </div>
-            <ChevronRight size={17} className="shrink-0 text-warn-600" />
-          </Card>
+          </span>
+          <span className="shrink-0 text-[14px] font-semibold text-brand-600">Switch</span>
+        </button>
+        <Rule />
+
+        {/* Drivers only: the one piece of state that can block earning. */}
+        {role === 'traveler' && (
+          <>
+            <Row
+              icon={ShieldCheck}
+              title="Finish verification"
+              meta="5 of 7"
+              to="/traveler/kyc"
+              tone="accent"
+            />
+            <Rule />
+          </>
         )}
 
-        {/* Account */}
-        <p className="mt-6 mb-2.5 px-1 text-[12px] font-bold tracking-wide text-ink-400 uppercase">
-          Account
-        </p>
-        <Group>
-          <ListRow
-            icon={<Pencil size={17} />}
-            title="Edit profile"
-            subtitle="Name, email and photo"
-            to="/profile/edit"
-            chevron
-          />
-          <ListRow
-            icon={<CreditCard size={17} />}
-            title="Payment methods"
-            subtitle="UPI, cards and wallets"
-            to="/payment-methods"
-            chevron
-          />
-          <ListRow
-            icon={<Phone size={17} />}
-            title="Emergency contacts"
-            subtitle="1 contact saved"
-            onClick={() => toast.info('Emergency contacts', 'Rahul S. · +91 98450 98450')}
-            chevron
-          />
-          <ListRow
-            icon={<FileText size={17} />}
-            title="Documents"
-            subtitle="KYC, invoices and receipts"
-            onClick={() => toast.info('Documents', 'All your invoices are emailed automatically.')}
-            chevron
-          />
-        </Group>
+        <SectionLabel>Account</SectionLabel>
+        <Rule />
+        <Row icon={Pencil} title="Edit profile" to="/profile/edit" />
+        <Rule />
+        <Row icon={CreditCard} title="Payment methods" meta="UPI" to="/payment-methods" />
+        <Rule />
+        <Row
+          icon={Phone}
+          title="Emergency contacts"
+          meta="1"
+          onClick={() => toast.info('Emergency contacts', 'Rahul S. · +91 98450 98450')}
+        />
+        <Rule />
+        <Row
+          icon={FileText}
+          title="Documents"
+          onClick={() => toast.info('Documents', 'All your invoices are emailed automatically.')}
+        />
+        <Rule />
 
-        {/* Preferences */}
-        <p className="mt-6 mb-2.5 px-1 text-[12px] font-bold tracking-wide text-ink-400 uppercase">
-          Preferences
-        </p>
-        <Group>
-          <ListRow
-            icon={<Bell size={17} />}
-            title="Notifications"
-            subtitle="Push, SMS and email"
-            to="/notifications"
-            chevron
-          />
-          <ListRow
-            icon={<SettingsIcon size={17} />}
-            title="Settings"
-            subtitle="Language, privacy and data"
-            to="/settings"
-            chevron
-          />
-          <ListRow
-            icon={<Gift size={17} />}
-            iconTone="success"
-            title="Refer & earn"
-            subtitle="₹100 per friend who joins"
-            onClick={() => toast.success('Invite link copied', 'Share it anywhere.')}
-            chevron
-          />
-        </Group>
+        <SectionLabel>Preferences</SectionLabel>
+        <Rule />
+        <Row icon={Bell} title="Notifications" to="/notifications" />
+        <Rule />
+        <Row icon={SettingsIcon} title="Settings" to="/settings" />
+        <Rule />
+        <Row
+          icon={Gift}
+          title="Refer & earn"
+          meta="₹100"
+          onClick={() => toast.success('Invite link copied', 'Share it anywhere.')}
+        />
+        <Rule />
 
-        {/* Support */}
-        <p className="mt-6 mb-2.5 px-1 text-[12px] font-bold tracking-wide text-ink-400 uppercase">
-          Support
-        </p>
-        <Group>
-          <ListRow
-            icon={<HelpCircle size={17} />}
-            title="Help centre"
-            subtitle="Guides and common questions"
-            to="/help"
-            chevron
-          />
-          <ListRow
-            icon={<Phone size={17} />}
-            title="Contact support"
-            subtitle="Chat with a human, 24×7"
-            to="/support"
-            chevron
-          />
-          <ListRow
-            icon={<LogOut size={17} />}
-            iconTone="danger"
-            title="Sign out"
-            onClick={() => setSignOutOpen(true)}
-          />
-        </Group>
+        <SectionLabel>Support</SectionLabel>
+        <Rule />
+        <Row icon={HelpCircle} title="Help centre" to="/help" />
+        <Rule />
+        <Row icon={Phone} title="Contact support" to="/support" />
+        <Rule />
 
-        <Note tone="neutral" className="mt-6">
-          DikkiConnect · version 1.0.0 (pilot) · Bangalore ↔ Mysore corridor
-        </Note>
+        {/* Sign out stays black. Red would be a fourth colour spent on the
+            least likely tap on the screen, and the dialog already carries the
+            warning. */}
+        <button
+          onClick={() => setSignOutOpen(true)}
+          className="flex w-full items-center gap-4 py-[15px] text-left transition-opacity active:opacity-55"
+        >
+          <LogOut size={17} strokeWidth={1.75} className="shrink-0 text-black/40" />
+          <span className="flex-1 text-[15px] font-medium text-black">Sign out</span>
+        </button>
+        <Rule />
+
+        <p className="pt-6 pb-2 text-[12px] text-black/25">
+          DikkiConnect 1.0.0 · Bangalore ↔ Mysore
+        </p>
       </ScreenBody>
 
-      {/* Role switcher */}
+      {/* ── Role switcher ────────────────────────────────────────────────── */}
       <Sheet
         open={switcherOpen}
         onClose={() => setSwitcherOpen(false)}
         title="Switch mode"
-        subtitle="One DikkiConnect account, four ways to use it"
+        subtitle="One account, four ways to use it"
       >
-        <div className="flex flex-col gap-2.5">
+        <div className="-mx-5">
           {(Object.keys(ROLE_META) as Role[]).map((r) => {
             const meta = ROLE_META[r]
             const Icon = meta.icon
@@ -251,24 +310,27 @@ export default function Profile() {
               <button
                 key={r}
                 onClick={() => switchTo(r)}
-                className={cn(
-                  'pressable flex items-center gap-3.5 rounded-(--radius-md) border-2 bg-white p-4 text-left transition-all',
-                  active ? 'border-brand-600 bg-brand-50/50' : 'border-ink-200',
-                )}
+                className="flex w-full items-center gap-4 border-t border-black/[0.07] px-5 py-4 text-left transition-opacity last:border-b active:opacity-55"
               >
-                <span
-                  className={cn(
-                    'grid size-11 shrink-0 place-items-center rounded-(--radius-sm)',
-                    active ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-500',
-                  )}
-                >
-                  <Icon size={20} />
-                </span>
+                <Icon
+                  size={19}
+                  strokeWidth={1.75}
+                  className={cn('shrink-0', active ? 'text-brand-600' : 'text-black/40')}
+                />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[14.5px] font-bold text-ink-900">{meta.label}</span>
-                  <span className="mt-0.5 block text-[12px] text-ink-500">{meta.blurb}</span>
+                  <span
+                    className={cn(
+                      'block text-[15px] font-semibold',
+                      active ? 'text-brand-600' : 'text-black',
+                    )}
+                  >
+                    {meta.label}
+                  </span>
+                  <span className="mt-0.5 block text-[12.5px] text-black/40">{meta.blurb}</span>
                 </span>
-                {active && <Badge tone="brand" size="sm">Current</Badge>}
+                {active && (
+                  <Check size={18} strokeWidth={2.4} className="shrink-0 text-brand-600" />
+                )}
               </button>
             )
           })}

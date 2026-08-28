@@ -22,6 +22,13 @@ import type {
   Trip,
 } from './types'
 import { useLocalStorage } from './hooks'
+import {
+  type RecentPlace,
+  type SavedPlace,
+  findSaved,
+  newPlaceId,
+  pushRecent,
+} from './places'
 import type { LngLat } from './geo'
 import { useAuth } from './auth'
 
@@ -36,6 +43,12 @@ export interface BookingDraft {
   mode: DeliveryMode
   pickupAddress: string
   dropAddress: string
+  /* Flat and landmark are kept apart from the geocoded line: no lookup can
+     supply them, and re-pinning the map must never wipe them. */
+  pickupFlat: string
+  pickupLandmark: string
+  dropFlat: string
+  dropLandmark: string
   /** Resolved by geocoding, so the traveler gets a point and not just prose. */
   pickupCoord: LngLat | null
   dropCoord: LngLat | null
@@ -61,6 +74,10 @@ export const EMPTY_DRAFT: BookingDraft = {
   mode: 'hub',
   pickupAddress: '',
   dropAddress: '',
+  pickupFlat: '',
+  pickupLandmark: '',
+  dropFlat: '',
+  dropLandmark: '',
   pickupCoord: null,
   dropCoord: null,
   fromCityId: 'blr',
@@ -147,6 +164,18 @@ interface AppState {
   unread: number
   markAllRead: () => void
   markRead: (id: string) => void
+
+  /* address book — shared, so a pickup field and a drop field on the same
+     screen are looking at one list rather than two copies of it */
+  places: SavedPlace[]
+  /** Creates or updates by id, and returns the stored place either way. */
+  savePlace: (p: Omit<SavedPlace, 'id' | 'createdAt'> & { id?: string }) => SavedPlace
+  removePlace: (id: string) => void
+  /** Marks a place as just-used, which is what floats it up the list. */
+  touchPlace: (id: string) => void
+
+  recents: RecentPlace[]
+  rememberRecent: (r: Omit<RecentPlace, 'at'>) => void
 }
 
 const AppContext = createContext<AppState | null>(null)
@@ -178,6 +207,62 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useLocalStorage<NotificationItem[]>(
     'dikkiconnect.notifications',
     NOTIFICATIONS,
+  )
+  const [places, setPlaces] = useLocalStorage<SavedPlace[]>('dikkiconnect.places', [])
+  const [recents, setRecents] = useLocalStorage<RecentPlace[]>('dikkiconnect.recents', [])
+
+  /* ── Address book ──────────────────────────────────────────────────────── */
+
+  const savePlace = useCallback(
+    (input: Omit<SavedPlace, 'id' | 'createdAt'> & { id?: string }) => {
+      const now = new Date().toISOString()
+      let stored!: SavedPlace
+
+      setPlaces((list) => {
+        const existing = input.id
+          ? list.find((p) => p.id === input.id)
+          : findSaved(list, input.coord)
+
+        stored = existing
+          ? { ...existing, ...input, id: existing.id, createdAt: existing.createdAt, lastUsedAt: now }
+          : { ...input, id: newPlaceId(), createdAt: now, lastUsedAt: now }
+
+        /* Home and Work are singular by definition. Re-labelling an address as
+           Home demotes whichever one held it, rather than leaving two. */
+        const demoted =
+          stored.label === 'other'
+            ? list
+            : list.map((p) =>
+                p.id !== stored.id && p.label === stored.label ? { ...p, label: 'other' as const } : p,
+              )
+
+        return existing
+          ? demoted.map((p) => (p.id === stored.id ? stored : p))
+          : [...demoted, stored]
+      })
+
+      return stored
+    },
+    [setPlaces],
+  )
+
+  const removePlace = useCallback(
+    (id: string) => setPlaces((list) => list.filter((p) => p.id !== id)),
+    [setPlaces],
+  )
+
+  const touchPlace = useCallback(
+    (id: string) =>
+      setPlaces((list) =>
+        list.map((p) => (p.id === id ? { ...p, lastUsedAt: new Date().toISOString() } : p)),
+      ),
+    [setPlaces],
+  )
+
+  const rememberRecent = useCallback(
+    (r: Omit<RecentPlace, 'at'>) =>
+      setRecents((list) => pushRecent(list, { ...r, at: new Date().toISOString() })),
+    [setRecents],
   )
 
   const patchDraft = useCallback((patch: Partial<BookingDraft>) => {
@@ -459,6 +544,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       markAllRead: () => setNotifications((n) => n.map((x) => ({ ...x, read: true }))),
       markRead: (id: string) =>
         setNotifications((n) => n.map((x) => (x.id === id ? { ...x, read: true } : x))),
+
+      places,
+      savePlace,
+      removePlace,
+      touchPlace,
+      recents,
+      rememberRecent,
     }),
     [
       account,
@@ -488,6 +580,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setBalance,
       notifications,
       setNotifications,
+      places,
+      savePlace,
+      removePlace,
+      touchPlace,
+      recents,
+      rememberRecent,
     ],
   )
 

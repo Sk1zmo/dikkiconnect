@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { ArrowRight, Camera, ShieldCheck } from 'lucide-react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
@@ -13,7 +12,8 @@ import {
   useToast,
 } from '@/components/ui'
 import { PhotoCapture } from '@/components/viz/Scanner'
-import { Confetti, SuccessBurst, SuccessMark } from '@/components/viz/Illustrations'
+import { Confetti } from '@/components/viz/Illustrations'
+import { LottieMark } from '@/components/brand/LottieMark'
 import { categoryById, hubById, jobFromParcel, otpFor } from '@/lib/data'
 import { inr, kg } from '@/lib/format'
 import { useApp, useManifest, useMe, useOpenJobs } from '@/lib/store'
@@ -114,15 +114,7 @@ export default function HandoffOtp() {
         <Confetti pieces={20} />
         <ScreenBody className="pt-safe">
           <div className="flex flex-col items-center pt-14 text-center">
-            <motion.div
-              initial={{ scale: 0.4, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 16 }}
-              className="relative grid size-[120px] place-items-center"
-            >
-              <SuccessBurst />
-              <SuccessMark size={86} />
-            </motion.div>
+            <LottieMark name="parcel-delivered" size={132} />
 
             <h1 className="text-display mt-6 text-[25px] font-extrabold text-ink-900">
               {isPickup ? 'Pickup confirmed' : 'Drop-off complete'}

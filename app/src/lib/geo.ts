@@ -219,3 +219,94 @@ export function pointAlong(coords: Array<[number, number]>, t: number): LngLat {
   const i = Math.min(coords.length - 1, Math.max(0, Math.round(t * (coords.length - 1))))
   return { lng: coords[i][0], lat: coords[i][1] }
 }
+
+/* ── Serviceability ──────────────────────────────────────────────────────── */
+
+/**
+ * How far from a city centre we still call a point "in" that city.
+ *
+ * Generous on purpose. Bangalore's built-up area runs past 30 km from the
+ * centre, and telling somebody in Electronic City that we do not serve
+ * Bangalore would be both wrong and insulting. Beyond this we do not refuse
+ * the booking — we say which city we are measuring against and how far out
+ * they are, and let them decide.
+ */
+export const SERVICE_RADIUS_KM = 45
+
+export interface NearestCity {
+  cityId: string
+  km: number
+  /** Within `SERVICE_RADIUS_KM` of a city we actually operate in. */
+  serviced: boolean
+}
+
+/**
+ * Which city on the network is this point in, or nearest to?
+ *
+ * Used to skip the "pick your city" step entirely when the device knows where
+ * it is — the same move Swiggy makes when it opens straight onto your area
+ * instead of asking.
+ */
+export function nearestCity(at: LngLat): NearestCity {
+  let best = { cityId: 'blr', km: Number.POSITIVE_INFINITY }
+  for (const [cityId, coord] of Object.entries(CITY_COORDS)) {
+    const km = haversineKm(at, coord)
+    if (km < best.km) best = { cityId, km }
+  }
+  return { ...best, serviced: best.km <= SERVICE_RADIUS_KM }
+}
+
+/* ── Road distance matrix ────────────────────────────────────────────────── */
+
+export interface Leg {
+  /** Distance along real roads, km. */
+  km: number
+  /** Driving time, minutes. */
+  minutes: number
+}
+
+/**
+ * Real road distance and drive time from one origin to many destinations, in a
+ * single request.
+ *
+ * This is what makes "nearest hub" mean nearest rather than closest-as-the-
+ * crow-flies. The two disagree constantly in Indian cities: a hub 2 km away
+ * across a railway line with no crossing is a 9 km drive, and a straight-line
+ * ranking would recommend it over one that is genuinely closer to reach.
+ *
+ * One `/table` call covers every hub in a city, so ranking six hubs costs one
+ * request rather than six. Returns null when the router is unreachable, and
+ * every caller falls back to the straight-line order rather than showing
+ * nothing.
+ */
+export async function roadMatrix(from: LngLat, tos: LngLat[]): Promise<Leg[] | null> {
+  if (!tos.length) return []
+
+  try {
+    const points = [from, ...tos].map((p) => `${p.lng},${p.lat}`).join(';')
+    const url =
+      `https://router.project-osrm.org/table/v1/driving/${points}` +
+      `?sources=0&annotations=distance,duration`
+
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(String(res.status))
+    const json = (await res.json()) as {
+      code?: string
+      distances?: number[][]
+      durations?: number[][]
+    }
+    if (json.code !== 'Ok' || !json.distances?.[0] || !json.durations?.[0]) return null
+
+    // Row 0 is the origin against every point, including itself at index 0.
+    const distances = json.distances[0].slice(1)
+    const durations = json.durations[0].slice(1)
+    if (distances.length !== tos.length) return null
+
+    return tos.map((_, i) => ({
+      km: Math.round((distances[i] ?? 0) / 100) / 10,
+      minutes: Math.round((durations[i] ?? 0) / 60),
+    }))
+  } catch {
+    return null
+  }
+}

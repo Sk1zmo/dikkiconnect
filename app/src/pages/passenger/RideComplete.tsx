@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { Heart, Receipt } from 'lucide-react'
 import { Screen, ScreenBody } from '@/components/layout/Screen'
 import {
@@ -14,7 +13,8 @@ import {
   TextArea,
   useToast,
 } from '@/components/ui'
-import { Confetti, SuccessBurst, SuccessMark } from '@/components/viz/Illustrations'
+import { Confetti } from '@/components/viz/Illustrations'
+import { LottieMark } from '@/components/brand/LottieMark'
 import { cityName, travelerById } from '@/lib/data'
 import { useTrip } from '@/lib/store'
 import { inr, time } from '@/lib/format'
@@ -63,15 +63,7 @@ export default function RideComplete() {
 
       <ScreenBody className="pt-safe">
         <div className="flex flex-col items-center pt-8 text-center">
-          <motion.div
-            initial={{ scale: 0.4, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 16 }}
-            className="relative grid size-[110px] place-items-center"
-          >
-            <SuccessBurst />
-            <SuccessMark size={78} />
-          </motion.div>
+          <LottieMark name="ride-complete" size={124} />
           <h1 className="text-display mt-5 text-[24px] font-extrabold text-ink-900">
             You&apos;ve arrived
           </h1>

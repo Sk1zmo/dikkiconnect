@@ -152,6 +152,7 @@ export function ConfirmDialog({
   onClose,
   onConfirm,
   icon,
+  plainIcon,
   tone = 'brand',
   title,
   body,
@@ -163,6 +164,8 @@ export function ConfirmDialog({
   onClose: () => void
   onConfirm: () => void
   icon?: ReactNode
+  /** Renders the icon without the tinted disc — for art that brings its own. */
+  plainIcon?: boolean
   tone?: 'brand' | 'danger' | 'success' | 'warn'
   title: string
   body?: ReactNode
@@ -187,7 +190,7 @@ export function ConfirmDialog({
     <Modal open={open} onClose={onClose} dismissible={!loading}>
       <div className="p-6 text-center">
         {icon && (
-          <div className={cn('anim-boing mx-auto mb-4 grid size-14 place-items-center rounded-full', tones.wash)}>
+          <div className={cn('mx-auto mb-4 grid place-items-center', plainIcon ? 'w-fit' : cn('anim-boing size-14 rounded-full', tones.wash))}>
             {icon}
           </div>
         )}
