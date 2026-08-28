@@ -1,5 +1,4 @@
 import { cn } from '@/lib/cn'
-import { LogoMark } from '@/components/brand/Logo'
 
 const TONES = {
   brand: 'border-brand-600/25 border-t-brand-600',
@@ -41,17 +40,40 @@ export function DotLoader({ className }: { className?: string }) {
   )
 }
 
-/** Full-screen branded loader — the route-level Suspense fallback. */
+/**
+ * Full-screen branded loader — the route-level Suspense fallback, and so the
+ * first thing a cold start puts on screen.
+ *
+ * It used to be a gradient squircle with a glow under it and a ring pinging
+ * outward. Three effects to say "wait a moment". This is the mark itself with
+ * its two arms lighting in sequence — the same forward motion the launch
+ * animation opens with, so the wait and the app that follows it are visibly
+ * the same product — over a track that travels rather than pulses, because a
+ * pulse says "busy" and a travelling bar says "progressing".
+ *
+ * Pure CSS: it has to paint before the route chunk it is waiting for arrives,
+ * so it cannot depend on anything that ships in that chunk.
+ */
 export function ScreenLoader({ label = 'Loading' }: { label?: string }) {
   return (
-    <div className="flex h-full min-h-[60vh] flex-col items-center justify-center gap-4">
-      <div className="relative grid size-14 place-items-center">
-        <span className="anim-ping absolute inset-0 rounded-full bg-brand-500/25" />
-        <span className="brand-gradient relative grid size-11 place-items-center rounded-2xl shadow-(--shadow-brand)">
-          <LogoMark size={25} tone="white" />
-        </span>
-      </div>
-      <p className="text-[13px] font-medium text-ink-500">{label}…</p>
+    <div className="flex h-full min-h-[60vh] flex-col items-center justify-center gap-5">
+      <svg viewBox="0 0 48 48" width="40" height="40" aria-hidden>
+        <path
+          d="M3 11.5h9.8L23 24 12.8 36.5H3L13.2 24Z"
+          fill="var(--color-brand-600)"
+          className="anim-chevron"
+        />
+        <path
+          d="M21.5 6h11.9L45.5 24 33.4 42H21.5L33.6 24Z"
+          fill="var(--color-brand-600)"
+          className="anim-chevron"
+          style={{ animationDelay: '0.14s' }}
+        />
+      </svg>
+
+      <span className="h-px w-24 overflow-hidden bg-ink-200" role="status" aria-label={label}>
+        <span className="anim-track block h-full w-1/3 bg-brand-600" />
+      </span>
     </div>
   )
 }
@@ -60,7 +82,7 @@ export function ScreenLoader({ label = 'Loading' }: { label?: string }) {
 export function RouteProgress() {
   return (
     <div className="fixed inset-x-0 top-0 z-100 h-0.5 overflow-hidden bg-transparent">
-      <div className="anim-progress h-full w-full bg-gradient-to-r from-brand-400 via-brand-600 to-brand-400" />
+      <div className="anim-progress h-full w-full bg-brand-600" />
     </div>
   )
 }

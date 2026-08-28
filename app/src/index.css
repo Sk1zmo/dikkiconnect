@@ -748,6 +748,22 @@ svg .anim-rush {
 }
 .anim-rise { animation: dikkiconnect-rise 0.55s var(--ease-out-expo) both; }
 
+/* Loader — the mark's two arms lighting in sequence, which is the same forward
+   motion the launch animation opens with. A branded wait should look like it
+   belongs to the brand, not like a borrowed spinner. */
+@keyframes dikkiconnect-chevron {
+  0%, 70%, 100% { opacity: 0.22; transform: translateX(0); }
+  25%           { opacity: 1;    transform: translateX(1.5px); }
+}
+.anim-chevron { animation: dikkiconnect-chevron 1.25s var(--ease-smooth) infinite; }
+
+/* The track under it. Travels rather than pulses, so it reads as progress. */
+@keyframes dikkiconnect-track {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+.anim-track { animation: dikkiconnect-track 1.15s var(--ease-smooth) infinite; }
+
 /* ═══ Surfaces ═════════════════════════════════════════════════════════════ */
 
 .glass {
@@ -768,8 +784,13 @@ svg .anim-rush {
 
 /* Deep dusk field — the in-app echo of the hero sky. Used on role headers so
    the product feels continuous with the launch screen. */
+/* The role-home header field. Flat, but blue — BrandHeader has described
+   itself as "the blue hero header" since it was written, and flattening it to
+   near-black quietly made every portal home a black screen with a blue app
+   underneath it. Deep enough to hold white type and a translucent search
+   field; still unmistakably the brand colour. */
 .dusk-gradient {
-  background: var(--color-action);
+  background: var(--color-brand-700);
 }
 
 /* The hero sky itself: night overhead, ember at the horizon. */
