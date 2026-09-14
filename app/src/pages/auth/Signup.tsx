@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowRight, Building2, Car, Package, Phone, UserRound, Users } from 'lucide-react'
+import {
+  ArrowRight,
+  Buildings,
+  Car,
+  Package,
+  Phone,
+  UserCircle,
+  Users,
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import { ActionBar, Button, Field, Note, useToast } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
@@ -12,7 +20,7 @@ const ROLES: Array<{ id: Role; icon: typeof Package; label: string; blurb: strin
   { id: 'sender', icon: Package, label: 'Send a parcel', blurb: 'Ship things between cities' },
   { id: 'traveler', icon: Car, label: 'Drive & earn', blurb: 'Carry parcels and passengers' },
   { id: 'passenger', icon: Users, label: 'Find a ride', blurb: 'Book a seat on a car going your way' },
-  { id: 'hub', icon: Building2, label: 'Run a hub', blurb: 'Take in and hand out parcels' },
+  { id: 'hub', icon: Buildings, label: 'Run a hub', blurb: 'Take in and hand out parcels' },
 ]
 
 /**
@@ -73,7 +81,7 @@ export default function Signup() {
       setRole(role)
       toast.success(
         'Account created',
-        `Welcome to DikkiConnect, ${result.account.name.split(' ')[0]}.`,
+        `Welcome to Stowza, ${result.account.name.split(' ')[0]}.`,
       )
       navigate('/auth/role', { replace: true })
     })()
@@ -103,7 +111,7 @@ export default function Signup() {
               setName(e.target.value)
               setErrors((x) => ({ ...x, name: undefined }))
             }}
-            prefix={<UserRound size={15} />}
+            prefix={<UserCircle size={15} />}
           />
 
           <Field

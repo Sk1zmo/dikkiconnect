@@ -592,9 +592,51 @@ html[data-font='jakarta'] .tabular {
    has to come from a parent <g transform>, never the animated element itself. */
 svg .anim-bob,
 svg .anim-ping,
-svg .anim-breathe {
+svg .anim-breathe,
+svg .anim-blink {
   transform-box: fill-box;
   transform-origin: center;
+}
+
+/* A slow blink — a light on a barrier, a typing dot. Opacity only. */
+@keyframes stowza-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+.anim-blink {
+  animation: stowza-blink 1.6s var(--ease-smooth) infinite;
+}
+
+/* A dashed route that travels. Needs a stroke-dasharray on the element. */
+@keyframes stowza-dash {
+  to { stroke-dashoffset: -26; }
+}
+.anim-dash {
+  animation: stowza-dash 1.4s linear infinite;
+}
+
+/* The mark drawing itself: the brand's loader. `pathLength="1"` on the path
+   makes the dash units fractions of the whole, whatever its real length. */
+@keyframes stowza-draw-loop {
+  0% { stroke-dashoffset: 1; opacity: 0.35; }
+  45% { stroke-dashoffset: 0; opacity: 1; }
+  70% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: -1; opacity: 0.35; }
+}
+.anim-draw-loop {
+  stroke-dasharray: 1;
+  animation: stowza-draw-loop 1.7s var(--ease-smooth) infinite;
+}
+@keyframes stowza-dot-land {
+  0%, 35% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.25); opacity: 1; }
+  60%, 70% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0); opacity: 0; }
+}
+.anim-dot-land {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: stowza-dot-land 1.7s var(--ease-smooth) infinite;
 }
 
 /* Burst, not rain: pieces launch up and out, then fall — so the arc peaks

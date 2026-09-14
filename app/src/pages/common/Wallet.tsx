@@ -2,14 +2,14 @@ import { useMemo, useState } from 'react'
 import {
   ArrowDownLeft,
   ArrowUpRight,
-  Banknote,
+  Money,
   CreditCard,
   Gift,
   Plus,
-  RotateCcw,
-  Smartphone,
+  ArrowCounterClockwise,
+  DeviceMobile,
   Wallet as WalletIcon,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody, LargeTitle } from '@/components/layout/Screen'
 import {
   Badge,
@@ -25,7 +25,6 @@ import {
   useToast,
 } from '@/components/ui'
 import { PromoBanner } from '@/components/domain/Cards'
-import { EmptyWalletArt } from '@/components/viz/Illustrations'
 import { SENDER_TXNS, TRAVELER_TXNS } from '@/lib/data'
 import { inr, relative } from '@/lib/format'
 import { useApp } from '@/lib/store'
@@ -35,11 +34,11 @@ import { cn } from '@/lib/cn'
 type Tab = 'all' | 'in' | 'out'
 
 const METHOD_ICON = {
-  upi: Smartphone,
+  upi: DeviceMobile,
   card: CreditCard,
   wallet: WalletIcon,
-  payout: Banknote,
-  refund: RotateCcw,
+  payout: Money,
+  refund: ArrowCounterClockwise,
 } as const
 
 const TOP_UPS = [200, 500, 1000, 2000]
@@ -75,7 +74,7 @@ export default function WalletPage() {
       addMoney(amount)
       setAdding(false)
       setAddOpen(false)
-      toast.success('Money added', `${inr(amount)} credited to your DikkiConnect wallet`)
+      toast.success('Money added', `${inr(amount)} credited to your Stowza wallet`)
     }, 1300)
   }
 
@@ -109,7 +108,7 @@ export default function WalletPage() {
               onClick={() => (isEarner ? toast.info('Payout scheduled', 'Settles every Monday.') : setAddOpen(true))}
               className="pressable flex items-center justify-center gap-2 rounded-(--radius-md) bg-white py-3 text-[13.5px] font-bold text-brand-700 shadow-(--shadow-e3)"
             >
-              {isEarner ? <Banknote size={16} /> : <Plus size={16} />}
+              {isEarner ? <Money size={16} /> : <Plus size={16} />}
               {isEarner ? 'Withdraw' : 'Add money'}
             </button>
             <button
@@ -176,7 +175,7 @@ export default function WalletPage() {
           ) : visible.length === 0 ? (
             <Card padded={false}>
               <EmptyState
-                art={<EmptyWalletArt />}
+                kind="wallet"
                 title="Nothing here yet"
                 body={
                   tab === 'in'
@@ -241,7 +240,7 @@ export default function WalletPage() {
         open={addOpen}
         onClose={() => setAddOpen(false)}
         title="Add money"
-        subtitle="Top up your DikkiConnect wallet for faster checkout"
+        subtitle="Top up your Stowza wallet for faster checkout"
         footer={
           <Button block size="lg" loading={adding} onClick={topUp}>
             {adding ? 'Processing…' : `Add ${inr(amount)}`}
@@ -271,7 +270,7 @@ export default function WalletPage() {
           </p>
           <div className="flex flex-col gap-2.5">
             {[
-              { icon: Smartphone, label: 'UPI', sub: 'Google Pay, PhonePe, Paytm' },
+              { icon: DeviceMobile, label: 'UPI', sub: 'Google Pay, PhonePe, Paytm' },
               { icon: CreditCard, label: 'HDFC •••• 4412', sub: 'Visa · expires 08/28' },
             ].map((m, i) => {
               const Icon = m.icon

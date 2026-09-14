@@ -2,14 +2,14 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowUpRight,
-  ChevronUp,
-  CornerUpRight,
+  CaretUp,
+  ArrowBendUpRight,
   Package,
   Phone,
-  ShieldAlert,
-  Volume2,
+  ShieldWarning,
+  SpeakerHigh,
   X,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import { Screen } from '@/components/layout/Screen'
 import { Badge, Button, IconButton, Sheet, useToast } from '@/components/ui'
 import { LiveMap } from '@/components/viz/Map'
@@ -20,9 +20,9 @@ import { useManifest, useMe } from '@/lib/store'
 import { CategoryIcon } from '@/components/domain/CategoryIcon'
 
 const STEPS = [
-  { in: '400 m', instruction: 'Turn right onto Hosur Road', icon: CornerUpRight },
+  { in: '400 m', instruction: 'Turn right onto Hosur Road', icon: ArrowBendUpRight },
   { in: '2.1 km', instruction: 'Merge onto NICE Ring Road', icon: ArrowUpRight },
-  { in: '18 km', instruction: 'Continue on NH275 toward Mysore', icon: ChevronUp },
+  { in: '18 km', instruction: 'Continue on NH275 toward Mysore', icon: CaretUp },
 ]
 
 /** Turn-by-turn navigation with the parcel manifest docked at the bottom. */
@@ -57,7 +57,7 @@ export default function TravelerNavigation() {
               <p className="mt-1 truncate text-[13.5px] text-white/85">{step.instruction}</p>
             </div>
             <IconButton
-              icon={<Volume2 size={17} />}
+              icon={<SpeakerHigh size={17} />}
               label="Mute voice guidance"
               tone="onBrand"
               size={38}
@@ -85,7 +85,7 @@ export default function TravelerNavigation() {
         {/* Side controls */}
         <div className="absolute top-1/2 right-4 z-30 flex -translate-y-1/2 flex-col gap-2.5">
           <IconButton
-            icon={<ShieldAlert size={18} />}
+            icon={<ShieldWarning size={18} />}
             label="Emergency SOS"
             className="bg-danger-600 text-white shadow-lg"
             onClick={() => setSosOpen(true)}
@@ -127,7 +127,7 @@ export default function TravelerNavigation() {
                   {inr(manifest.reduce((s, j) => s + j.payout, 0))} in payouts pending
                 </span>
               </span>
-              <ChevronUp size={17} className="shrink-0 text-ink-400" />
+              <CaretUp size={17} className="shrink-0 text-ink-400" />
             </button>
 
             <div className="mt-3 grid grid-cols-2 gap-2.5">
@@ -203,7 +203,7 @@ export default function TravelerNavigation() {
         <div className="flex flex-col gap-2.5">
           {[
             { label: 'Call emergency services (112)', tone: 'danger' as const },
-            { label: 'Call DikkiConnect safety desk', tone: 'brand' as const },
+            { label: 'Call Stowza safety desk', tone: 'brand' as const },
             { label: 'Share live trip with emergency contact', tone: 'neutral' as const },
             { label: 'Report an accident or breakdown', tone: 'neutral' as const },
           ].map((a) => (
@@ -211,7 +211,7 @@ export default function TravelerNavigation() {
               key={a.label}
               onClick={() => {
                 setSosOpen(false)
-                toast.info('Safety desk notified', 'A DikkiConnect agent will call you within 60 seconds.')
+                toast.info('Safety desk notified', 'A Stowza agent will call you within 60 seconds.')
               }}
               className={`pressable rounded-(--radius-md) p-4 text-left text-[14px] font-bold ${
                 a.tone === 'danger'

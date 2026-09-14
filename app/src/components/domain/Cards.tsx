@@ -1,17 +1,17 @@
 import {
   ArrowRight,
-  Building2,
+  Buildings,
   Clock,
-  Fuel,
-  Home,
+  GasPump,
+  House,
   MapPin,
-  Navigation,
+  NavigationArrow,
   Package,
   ShieldCheck,
   Timer,
   Users,
-  Zap,
-} from 'lucide-react'
+  Lightning,
+} from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 import { Avatar, Badge, Card, StatusBadge, Stars } from '@/components/ui'
 import { MiniTimeline } from '@/components/viz/Timeline'
@@ -204,9 +204,9 @@ export function JobCard({
             </div>
             <p className="mt-1 flex items-center gap-1.5 text-[12px] text-ink-500">
               {job.mode === 'p2p' ? (
-                <Home size={12} className="shrink-0 text-brand-600" />
+                <House size={12} className="shrink-0 text-brand-600" />
               ) : (
-                <Building2 size={12} className="shrink-0 text-ink-400" />
+                <Buildings size={12} className="shrink-0 text-ink-400" />
               )}
               <span className="truncate">
                 {job.fromLabel} → {job.toLabel}
@@ -233,7 +233,7 @@ export function JobCard({
             {job.mode === 'p2p' ? 'Door to door' : 'Hub to hub'}
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <Fuel size={12} className="text-ink-400" />
+            <GasPump size={12} className="text-ink-400" />
             {job.detourKm} km detour
           </span>
           <span
@@ -348,7 +348,7 @@ export function HubCard({
         </span>
         {road && (
           <span className="inline-flex items-center gap-1.5 font-semibold text-ink-500">
-            <Navigation size={11} className="text-ink-400" />
+            <NavigationArrow size={11} className="text-ink-400" />
             By road
           </span>
         )}
@@ -424,7 +424,7 @@ export function PromoBanner({
       className="pressable relative flex w-full items-center gap-4 overflow-hidden rounded-(--radius-lg) bg-brand-600 p-4 text-left text-white"
     >
       <span className="relative grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-white/15">
-        {icon ?? <Zap size={20} />}
+        {icon ?? <Lightning size={20} />}
       </span>
       <span className="relative min-w-0 flex-1">
         <span className="block text-[14px] font-bold">{title}</span>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Filter, Plus, Search } from 'lucide-react'
+import { Funnel, Plus } from '@phosphor-icons/react'
 import { Screen, ScreenBody, LargeTitle } from '@/components/layout/Screen'
 import {
   Card,
@@ -12,7 +12,6 @@ import {
   Switch,
 } from '@/components/ui'
 import { ParcelCard } from '@/components/domain/Cards'
-import { EmptyBoxArt } from '@/components/viz/Illustrations'
 import { useApp } from '@/lib/store'
 import { useDebounced, useLoaded } from '@/lib/hooks'
 import { categoryById, cityName } from '@/lib/data'
@@ -66,12 +65,12 @@ export default function SenderBookings() {
     <Screen>
       <LargeTitle
         title="Bookings"
-        subtitle={`${counts.all} parcels sent with DikkiConnect`}
+        subtitle={`${counts.all} parcels sent with Stowza`}
         className="pt-safe"
         action={
           <>
             <IconButton
-              icon={<Filter size={17} />}
+              icon={<Funnel size={17} />}
               label="Filters"
               onClick={() => setFiltersOpen(true)}
               className={activeFilters ? 'ring-2 ring-brand-500' : undefined}
@@ -105,7 +104,7 @@ export default function SenderBookings() {
         ) : visible.length === 0 ? (
           debounced ? (
             <EmptyState
-              icon={<Search size={26} />}
+              kind="search-results"
               title={`No results for “${debounced}”`}
               body="Try a tracking ID, a city name, or the receiver's name."
               actionLabel="Clear search"
@@ -114,8 +113,8 @@ export default function SenderBookings() {
           ) : (
             <Card padded={false}>
               <EmptyState
-                art={<EmptyBoxArt />}
-                title={tab === 'active' ? 'Nothing in flight' : 'No completed bookings yet'}
+                kind={tab === 'active' ? 'parcels' : 'parcels-done'}
+                title={tab === 'active' ? 'Nothing on the road yet' : 'No deliveries closed yet'}
                 body={
                   tab === 'active'
                     ? 'Parcels you book will appear here while they move between hubs.'

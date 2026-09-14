@@ -1,15 +1,14 @@
 import { useMemo, useState } from 'react'
 import {
-  Building2,
+  Buildings,
   Car,
-  ChevronDown,
+  CaretDown,
   CreditCard,
   Headphones,
   Package,
-  Search,
   ShieldCheck,
   Users,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import { Button, Card, EmptyState, SearchField, SectionHeader } from '@/components/ui'
 import { useDebounced } from '@/lib/hooks'
@@ -21,7 +20,7 @@ const CATEGORIES = [
   { id: 'payments', icon: CreditCard, label: 'Payments', count: 9 },
   { id: 'safety', icon: ShieldCheck, label: 'Safety & OTP', count: 7 },
   { id: 'driving', icon: Car, label: 'Driving', count: 10 },
-  { id: 'hubs', icon: Building2, label: 'Hubs', count: 6 },
+  { id: 'hubs', icon: Buildings, label: 'Hubs', count: 6 },
 ]
 
 const FAQS = [
@@ -36,7 +35,7 @@ const FAQS = [
     cat: 'parcels',
   },
   {
-    q: 'How is DikkiConnect cheaper than a courier?',
+    q: 'How is Stowza cheaper than a courier?',
     a: 'The boot space was travelling to your destination city anyway. We are not paying for a dedicated vehicle or a hub-and-spoke sorting network — just a handling fee to two hub partners and a share to the driver. That is why the same parcel costs roughly half of a standard courier and arrives the same or next day.',
     cat: 'payments',
   },
@@ -47,12 +46,12 @@ const FAQS = [
   },
   {
     q: 'Is my parcel insured?',
-    a: 'DikkiConnect Protect covers up to ₹5,000 declared value against loss or damage in transit for ₹25 per parcel. That cap is a deliberate pilot limit while we build out insurance partnerships — do not send anything worth more than that yet.',
+    a: 'Stowza Protect covers up to ₹5,000 declared value against loss or damage in transit for ₹25 per parcel. That cap is a deliberate pilot limit while we build out insurance partnerships — do not send anything worth more than that yet.',
     cat: 'payments',
   },
   {
-    q: 'Is carpooling on DikkiConnect legal?',
-    a: 'DikkiConnect rides are structured as cost-sharing: riders contribute to fuel and tolls on a trip the driver is already making. Drivers are not commercial operators and fares are capped at cost, which is what keeps this inside the Motor Vehicles Act carpooling exemption in Karnataka.',
+    q: 'Is carpooling on Stowza legal?',
+    a: 'Stowza rides are structured as cost-sharing: riders contribute to fuel and tolls on a trip the driver is already making. Drivers are not commercial operators and fares are capped at cost, which is what keeps this inside the Motor Vehicles Act carpooling exemption in Karnataka.',
     cat: 'rides',
   },
   {
@@ -62,7 +61,7 @@ const FAQS = [
   },
   {
     q: 'When do I get paid as a driver?',
-    a: 'Parcel payouts credit to your DikkiConnect wallet the moment the destination hub confirms drop-off. Seat fares credit at trip completion. Wallet balance transfers to your bank every Monday, or instantly for a 1% fee.',
+    a: 'Parcel payouts credit to your Stowza wallet the moment the destination hub confirms drop-off. Seat fares credit at trip completion. Wallet balance transfers to your bank every Monday, or instantly for a 1% fee.',
     cat: 'driving',
   },
   {
@@ -149,7 +148,7 @@ export default function HelpCenter() {
 
         {visible.length === 0 ? (
           <EmptyState
-            icon={<Search size={26} />}
+            kind="articles"
             title="No articles found"
             body="Try different words, or chat with a human who can look at your specific booking."
             actionLabel="Chat with support"
@@ -166,7 +165,7 @@ export default function HelpCenter() {
                     className="pressable flex w-full items-start gap-3 p-4 text-left"
                   >
                     <span className="min-w-0 flex-1 text-[14px] font-bold text-ink-900">{f.q}</span>
-                    <ChevronDown
+                    <CaretDown
                       size={18}
                       className={cn(
                         'mt-0.5 shrink-0 text-ink-400 transition-transform duration-300',

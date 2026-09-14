@@ -1,6 +1,13 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
-import { Ban, ChevronUp, MessageCircle, Phone, Share2, ShieldAlert } from 'lucide-react'
+import {
+  Prohibit,
+  CaretUp,
+  ChatCircle,
+  Phone,
+  ShareNetwork,
+  ShieldWarning,
+} from '@phosphor-icons/react'
 import { Screen } from '@/components/layout/Screen'
 import {
   Avatar,
@@ -48,7 +55,7 @@ export default function RideTracking() {
         {/* Top bar */}
         <div className="pt-safe-3 absolute inset-x-0 top-0 z-30 flex items-center justify-between px-4">
           <IconButton
-            icon={<ChevronUp size={19} className="rotate-[-90deg]" />}
+            icon={<CaretUp size={19} className="rotate-[-90deg]" />}
             label="Back"
             tone="glass"
             onClick={() => navigate('/passenger/bookings')}
@@ -57,7 +64,7 @@ export default function RideTracking() {
             <LiveDot label={`Arriving in ${label}`} />
           </span>
           <IconButton
-            icon={<Share2 size={17} />}
+            icon={<ShareNetwork size={17} />}
             label="Share live trip"
             tone="glass"
             onClick={() => toast.success('Trip shared', 'Live link sent to your emergency contact.')}
@@ -67,7 +74,7 @@ export default function RideTracking() {
         {/* SOS */}
         <div className="absolute top-1/2 right-4 z-30 -translate-y-1/2">
           <IconButton
-            icon={<ShieldAlert size={19} />}
+            icon={<ShieldWarning size={19} />}
             label="Emergency SOS"
             className="size-12 bg-danger-600 text-white shadow-lg"
             onClick={() => setSosOpen(true)}
@@ -112,7 +119,7 @@ export default function RideTracking() {
               </div>
               <div className="flex shrink-0 gap-2">
                 <IconButton
-                  icon={<MessageCircle size={17} />}
+                  icon={<ChatCircle size={17} />}
                   label="Message driver"
                   onClick={() => navigate(`/passenger/messages/${trip.id}`)}
                 />
@@ -180,7 +187,7 @@ export default function RideTracking() {
           <Button
             variant="danger"
             block
-            icon={<Ban size={17} />}
+            icon={<Prohibit size={17} />}
             onClick={() => {
               setDetailsOpen(false)
               setCancelOpen(true)
@@ -201,7 +208,7 @@ export default function RideTracking() {
         <div className="flex flex-col gap-2.5">
           {[
             { label: 'Call emergency services (112)', tone: 'danger' as const },
-            { label: 'Call DikkiConnect safety desk', tone: 'brand' as const },
+            { label: 'Call Stowza safety desk', tone: 'brand' as const },
             { label: 'Alert my emergency contact now', tone: 'neutral' as const },
             { label: 'Report unsafe driving', tone: 'neutral' as const },
           ].map((a) => (
@@ -234,7 +241,7 @@ export default function RideTracking() {
           navigate('/passenger/bookings')
         }}
         tone="danger"
-        icon={<Ban size={28} />}
+        icon={<Prohibit size={28} />}
         title="Cancel this ride?"
         body="The ride has already started, so a 50% cancellation charge applies. The driver is compensated for the detour."
         confirmLabel="Cancel anyway"

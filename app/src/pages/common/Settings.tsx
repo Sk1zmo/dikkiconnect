@@ -1,15 +1,15 @@
 import { useState } from 'react'
 import {
   Bell,
-  Download,
+  DownloadSimple,
   Globe,
   Lock,
   MapPin,
   Moon,
   ShieldCheck,
-  Trash2,
+  Trash,
   Vibrate,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   Card,
@@ -21,13 +21,21 @@ import {
   Switch,
   useToast,
 } from '@/components/ui'
+import { APP_VERSION, BRAND } from '@/lib/brand'
+import { TIER_META } from '@/lib/notifications'
+import { requestNotificationPermission, setNotifyPrefs, useNotificationPermission, useNotifyPrefs } from '@/lib/push'
 
 export default function Settings() {
   const toast = useToast()
 
-  const [push, setPush] = useState(true)
-  const [sms, setSms] = useState(true)
-  const [marketing, setMarketing] = useState(false)
+  const prefs = useNotifyPrefs()
+  const permission = useNotificationPermission()
+  const push = prefs.contextual
+  const sms = prefs.email
+  const marketing = prefs.marketing
+  const setPush = (v: boolean) => setNotifyPrefs({ contextual: v })
+  const setSms = (v: boolean) => setNotifyPrefs({ email: v })
+  const setMarketing = (v: boolean) => setNotifyPrefs({ marketing: v })
   const [haptics, setHaptics] = useState(true)
   const [location, setLocation] = useState(true)
   const [shareTrips, setShareTrips] = useState(true)
@@ -45,24 +53,32 @@ export default function Settings() {
         </p>
         <Card className="flex flex-col gap-4">
           <Switch
+            checked
+            onChange={() => {}}
+            disabled
+            label={TIER_META.critical.label}
+            description={`${TIER_META.critical.hint}. These are the app doing its job, so they cannot be switched off.`}
+          />
+          <div className="h-px bg-ink-100" />
+          <Switch
             checked={push}
             onChange={setPush}
-            label="Push notifications"
-            description="Custody updates, ETAs and OTP alerts"
+            label={TIER_META.contextual.label}
+            description={TIER_META.contextual.hint}
           />
           <div className="h-px bg-ink-100" />
           <Switch
             checked={sms}
             onChange={setSms}
-            label="SMS alerts"
-            description="OTPs always send by SMS regardless of this setting"
+            label="Email copies"
+            description="A copy of every custody update to your inbox. OTPs go there regardless."
           />
           <div className="h-px bg-ink-100" />
           <Switch
             checked={marketing}
             onChange={setMarketing}
-            label="Offers and promotions"
-            description="Occasional discount codes. Off by default."
+            label={TIER_META.marketing.label}
+            description={`${TIER_META.marketing.hint}. Never more than one a week.`}
           />
         </Card>
 
@@ -128,7 +144,7 @@ export default function Settings() {
             chevron
           />
           <ListRow
-            icon={<Download size={17} />}
+            icon={<DownloadSimple size={17} />}
             title="Download my data"
             subtitle="A copy of everything, emailed to you"
             onClick={() => toast.success('Request received', 'We will email your archive within 48 hours.')}
@@ -139,7 +155,7 @@ export default function Settings() {
             title="Aadhaar & KYC records"
             subtitle="Managed by our licensed KYC partner"
             onClick={() =>
-              toast.info('KYC records', 'DikkiConnect stores only a masked reference token.')
+              toast.info('KYC records', 'Stowza stores only a masked reference token.')
             }
             chevron
           />
@@ -159,10 +175,19 @@ export default function Settings() {
           />
           <ListRow
             icon={<Bell size={17} />}
-            iconTone={push ? 'success' : 'neutral'}
+            iconTone={permission === 'granted' ? 'success' : permission === 'denied' ? 'danger' : 'neutral'}
             title="Notifications"
-            value={push ? 'Allowed' : 'Off'}
-            valueTone={push ? 'success' : undefined}
+            subtitle={
+              permission === 'denied'
+                ? 'Blocked in your phone’s settings — custody updates stay in the inbox'
+                : permission === 'prompt'
+                  ? 'Tap to allow custody updates on the lock screen'
+                  : undefined
+            }
+            value={permission === 'granted' ? 'Allowed' : permission === 'denied' ? 'Blocked' : permission === 'prompt' ? 'Not yet' : 'n/a'}
+            valueTone={permission === 'granted' ? 'success' : permission === 'denied' ? 'danger' : undefined}
+            onClick={permission === 'prompt' ? () => void requestNotificationPermission() : undefined}
+            chevron={permission === 'prompt'}
           />
           <ListRow icon={<Globe size={17} />} iconTone="success" title="Camera" value="Allowed" valueTone="success" />
           <ListRow icon={<Vibrate size={17} />} iconTone="neutral" title="Contacts" value="Not requested" />
@@ -174,7 +199,7 @@ export default function Settings() {
         </p>
         <Group>
           <ListRow
-            icon={<Trash2 size={17} />}
+            icon={<Trash size={17} />}
             iconTone="danger"
             title="Delete my account"
             subtitle="Permanently removes your data"
@@ -184,7 +209,7 @@ export default function Settings() {
         </Group>
 
         <Note tone="neutral" icon={<Moon size={15} />} className="mt-6">
-          DikkiConnect 1.0.0 · pilot build · Bangalore ↔ Mysore
+          {BRAND.name} {APP_VERSION} · pilot build · Bangalore ↔ Mysore
         </Note>
       </ScreenBody>
 
@@ -196,7 +221,7 @@ export default function Settings() {
           toast.warn('Deletion scheduled', 'Your account will be removed in 30 days. Sign in to cancel.')
         }}
         tone="danger"
-        icon={<Trash2 size={26} />}
+        icon={<Trash size={26} />}
         title="Delete your account?"
         body="This removes your profile, bookings and payment methods after a 30-day grace period. Active parcels must be delivered first."
         confirmLabel="Delete account"

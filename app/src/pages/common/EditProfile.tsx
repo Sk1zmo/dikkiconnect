@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AtSign, Camera, Check, Phone, ShieldCheck, User } from 'lucide-react'
+import { At, Camera, Check, Phone, ShieldCheck, User } from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -74,7 +74,7 @@ export default function EditProfile() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            prefix={<AtSign size={15} />}
+            prefix={<At size={15} />}
             hint="Invoices and receipts go here"
           />
           <Select

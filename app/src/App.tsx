@@ -1,9 +1,16 @@
-import { lazy, Suspense } from 'react'
-import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
+import { lazy, Suspense, useCallback, useEffect, useState, type ReactNode } from 'react'
+import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { AnimatePresence } from 'framer-motion'
 import { AppProvider, useApp } from '@/lib/store'
 import { AuthProvider, useAuth } from '@/lib/auth'
+import { BootProvider } from '@/lib/boot'
 import { DEMO } from '@/lib/demo'
 import { DemoBadge } from '@/components/brand/DemoBadge'
+import { LaunchScreen } from '@/components/brand/LaunchScreen'
+import { Maintenance } from '@/components/layout/Maintenance'
+import { LiveAlerts } from '@/components/layout/LiveAlerts'
+import { initPush } from '@/lib/push'
+import { useMaintenance } from '@/lib/maintenance'
 import { ToastProvider } from '@/components/ui'
 import { DeviceShell, FlowLayout, RoleLayout, ScrollReset } from '@/components/layout/AppShell'
 
@@ -21,6 +28,9 @@ const SenderBookings = lazy(() => import('@/pages/sender/Bookings'))
 const SenderTrackList = lazy(() => import('@/pages/sender/TrackList'))
 const SenderTracking = lazy(() => import('@/pages/sender/Tracking'))
 const BookRoute = lazy(() => import('@/pages/sender/BookRoute'))
+const RequireRoute = lazy(() =>
+  import('@/pages/sender/BookRoute').then((m) => ({ default: m.RequireRoute })),
+)
 const BookParcel = lazy(() => import('@/pages/sender/BookParcel'))
 const BookHub = lazy(() => import('@/pages/sender/BookHub'))
 const BookReview = lazy(() => import('@/pages/sender/BookReview'))
@@ -100,6 +110,7 @@ export default function App() {
       <AppProvider>
         <DemoBadge />
         <DeviceShell>
+        <Launch>
         <ToastProvider>
           <ScrollReset />
           <Routes>
@@ -127,10 +138,10 @@ export default function App() {
             <Route element={<FlowLayout />}>
               <Route path="/sender/track/:id" element={<SenderTracking />} />
               <Route path="/sender/book" element={<BookRoute />} />
-              <Route path="/sender/book/parcel" element={<BookParcel />} />
-              <Route path="/sender/book/hub" element={<BookHub />} />
-              <Route path="/sender/book/review" element={<BookReview />} />
-              <Route path="/sender/book/payment" element={<BookPayment />} />
+              <Route path="/sender/book/parcel" element={<RequireRoute><BookParcel /></RequireRoute>} />
+              <Route path="/sender/book/hub" element={<RequireRoute><BookHub /></RequireRoute>} />
+              <Route path="/sender/book/review" element={<RequireRoute><BookReview /></RequireRoute>} />
+              <Route path="/sender/book/payment" element={<RequireRoute><BookPayment /></RequireRoute>} />
               <Route path="/sender/book/confirmed" element={<BookConfirmed />} />
               <Route path="/sender/qr/:id" element={<DropOffQr />} />
             </Route>
@@ -199,9 +210,42 @@ export default function App() {
             <Route path="*" element={<Navigate to="/404" replace />} />
           </Routes>
         </ToastProvider>
+        </Launch>
         </DeviceShell>
       </AppProvider>
     </AuthProvider>
+  )
+}
+
+/**
+ * The opening. The launch screen lies over the app inside the phone frame
+ * while the app mounts underneath — no route of its own, so nothing about
+ * where you land (a fresh start, a deep link, a refresh mid-flow) changes.
+ * It lifts once the first route has committed, and never comes back this
+ * page load: a cold start is the only opening there is.
+ */
+function Launch({ children }: { children: ReactNode }) {
+  const [settled, setSettled] = useState(false)
+  const [done, setDone] = useState(false)
+  const settle = useCallback(() => setSettled(true), [])
+  const finish = useCallback(() => setDone(true), [])
+  const maintenance = useMaintenance()
+  const navigate = useNavigate()
+
+  /* Android channels, and where a tap on a tray notification goes. */
+  useEffect(() => {
+    void initPush((href) => navigate(href))
+  }, [navigate])
+
+  return (
+    <BootProvider value={settle}>
+      {children}
+      <LiveAlerts />
+      {maintenance && <Maintenance />}
+      <AnimatePresence>
+        {!done && <LaunchScreen key="launch" ready={settled} onDone={finish} />}
+      </AnimatePresence>
+    </BootProvider>
   )
 }
 

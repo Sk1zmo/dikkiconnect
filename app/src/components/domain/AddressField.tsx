@@ -4,14 +4,14 @@ import {
   Check,
   Clock,
   Crosshair,
-  Home,
-  Loader2,
-  Map as MapIcon,
+  House,
+  CircleNotch,
+  MapTrifold as MapIcon,
   MapPin,
   Pencil,
   Star,
-  Trash2,
-} from 'lucide-react'
+  Trash,
+} from '@phosphor-icons/react'
 import { CentrePinMap, PickMap } from '@/components/viz/Map'
 import { Button, Field, Sheet } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -234,7 +234,7 @@ export function AddressField({
             onClick={useMyLocation}
             className="pressable-sm inline-flex items-center gap-1.5 text-[11.5px] font-bold text-brand-600"
           >
-            {locating ? <Loader2 size={12} className="anim-spin" /> : <Crosshair size={12} />}
+            {locating ? <CircleNotch size={12} className="anim-spin" /> : <Crosshair size={12} />}
             {locating ? 'Locating…' : 'Use my location'}
           </button>
         </div>
@@ -258,7 +258,7 @@ export function AddressField({
           )}
         />
         {searching && (
-          <Loader2 size={14} className="anim-spin absolute top-3.5 right-3 text-ink-400" />
+          <CircleNotch size={14} className="anim-spin absolute top-3.5 right-3 text-ink-400" />
         )}
 
         {open && (hasSuggestions || locating) && (
@@ -276,7 +276,7 @@ export function AddressField({
               className="flex w-full items-center gap-2.5 border-b border-ink-100 px-3.5 py-3 text-left transition-colors hover:bg-ink-50"
             >
               {locating ? (
-                <Loader2 size={14} className="anim-spin shrink-0 text-brand-600" />
+                <CircleNotch size={14} className="anim-spin shrink-0 text-brand-600" />
               ) : (
                 <Crosshair size={14} className="shrink-0 text-brand-600" />
               )}
@@ -434,7 +434,7 @@ export function AddressField({
                 </p>
                 {resolving ? (
                   <p className="mt-1 flex items-center gap-2 text-[13px] text-ink-400">
-                    <Loader2 size={13} className="anim-spin" />
+                    <CircleNotch size={13} className="anim-spin" />
                     Finding the address…
                   </p>
                 ) : (
@@ -486,7 +486,7 @@ function SuggestionHeading({ children }: { children: React.ReactNode }) {
 }
 
 export function LabelIcon({ label, size = 14 }: { label: PlaceLabel; size?: number }) {
-  const Icon = label === 'home' ? Home : label === 'work' ? Briefcase : MapPin
+  const Icon = label === 'home' ? House : label === 'work' ? Briefcase : MapPin
   return <Icon size={size} className="mt-0.5 shrink-0 text-brand-600" />
 }
 
@@ -598,7 +598,7 @@ function SavePlaceSheet({
           }}
           className="pressable mt-2.5 flex w-full items-center justify-center gap-1.5 py-2.5 text-[12.5px] font-bold text-danger-600"
         >
-          <Trash2 size={13} />
+          <Trash size={13} />
           Remove from saved
         </button>
       )}

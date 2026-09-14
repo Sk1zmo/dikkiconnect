@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, ScanLine, Search } from 'lucide-react'
+import { ArrowRight, Scan, MagnifyingGlass } from '@phosphor-icons/react'
 import { Screen, ScreenBody, LargeTitle } from '@/components/layout/Screen'
 import {
   Button,
@@ -14,7 +14,6 @@ import {
 } from '@/components/ui'
 import { ParcelCard } from '@/components/domain/Cards'
 import { LiveMap } from '@/components/viz/Map'
-import { EmptyRoadArt } from '@/components/viz/Illustrations'
 import { useApp } from '@/lib/store'
 import { useLoaded } from '@/lib/hooks'
 
@@ -63,7 +62,7 @@ export default function TrackList() {
               setError(undefined)
             }}
             onKeyDown={(e) => e.key === 'Enter' && lookup()}
-            prefix={<Search size={16} />}
+            prefix={<MagnifyingGlass size={16} />}
           />
           <div className="flex gap-2.5">
             <Button block onClick={lookup} disabled={!id.trim()} iconRight={<ArrowRight size={17} />}>
@@ -71,9 +70,9 @@ export default function TrackList() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => toast.info('Scanner', 'Point at any DikkiConnect QR to auto-fill the ID.')}
-              icon={<ScanLine size={17} />}
-              aria-label="Scan a DikkiConnect QR code"
+              onClick={() => toast.info('Scanner', 'Point at any Stowza QR to auto-fill the ID.')}
+              icon={<Scan size={17} />}
+              aria-label="Scan a Stowza QR code"
               className="w-12 shrink-0 px-0"
             />
           </div>
@@ -118,7 +117,7 @@ export default function TrackList() {
           ) : active.length === 0 ? (
             <Card padded={false}>
               <EmptyState
-                art={<EmptyRoadArt />}
+                kind="parcels"
                 title="No parcels in transit"
                 body="Once you book a parcel it appears here with live custody updates."
                 actionLabel="Book a parcel"

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowDownToLine, ArrowUpFromLine, Keyboard, UserCheck, X } from 'lucide-react'
+import { ArrowLineDown, ArrowLineUp, Keyboard, UserCheck, X } from '@phosphor-icons/react'
 import { Screen } from '@/components/layout/Screen'
 import { Button, Field, IconButton, Segmented, Sheet, useToast } from '@/components/ui'
 import { ScannerViewfinder } from '@/components/viz/Scanner'
@@ -104,9 +104,9 @@ export default function HubScan() {
             onClick={() => navigate(MODE_COPY[mode].next(item.parcelId))}
             icon={
               mode === 'intake' ? (
-                <ArrowDownToLine size={18} />
+                <ArrowLineDown size={18} />
               ) : mode === 'release' ? (
-                <ArrowUpFromLine size={18} />
+                <ArrowLineUp size={18} />
               ) : (
                 <UserCheck size={18} />
               )

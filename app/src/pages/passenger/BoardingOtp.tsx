@@ -1,5 +1,5 @@
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
-import { Car, MapPin, MessageCircle, Phone, ShieldCheck } from 'lucide-react'
+import { Car, MapPin, ChatCircle, Phone, ShieldCheck } from '@phosphor-icons/react'
 import { Screen, ScreenBody } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -68,7 +68,7 @@ export default function BoardingOtp() {
             </div>
             <div className="flex shrink-0 gap-2">
               <IconButton
-                icon={<MessageCircle size={17} />}
+                icon={<ChatCircle size={17} />}
                 label="Message driver"
                 onClick={() => navigate(`/passenger/messages/${trip.id}`)}
               />

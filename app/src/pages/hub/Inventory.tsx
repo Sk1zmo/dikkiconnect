@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, Package, Search } from 'lucide-react'
+import { Warning, Package } from '@phosphor-icons/react'
 import { Screen, ScreenBody, LargeTitle } from '@/components/layout/Screen'
 import {
   Card,
@@ -11,7 +11,6 @@ import {
   Stat,
 } from '@/components/ui'
 import { InventoryRow } from '@/components/domain/Cards'
-import { EmptyBoxArt } from '@/components/viz/Illustrations'
 import { isStale } from '@/lib/format'
 import { useDebounced, useLoaded } from '@/lib/hooks'
 import { useHubInventory } from '@/lib/store'
@@ -109,7 +108,7 @@ export default function HubInventory() {
 
         {!loading && aging > 0 && filter === 'all' && (
           <Card className="mb-4 flex items-center gap-3 border-warn-100 bg-warn-50">
-            <AlertTriangle size={18} className="shrink-0 text-warn-600" />
+            <Warning size={18} className="shrink-0 text-warn-600" />
             <p className="text-[12.5px] font-semibold text-warn-800">
               {aging} parcels have been here over 24 hours. Ops escalation triggers at 48.
             </p>
@@ -121,8 +120,7 @@ export default function HubInventory() {
         ) : visible.length === 0 ? (
           <Card padded={false}>
             <EmptyState
-              art={debounced ? undefined : <EmptyBoxArt />}
-              icon={debounced ? <Search size={26} /> : undefined}
+              kind={debounced ? 'search-results' : 'inventory'}
               title={debounced ? `No match for “${debounced}”` : 'Nothing on the shelves'}
               body={
                 debounced

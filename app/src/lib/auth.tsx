@@ -10,6 +10,7 @@ import {
 import { useLocalStorage } from './hooks'
 import { DEMO, DEMO_ACCOUNT } from './demo'
 import type { KycTier, Role } from './types'
+import { enterMaintenance } from './maintenance'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Accounts and verification — client side.
@@ -94,6 +95,15 @@ async function api<T>(path: string, body?: unknown): Promise<T | ApiFailure> {
     })
   } catch {
     // Genuinely could not reach it: offline, DNS, or a CORS preflight refused.
+    return 'network'
+  }
+
+  /* 503 is the one status that means "we did this on purpose": the API is
+     being redeployed or has been taken down for a moment. The whole app
+     switches to its maintenance screen (see lib/maintenance) rather than
+     each form inventing its own apology. */
+  if (res.status === 503) {
+    enterMaintenance()
     return 'network'
   }
 

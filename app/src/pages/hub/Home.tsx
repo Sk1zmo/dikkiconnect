@@ -1,17 +1,17 @@
 import { useNavigate } from 'react-router-dom'
 import {
-  AlertTriangle,
-  ArrowDownToLine,
-  ArrowUpFromLine,
+  Warning,
+  ArrowLineDown,
+  ArrowLineUp,
   Bell,
-  Box,
-  ChevronRight,
-  IndianRupee,
-  PackageCheck,
+  Cube,
+  CaretRight,
+  CurrencyInr,
+  SealCheck,
   QrCode,
   Timer,
   UserCheck,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody, BrandHeader } from '@/components/layout/Screen'
 import { PortalSwitcher } from '@/components/layout/PortalSwitcher'
 import {
@@ -33,10 +33,10 @@ import { useCountUp, useLoaded } from '@/lib/hooks'
 const HUB = HUBS[0]
 
 const ACTIONS = [
-  { icon: ArrowDownToLine, label: 'Intake', to: '/hub/scan', tone: 'primary' as const },
-  { icon: ArrowUpFromLine, label: 'Handoff', to: '/hub/handoff' },
+  { icon: ArrowLineDown, label: 'Intake', to: '/hub/scan', tone: 'primary' as const },
+  { icon: ArrowLineUp, label: 'Handoff', to: '/hub/handoff' },
   { icon: UserCheck, label: 'Receiver', to: '/hub/receiver' },
-  { icon: Box, label: 'Inventory', to: '/hub/inventory' },
+  { icon: Cube, label: 'Inventory', to: '/hub/inventory' },
 ]
 
 export default function HubHome() {
@@ -128,7 +128,7 @@ export default function HubHome() {
             className="mb-5 flex items-center gap-3.5 border-warn-100 bg-warn-50"
           >
             <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-warn-500/15 text-warn-600">
-              <AlertTriangle size={19} />
+              <Warning size={19} />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[13.5px] font-bold text-warn-800">
@@ -138,7 +138,7 @@ export default function HubHome() {
                 Flag them for the next traveler or escalate to ops
               </p>
             </div>
-            <ChevronRight size={17} className="shrink-0 text-warn-600" />
+            <CaretRight size={17} className="shrink-0 text-warn-600" />
           </Card>
         )}
 
@@ -149,7 +149,7 @@ export default function HubHome() {
             className="mb-5 flex items-center gap-3.5 border-brand-100 bg-brand-50"
           >
             <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-500/15 text-brand-600">
-              <ArrowDownToLine size={19} />
+              <ArrowLineDown size={19} />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[13.5px] font-bold text-brand-800">
@@ -159,7 +159,7 @@ export default function HubHome() {
                 Booked by senders · scan to weigh, photograph and take custody
               </p>
             </div>
-            <ChevronRight size={17} className="shrink-0 text-brand-600" />
+            <CaretRight size={17} className="shrink-0 text-brand-600" />
           </Card>
         )}
 
@@ -174,26 +174,26 @@ export default function HubHome() {
         ) : (
           <div className="grid grid-cols-2 gap-3">
             <Stat
-              icon={<ArrowDownToLine size={15} />}
+              icon={<ArrowLineDown size={15} />}
               label="Parcels received"
               value="23"
               delta={{ value: '18%', up: true }}
             />
             <Stat
-              icon={<ArrowUpFromLine size={15} />}
+              icon={<ArrowLineUp size={15} />}
               label="Dispatched"
               value="19"
               tone="success"
               delta={{ value: '9%', up: true }}
             />
             <Stat
-              icon={<PackageCheck size={15} />}
+              icon={<SealCheck size={15} />}
               label="Collected by receivers"
               value="14"
               tone="accent"
             />
             <Stat
-              icon={<IndianRupee size={15} />}
+              icon={<CurrencyInr size={15} />}
               label="Handling fees"
               value={compactInr(revenue)}
               tone="warn"

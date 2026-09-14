@@ -1,4 +1,4 @@
-/** Domain model for DikkiConnect — mirrors the PRD's hub-to-hub custody chain. */
+/** Domain model for Stowza — mirrors the PRD's hub-to-hub custody chain. */
 
 export type Role = 'sender' | 'traveler' | 'passenger' | 'hub'
 
@@ -189,6 +189,8 @@ export interface NotificationItem {
   at: string
   read: boolean
   kind: 'parcel' | 'ride' | 'payment' | 'kyc' | 'promo' | 'alert'
+  /** How loud it may be — see lib/notifications. Derived from `kind` when absent. */
+  tier?: 'critical' | 'contextual' | 'marketing'
   href?: string
 }
 

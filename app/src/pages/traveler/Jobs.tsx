@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Briefcase, SlidersHorizontal } from 'lucide-react'
+import { Briefcase, SlidersHorizontal } from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   Card,
@@ -16,7 +16,6 @@ import {
   useToast,
 } from '@/components/ui'
 import { JobCard } from '@/components/domain/Cards'
-import { EmptyBoxArt } from '@/components/viz/Illustrations'
 import { jobFromParcel } from '@/lib/data'
 import { inr } from '@/lib/format'
 import { useLoaded } from '@/lib/hooks'
@@ -134,7 +133,7 @@ export default function TravelerJobs() {
         ) : visible.length === 0 ? (
           <Card padded={false}>
             <EmptyState
-              art={<EmptyBoxArt />}
+              kind="jobs"
               title="No jobs match your filters"
               body="Widen your detour range or lower the minimum payout to see more parcels."
               actionLabel="Reset filters"

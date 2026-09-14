@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Headphones, Paperclip, Phone, Send, ShieldCheck } from 'lucide-react'
+import { Headphones, Paperclip, Phone, PaperPlaneTilt, ShieldCheck } from '@phosphor-icons/react'
 import { Screen, TopBar } from '@/components/layout/Screen'
 import { Avatar, DotLoader, IconButton, Note, Skeleton } from '@/components/ui'
 import { RIDE_CHAT, SUPPORT_THREAD, travelerById } from '@/lib/data'
@@ -23,7 +23,7 @@ export default function Chat() {
   const isSupport = id === 'support'
   const trip = useTrip(id)
   const driver = travelerById(trip?.travelerId)
-  const name = isSupport ? 'DikkiConnect Support' : (driver?.name ?? 'Driver')
+  const name = isSupport ? 'Stowza Support' : (driver?.name ?? 'Driver')
 
   const [messages, setMessages] = useState<ChatMessage[]>(isSupport ? SUPPORT_THREAD : RIDE_CHAT)
   const [draft, setDraft] = useState('')
@@ -90,7 +90,7 @@ export default function Chat() {
       <div className="device-scroll flex-1 bg-ink-50 px-4 py-4">
         {isSupport && (
           <Note tone="neutral" icon={<ShieldCheck size={14} />} className="mb-4">
-            Never share OTPs, card numbers or your Aadhaar in chat. DikkiConnect agents will never ask for
+            Never share OTPs, card numbers or your Aadhaar in chat. Stowza agents will never ask for
             them.
           </Note>
         )}
@@ -202,7 +202,7 @@ export default function Chat() {
             aria-label="Send message"
             className="pressable-sm grid size-11 shrink-0 place-items-center rounded-full bg-brand-600 text-white shadow-(--shadow-brand-sm) disabled:opacity-40"
           >
-            <Send size={17} />
+            <PaperPlaneTilt size={17} />
           </button>
         </div>
         {!isSupport && (
@@ -210,7 +210,7 @@ export default function Chat() {
             onClick={() => navigate('/passenger/messages/support')}
             className="pressable-sm w-full pb-3 text-center text-[12px] font-semibold text-ink-400"
           >
-            Need help? Chat with DikkiConnect Support
+            Need help? Chat with Stowza Support
           </button>
         )}
       </div>

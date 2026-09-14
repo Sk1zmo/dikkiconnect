@@ -2,22 +2,22 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Bell,
-  Building2,
+  Buildings,
   Car,
   Check,
-  ChevronRight,
+  CaretRight,
   CreditCard,
   FileText,
   Gift,
-  HelpCircle,
-  LogOut,
+  Question,
+  SignOut,
   Package,
   Pencil,
   Phone,
-  Settings as SettingsIcon,
+  Gear as SettingsIcon,
   ShieldCheck,
   Users,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody } from '@/components/layout/Screen'
 import { ConfirmDialog, Sheet, useToast } from '@/components/ui'
 import { useApp } from '@/lib/store'
@@ -64,7 +64,7 @@ const ROLE_META: Record<Role, { icon: typeof Package; label: string; home: strin
       blurb: 'Carry parcels and riders',
     },
     passenger: { icon: Users, label: 'Book rides', home: '/passenger', blurb: 'Share a car seat' },
-    hub: { icon: Building2, label: 'Manage a hub', home: '/hub', blurb: 'Intake and handoffs' },
+    hub: { icon: Buildings, label: 'Manage a hub', home: '/hub', blurb: 'Intake and handoffs' },
   }
 
 /** Initials, capped at two — three reads as an acronym rather than a person. */
@@ -105,7 +105,6 @@ function Row({
     >
       <Icon
         size={17}
-        strokeWidth={1.75}
         className={cn('shrink-0', tone === 'accent' ? 'text-brand-600' : 'text-black/40')}
       />
       <span
@@ -117,7 +116,7 @@ function Row({
         {title}
       </span>
       {meta && <span className="shrink-0 text-[13.5px] text-black/40">{meta}</span>}
-      <ChevronRight size={16} strokeWidth={1.75} className="shrink-0 text-black/25" />
+      <CaretRight size={16} className="shrink-0 text-black/25" />
     </button>
   )
 }
@@ -174,7 +173,7 @@ export default function Profile() {
             <div className="mt-1 flex items-center gap-2">
               <p className="tabular truncate text-[14px] text-black/50">{maskPhone(user.phone)}</p>
               <span className="inline-flex shrink-0 items-center gap-1 text-[12.5px] font-semibold text-brand-600">
-                <ShieldCheck size={13} strokeWidth={2} />
+                <ShieldCheck size={13} />
                 Verified
               </span>
             </div>
@@ -185,7 +184,7 @@ export default function Profile() {
             aria-label="Edit profile"
             className="grid size-9 shrink-0 place-items-center rounded-full transition-opacity active:opacity-55"
           >
-            <Pencil size={17} strokeWidth={1.75} className="text-black/40" />
+            <Pencil size={17} className="text-black/40" />
           </button>
         </div>
 
@@ -272,7 +271,7 @@ export default function Profile() {
 
         <SectionLabel>Support</SectionLabel>
         <Rule />
-        <Row icon={HelpCircle} title="Help centre" to="/help" />
+        <Row icon={Question} title="Help centre" to="/help" />
         <Rule />
         <Row icon={Phone} title="Contact support" to="/support" />
         <Rule />
@@ -284,13 +283,13 @@ export default function Profile() {
           onClick={() => setSignOutOpen(true)}
           className="flex w-full items-center gap-4 py-[15px] text-left transition-opacity active:opacity-55"
         >
-          <LogOut size={17} strokeWidth={1.75} className="shrink-0 text-black/40" />
+          <SignOut size={17} className="shrink-0 text-black/40" />
           <span className="flex-1 text-[15px] font-medium text-black">Sign out</span>
         </button>
         <Rule />
 
         <p className="pt-6 pb-2 text-[12px] text-black/25">
-          DikkiConnect 1.0.0 · Bangalore ↔ Mysore
+          Stowza 1.0.0 · Bangalore ↔ Mysore
         </p>
       </ScreenBody>
 
@@ -314,7 +313,6 @@ export default function Profile() {
               >
                 <Icon
                   size={19}
-                  strokeWidth={1.75}
                   className={cn('shrink-0', active ? 'text-brand-600' : 'text-black/40')}
                 />
                 <span className="min-w-0 flex-1">
@@ -329,7 +327,7 @@ export default function Profile() {
                   <span className="mt-0.5 block text-[12.5px] text-black/40">{meta.blurb}</span>
                 </span>
                 {active && (
-                  <Check size={18} strokeWidth={2.4} className="shrink-0 text-brand-600" />
+                  <Check size={18} className="shrink-0 text-brand-600" />
                 )}
               </button>
             )
@@ -342,12 +340,12 @@ export default function Profile() {
         onClose={() => setSignOutOpen(false)}
         onConfirm={() => {
           signOut()
-          navigate('/', { replace: true })
+          navigate('/', { replace: true, state: { signedOut: true } })
         }}
         tone="danger"
-        icon={<LogOut size={26} />}
-        title="Sign out of DikkiConnect?"
-        body="You'll need your mobile number and an OTP to sign back in."
+        icon={<SignOut size={26} />}
+        title="Sign out of Stowza?"
+        body="Your bookings and wallet stay on your account. Signing back in takes an email or mobile number and a code — no password."
         confirmLabel="Sign out"
       />
     </Screen>

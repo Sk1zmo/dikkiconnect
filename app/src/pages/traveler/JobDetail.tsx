@@ -1,16 +1,16 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import {
-  AlertTriangle,
-  Building2,
+  Warning,
+  Buildings,
   Clock,
-  Fuel,
-  Home,
+  GasPump,
+  House,
   MapPin,
   Package,
   ShieldCheck,
   Timer,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -100,18 +100,18 @@ export default function JobDetail() {
           <div className="mt-4 flex flex-wrap gap-2 border-t border-ink-100 pt-3.5">
             <Badge
               tone={isP2P ? 'brand' : 'neutral'}
-              icon={isP2P ? <Home size={11} /> : <Building2 size={11} />}
+              icon={isP2P ? <House size={11} /> : <Buildings size={11} />}
             >
               {isP2P ? 'Door to door' : 'Hub to hub'}
             </Badge>
-            <Badge tone="neutral" icon={<Fuel size={11} />}>
+            <Badge tone="neutral" icon={<GasPump size={11} />}>
               {job.detourKm} km detour
             </Badge>
             <Badge tone={urgent ? 'danger' : 'brand'} icon={<Timer size={11} />}>
               Expires {relative(job.expiresAt)}
             </Badge>
             {job.fragile && (
-              <Badge tone="warn" icon={<AlertTriangle size={11} />}>
+              <Badge tone="warn" icon={<Warning size={11} />}>
                 Fragile
               </Badge>
             )}

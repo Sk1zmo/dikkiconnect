@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 /**
- * Android wrapper for the DikkiConnect PWA.
+ * Android wrapper for the Stowza PWA.
  *
  * The web build in `dist/` is bundled into the APK, so the app runs offline and
  * does not point at a server. Build order is always:
@@ -13,8 +13,8 @@ import type { CapacitorConfig } from '@capacitor/cli'
  * geolocation and the camera — all of which this app uses.
  */
 const config: CapacitorConfig = {
-  appId: 'in.dikkiconnect.app',
-  appName: 'DikkiConnect',
+  appId: 'in.stowza.app',
+  appName: 'Stowza',
   webDir: 'dist',
   server: {
     androidScheme: 'https',
@@ -33,9 +33,18 @@ const config: CapacitorConfig = {
     contentInset: 'never',
   },
   plugins: {
+    /* The native plate is a solid dusk field (the splash.png in each Android
+       drawable folder, and the iOS Splash imageset) — no mark, no artwork.
+       The branded opening is drawn by the app itself
+       (components/brand/LaunchScreen), which starts from that same colour and
+       hides the plate the moment it has painted, so the hand-over is
+       invisible. `launchShowDuration` is only a ceiling for the case where the
+       web layer never gets that far. */
     SplashScreen: {
-      launchShowDuration: 900,
-      backgroundColor: '#091A4A',
+      launchAutoHide: true,
+      launchShowDuration: 1500,
+      launchFadeOutDuration: 180,
+      backgroundColor: '#071231',
       androidScaleType: 'CENTER_CROP',
       showSpinner: false,
     },

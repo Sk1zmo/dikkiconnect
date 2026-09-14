@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import {
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  Download,
-  IndianRupee,
-  PackageCheck,
+  ArrowLineDown,
+  ArrowLineUp,
+  DownloadSimple,
+  CurrencyInr,
+  SealCheck,
   Wallet,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody, LargeTitle } from '@/components/layout/Screen'
 import {
   Badge,
@@ -39,9 +39,9 @@ const LOG = [
 ]
 
 const META = {
-  in: { icon: ArrowDownToLine, label: 'Received', tone: 'brand' as const },
-  out: { icon: ArrowUpFromLine, label: 'Released', tone: 'accent' as const },
-  collected: { icon: PackageCheck, label: 'Collected', tone: 'success' as const },
+  in: { icon: ArrowLineDown, label: 'Received', tone: 'brand' as const },
+  out: { icon: ArrowLineUp, label: 'Released', tone: 'accent' as const },
+  collected: { icon: SealCheck, label: 'Collected', tone: 'success' as const },
 }
 
 const SETTLEMENTS = [
@@ -65,7 +65,7 @@ export default function HubHistory() {
         className="pt-safe"
         action={
           <IconButton
-            icon={<Download size={17} />}
+            icon={<DownloadSimple size={17} />}
             label="Export report"
             onClick={() => toast.success('Report queued', 'CSV will be emailed to you shortly.')}
           />
@@ -87,10 +87,10 @@ export default function HubHistory() {
         {tab === 'activity' ? (
           <>
             <div className="mb-4 grid grid-cols-3 gap-2.5">
-              <Stat icon={<ArrowDownToLine size={14} />} label="In today" value="23" />
-              <Stat icon={<ArrowUpFromLine size={14} />} label="Out today" value="19" tone="accent" />
+              <Stat icon={<ArrowLineDown size={14} />} label="In today" value="23" />
+              <Stat icon={<ArrowLineUp size={14} />} label="Out today" value="19" tone="accent" />
               <Stat
-                icon={<PackageCheck size={14} />}
+                icon={<SealCheck size={14} />}
                 label="Collected"
                 value="14"
                 tone="success"
@@ -161,7 +161,7 @@ export default function HubHistory() {
               </div>
             </Card>
 
-            <Note tone="brand" icon={<IndianRupee size={15} />} className="mt-3">
+            <Note tone="brand" icon={<CurrencyInr size={15} />} className="mt-3">
               You earn a flat {inr(HUB_HANDLING_FEE)} per parcel handled — no percentage cuts, so
               your income does not depend on what is inside the box.
             </Note>

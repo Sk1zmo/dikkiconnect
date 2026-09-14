@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
-import { Heart, Receipt } from 'lucide-react'
+import { Heart, Receipt } from '@phosphor-icons/react'
 import { Screen, ScreenBody } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -111,7 +111,7 @@ export default function RideComplete() {
 
               <div className="mt-4">
                 <TextArea
-                  placeholder="Anything else you'd like to add? (only DikkiConnect sees this)"
+                  placeholder="Anything else you'd like to add? (only Stowza sees this)"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={2}
@@ -145,7 +145,7 @@ export default function RideComplete() {
               ))}
             </div>
             <p className="mt-2.5 text-[11.5px] text-ink-400">
-              100% of tips go to the driver. DikkiConnect takes nothing.
+              100% of tips go to the driver. Stowza takes nothing.
             </p>
           </Card>
         )}

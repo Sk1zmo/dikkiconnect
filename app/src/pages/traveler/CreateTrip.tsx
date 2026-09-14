@@ -2,14 +2,14 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowRight,
-  ArrowUpDown,
-  CalendarClock,
+  ArrowsDownUp,
+  CalendarDots,
   Calendar,
   Car,
   Check,
   Package,
   Users,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -157,7 +157,7 @@ export default function CreateTrip() {
                 aria-label="Swap cities"
                 className="pressable-sm absolute top-[62px] right-12 z-1 grid size-9 place-items-center rounded-full border border-ink-200 bg-white text-ink-600 shadow-(--shadow-e2)"
               >
-                <ArrowUpDown size={15} />
+                <ArrowsDownUp size={15} />
               </button>
               <div className="mt-4">
                 <Select label="Heading to" value={to} onChange={setTo} options={cityOptions} />
@@ -166,7 +166,7 @@ export default function CreateTrip() {
 
             {sameCity && (
               <Note tone="warn" className="mt-4">
-                Pick two different cities — DikkiConnect only matches intercity trips.
+                Pick two different cities — Stowza only matches intercity trips.
               </Note>
             )}
 
@@ -226,7 +226,7 @@ export default function CreateTrip() {
                 find and book the ride.
               </Note>
             ) : (
-              <Note tone="brand" icon={<CalendarClock size={15} />} className="mt-3" title={`Departs ${whenLabel}`}>
+              <Note tone="brand" icon={<CalendarDots size={15} />} className="mt-3" title={`Departs ${whenLabel}`}>
                 {daysAhead > 0
                   ? 'Publishing early is how you fill the car. The ride goes live now and you start it from My trips when you actually set off.'
                   : 'Same-day rides are matched immediately, but posting a day or two ahead fills far more seats and boot slots.'}
@@ -401,7 +401,7 @@ export default function CreateTrip() {
               </div>
             </Card>
 
-            <Note tone="neutral" icon={<CalendarClock size={15} />} className="mt-3" title="Published now, driven later">
+            <Note tone="neutral" icon={<CalendarDots size={15} />} className="mt-3" title="Published now, driven later">
               The ride goes live the moment you publish, so passengers can book and parcels can be
               matched {daysAhead > 0 ? `over the next ${daysAhead === 1 ? 'day' : `${daysAhead} days`}` : 'right away'}.
               Tap <span className="font-bold">Start trip</span> in My trips when you actually set

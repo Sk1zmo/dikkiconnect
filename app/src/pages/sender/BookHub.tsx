@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Clock, Crosshair, Home, Loader2, MapPin, Navigation } from 'lucide-react'
+import {
+  ArrowRight,
+  Clock,
+  Crosshair,
+  House,
+  CircleNotch,
+  MapPin,
+  NavigationArrow,
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import { ActionBar, Button, Card, Note, Segmented, Stepper } from '@/components/ui'
 import { HubCard } from '@/components/domain/Cards'
@@ -63,7 +71,7 @@ export default function BookHub() {
         </div>
 
         <ScreenBody>
-          <Note tone="brand" icon={<Home size={15} />} title="Door to door">
+          <Note tone="brand" icon={<House size={15} />} title="Door to door">
             A verified traveler collects from your address and hands it to the receiver at theirs.
             No hub in between — two OTP checkpoints instead of four.
           </Note>
@@ -213,12 +221,12 @@ export default function BookHub() {
           <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-ink-500">
             {refining ? (
               <>
-                <Loader2 size={11} className="anim-spin" />
+                <CircleNotch size={11} className="anim-spin" />
                 Checking road distances…
               </>
             ) : precise ? (
               <>
-                <Navigation size={11} className="text-brand-600" />
+                <NavigationArrow size={11} className="text-brand-600" />
                 Sorted by drive distance
               </>
             ) : reference ? (
@@ -284,7 +292,7 @@ export default function BookHub() {
             onClick={() => setSide('destination')}
             className="pressable mt-4 flex w-full items-center justify-center gap-2 rounded-(--radius-md) border border-ink-200 bg-white py-3.5 text-[13.5px] font-bold text-ink-700"
           >
-            <Navigation size={15} />
+            <NavigationArrow size={15} />
             Now pick the collection hub
           </button>
         )}

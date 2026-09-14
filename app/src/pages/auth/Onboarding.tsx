@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowRight, IndianRupee, ShieldCheck, Zap } from 'lucide-react'
+import { ArrowRight, CurrencyInr, ShieldCheck, Lightning } from '@phosphor-icons/react'
 import { Screen } from '@/components/layout/Screen'
 import { Button } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -9,10 +9,10 @@ import { useApp } from '@/lib/store'
 
 const SLIDES = [
   {
-    icon: Zap,
+    icon: Lightning,
     eyebrow: 'Same-day, not five-day',
     title: 'Your parcel rides with someone already going there',
-    body: 'Crores of cars drive between cities every day with an empty boot. DikkiConnect matches your parcel to one of them — so Bangalore to Mysore takes hours, not days.',
+    body: 'Crores of cars drive between cities every day with an empty boot. Stowza matches your parcel to one of them — so Bangalore to Mysore takes hours, not days.',
     art: <ArtRoute />,
   },
   {
@@ -23,7 +23,7 @@ const SLIDES = [
     art: <ArtCustody />,
   },
   {
-    icon: IndianRupee,
+    icon: CurrencyInr,
     eyebrow: 'Half the courier price',
     title: 'Cheaper for you, extra income for the driver',
     body: 'The boot space was going to travel empty anyway. That is why it costs less than a courier — and why travelers earn on a drive they were making regardless.',
@@ -234,7 +234,7 @@ function ArtSavings() {
       {/* dikkiconnect bar */}
       <rect x="52" y="112" width="86" height="34" rx="10" fill="#1650e0" />
       <text x="64" y="134" fill="#fff" fontSize="12" fontWeight="800">
-        DikkiConnect · ₹189
+        Stowza · ₹189
       </text>
       <text x="148" y="134" fill="#1650e0" fontSize="11" fontWeight="800">
         Same day

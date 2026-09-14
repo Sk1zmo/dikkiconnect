@@ -185,6 +185,89 @@ export function useInView<T extends HTMLElement>(rootMargin = '0px 0px -10% 0px'
   return { ref, inView }
 }
 
+/**
+ * The state of the line: offline, slow, or just recovered.
+ *
+ * "Slow" is the Network Information API where it exists (Android WebView
+ * and Chrome have it; iOS does not) — 2G-class effective type, a round trip
+ * over a second, or the data saver on. Where it does not exist the flag
+ * simply never trips, which is the right failure. "Just back" holds for two
+ * seconds after a reconnect so the recovery is seen and then gets out of
+ * the way.
+ */
+export function useConnection() {
+  const online = useOnline()
+  const [slow, setSlow] = useState(false)
+  const [justBack, setJustBack] = useState(false)
+  const wasOffline = useRef(false)
+
+  useEffect(() => {
+    type Conn = {
+      effectiveType?: string
+      rtt?: number
+      saveData?: boolean
+      addEventListener?: (t: string, f: () => void) => void
+      removeEventListener?: (t: string, f: () => void) => void
+    }
+    const conn = (navigator as Navigator & { connection?: Conn }).connection
+    if (!conn) return
+    const read = () =>
+      setSlow(
+        conn.effectiveType === 'slow-2g' ||
+          conn.effectiveType === '2g' ||
+          (conn.rtt ?? 0) > 1000 ||
+          Boolean(conn.saveData),
+      )
+    read()
+    conn.addEventListener?.('change', read)
+    return () => conn.removeEventListener?.('change', read)
+  }, [])
+
+  useEffect(() => {
+    if (!online) {
+      wasOffline.current = true
+      return
+    }
+    if (!wasOffline.current) return
+    wasOffline.current = false
+    setJustBack(true)
+    const t = setTimeout(() => setJustBack(false), 2200)
+    return () => clearTimeout(t)
+  }, [online])
+
+  return { online, slow: online && slow, justBack }
+}
+
+/**
+ * True once the service worker has installed a newer build behind this one.
+ * index.html registers the worker; it posts nothing, so we watch the
+ * registration for a fresh `installed` worker while a controller exists —
+ * which is exactly "an update is waiting", not "first install".
+ */
+export function useUpdateReady() {
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return
+    let cancelled = false
+    navigator.serviceWorker.getRegistration().then((reg) => {
+      if (!reg || cancelled) return
+      const watch = (w: ServiceWorker | null) => {
+        if (!w) return
+        w.addEventListener('statechange', () => {
+          if (w.state === 'installed' && navigator.serviceWorker.controller) setReady(true)
+        })
+      }
+      watch(reg.installing)
+      reg.addEventListener('updatefound', () => watch(reg.installing))
+      if (reg.waiting && navigator.serviceWorker.controller) setReady(true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  return ready
+}
+
 /** Browser online/offline — powers the offline banner. */
 export function useOnline() {
   const [online, setOnline] = useState(() => navigator.onLine)

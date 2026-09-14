@@ -1,16 +1,16 @@
 import {
   Archive,
-  Box,
+  Cube,
   FileText,
   Gift,
   Package,
   Pill,
-  Shirt,
-  Smartphone,
-  UtensilsCrossed,
+  TShirt,
+  DeviceMobile,
+  ForkKnife,
   Wrench,
-  type LucideIcon,
-} from 'lucide-react'
+  type Icon as LucideIcon,
+} from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -28,9 +28,9 @@ import { cn } from '@/lib/cn'
 
 const CATEGORY: Record<string, LucideIcon> = {
   documents: FileText,
-  electronics: Smartphone,
-  clothing: Shirt,
-  food: UtensilsCrossed,
+  electronics: DeviceMobile,
+  clothing: TShirt,
+  food: ForkKnife,
   medicine: Pill,
   gifts: Gift,
   spares: Wrench,
@@ -39,17 +39,17 @@ const CATEGORY: Record<string, LucideIcon> = {
 
 /** Size is one idea — how much volume — so it reads as one glyph growing. */
 const SIZE: Record<string, LucideIcon> = {
-  S: Box,
+  S: Cube,
   M: Package,
   L: Archive,
 }
 
 export function CategoryIcon({ id, className }: { id: string; className?: string }) {
   const Icon = CATEGORY[id] ?? Package
-  return <Icon aria-hidden strokeWidth={1.75} className={cn('size-[19px]', className)} />
+  return <Icon aria-hidden className={cn('size-[19px]', className)} />
 }
 
 export function SizeIcon({ id, className }: { id: string; className?: string }) {
   const Icon = SIZE[id] ?? Package
-  return <Icon aria-hidden strokeWidth={1.75} className={cn('size-[21px]', className)} />
+  return <Icon aria-hidden className={cn('size-[21px]', className)} />
 }

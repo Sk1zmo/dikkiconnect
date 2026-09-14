@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronRight } from 'lucide-react'
+import { CaretRight } from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 
 /* ═══ Divider ══════════════════════════════════════════════════════════════ */
@@ -79,7 +79,7 @@ export function ListRow({
         </span>
       )}
       {trailing}
-      {chevron && <ChevronRight size={17} className="shrink-0 text-ink-300" />}
+      {chevron && <CaretRight size={17} className="shrink-0 text-ink-300" />}
     </>
   )
 

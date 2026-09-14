@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, Keyboard, Package, X } from 'lucide-react'
+import { CheckCircle, Keyboard, Package, X } from '@phosphor-icons/react'
 import { Screen } from '@/components/layout/Screen'
 import { Button, Field, IconButton, Segmented, Sheet, useToast } from '@/components/ui'
 import { ScannerViewfinder } from '@/components/viz/Scanner'
@@ -100,7 +100,7 @@ export default function TravelerScan() {
             block
             size="lg"
             onClick={() => navigate(`/traveler/handoff/${mode}`)}
-            icon={<CheckCircle2 size={18} />}
+            icon={<CheckCircle size={18} />}
           >
             Continue to OTP
           </Button>

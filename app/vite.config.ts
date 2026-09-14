@@ -17,6 +17,7 @@ function stripPwaTags() {
       return html
         .replace(/\s*<link rel="manifest"[^>]*>/g, '')
         .replace(/\s*<link rel="apple-touch-icon"[^>]*>/g, '')
+        .replace(/\s*<link rel="preload" href="[^"]*hero\.webp"[^>]*>/g, '')
         .replace(/\s*<script>[\s\S]*?serviceWorker[\s\S]*?<\/script>/g, '')
     },
   }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Headphones, Paperclip, Phone, Send, ShieldCheck } from 'lucide-react'
+import { Headphones, Paperclip, Phone, PaperPlaneTilt, ShieldCheck } from '@phosphor-icons/react'
 import { Screen, TopBar } from '@/components/layout/Screen'
 import { Card, DotLoader, IconButton, LiveDot, Note, Skeleton } from '@/components/ui'
 import { SUPPORT_THREAD } from '@/lib/data'
@@ -61,7 +61,7 @@ export default function Support() {
       <TopBar
         back
         bordered
-        title="DikkiConnect Support"
+        title="Stowza Support"
         subtitle="Typically replies in 2 minutes"
         action={<IconButton icon={<Phone size={17} />} label="Call support" tone="solid" size={38} />}
       />
@@ -74,7 +74,7 @@ export default function Support() {
         </div>
 
         <Note tone="neutral" icon={<ShieldCheck size={14} />} className="mb-4">
-          Never share OTPs, card numbers or your Aadhaar in chat. DikkiConnect agents will never ask.
+          Never share OTPs, card numbers or your Aadhaar in chat. Stowza agents will never ask.
         </Note>
 
         {loading ? (
@@ -178,7 +178,7 @@ export default function Support() {
             aria-label="Send message"
             className="pressable-sm grid size-11 shrink-0 place-items-center rounded-full bg-brand-600 text-white shadow-(--shadow-brand-sm) disabled:opacity-40"
           >
-            <Send size={17} />
+            <PaperPlaneTilt size={17} />
           </button>
         </div>
         <button

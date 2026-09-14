@@ -42,15 +42,15 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
   const mail = await sendMail(
     id.value,
-    'DikkiConnect delivery test',
+    'Stowza delivery test',
     `<!doctype html><html><body style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;padding:24px;">
       <h2 style="margin:0 0 8px;color:#101a38;">Delivery is working</h2>
       <p style="margin:0;color:#5b6884;line-height:1.6;">
-        This is a test from the DikkiConnect operations page. If you can read it, verification
+        This is a test from the Stowza operations page. If you can read it, verification
         codes will reach this address. Sent via <b>${mailProvider()}</b>.
       </p>
     </body></html>`,
-    `Delivery is working. This is a test from the DikkiConnect operations page, sent via ${mailProvider()}.`,
+    `Delivery is working. This is a test from the Stowza operations page, sent via ${mailProvider()}.`,
   )
 
   await record({

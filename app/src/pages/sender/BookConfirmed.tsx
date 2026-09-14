@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Clock, Home, MapPin, QrCode, Share2 } from 'lucide-react'
+import { Clock, House, MapPin, QrCode, ShareNetwork } from '@phosphor-icons/react'
 import { Screen, ScreenBody } from '@/components/layout/Screen'
 import { ActionBar, Button, Card, KeyValue, Note, OtpDisplay } from '@/components/ui'
 import { Confetti } from '@/components/viz/Illustrations'
@@ -9,6 +9,7 @@ import { LottieMark } from '@/components/brand/LottieMark'
 import { hubById, otpFor } from '@/lib/data'
 import { inr, shortDate } from '@/lib/format'
 import { useApp } from '@/lib/store'
+import { DropOffCountdown, NotifyAsk } from '@/components/domain/Confirm'
 
 /** Booking receipt + the drop-off OTP (checkpoint 1 of the custody chain). */
 export default function BookConfirmed() {
@@ -60,8 +61,11 @@ export default function BookConfirmed() {
             <p className="tabular mt-3 inline-block rounded-full bg-ink-100 px-3.5 py-1.5 text-[13px] font-extrabold text-ink-800">
               {parcel.id}
             </p>
+            {!isP2P && <DropOffCountdown bookedAt={parcel.timeline[0]?.at ?? undefined} />}
           </motion.div>
         </div>
+
+        <NotifyAsk />
 
         {/* Drop-off OTP */}
         <Card className="border-brand-100 bg-brand-50/60">
@@ -80,7 +84,7 @@ export default function BookConfirmed() {
         <Card className="mt-3">
           <div className="flex items-start gap-3">
             <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-50 text-brand-600">
-              {isP2P ? <Home size={18} /> : <MapPin size={18} />}
+              {isP2P ? <House size={18} /> : <MapPin size={18} />}
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-bold tracking-wide text-ink-400 uppercase">
@@ -127,7 +131,7 @@ export default function BookConfirmed() {
           <Button variant="outline" onClick={() => done(`/sender/qr/${parcel.id}`)} icon={<QrCode size={17} />}>
             Show QR
           </Button>
-          <Button variant="outline" icon={<Share2 size={17} />}>
+          <Button variant="outline" icon={<ShareNetwork size={17} />}>
             Share details
           </Button>
         </div>

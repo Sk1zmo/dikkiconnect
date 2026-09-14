@@ -2,13 +2,13 @@ import { useState } from 'react'
 import {
   Check,
   CreditCard,
-  Landmark,
+  Bank,
   Lock,
   Plus,
-  Smartphone,
-  Trash2,
+  DeviceMobile,
+  Trash,
   Wallet as WalletIcon,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   Badge,
@@ -39,7 +39,7 @@ const INITIAL: Method[] = [
   { id: 'm3', kind: 'bank', label: 'ICICI •••• 8890', sub: 'Savings · for refunds' },
 ]
 
-const ICONS = { upi: Smartphone, card: CreditCard, bank: Landmark }
+const ICONS = { upi: DeviceMobile, card: CreditCard, bank: Bank }
 
 export default function PaymentMethods() {
   const toast = useToast()
@@ -74,7 +74,7 @@ export default function PaymentMethods() {
             <WalletIcon size={20} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[14px] font-bold text-ink-900">DikkiConnect Wallet</p>
+            <p className="text-[14px] font-bold text-ink-900">Stowza Wallet</p>
             <p className="mt-0.5 text-[12px] text-ink-500">Fastest checkout, instant refunds</p>
           </div>
           <p className="tabular shrink-0 text-[16px] font-extrabold text-brand-700">
@@ -115,7 +115,7 @@ export default function PaymentMethods() {
                           aria-label={`Remove ${m.label}`}
                           className="pressable-sm grid size-8 place-items-center rounded-full text-ink-400 hover:bg-danger-50 hover:text-danger-600"
                         >
-                          <Trash2 size={15} />
+                          <Trash size={15} />
                         </button>
                       </>
                     )}
@@ -131,12 +131,12 @@ export default function PaymentMethods() {
         </Button>
 
         <Note tone="neutral" icon={<Lock size={15} />} className="mt-6" title="How we store this">
-          DikkiConnect never stores card numbers or UPI PINs. Cards are tokenised by our PCI-DSS compliant
+          Stowza never stores card numbers or UPI PINs. Cards are tokenised by our PCI-DSS compliant
           gateway as required by RBI, and we only keep the last four digits.
         </Note>
 
         <Note tone="brand" className="mt-3" title="Refunds">
-          Cancellations refund to your DikkiConnect wallet instantly, or back to the original method in 3–5
+          Cancellations refund to your Stowza wallet instantly, or back to the original method in 3–5
           working days if you prefer.
         </Note>
       </ScreenBody>
@@ -154,9 +154,9 @@ export default function PaymentMethods() {
       >
         <div className="mb-5 flex flex-col gap-2.5">
           {[
-            { icon: Smartphone, label: 'UPI ID', sub: 'name@bank', active: true },
+            { icon: DeviceMobile, label: 'UPI ID', sub: 'name@bank', active: true },
             { icon: CreditCard, label: 'Debit / credit card', sub: 'Visa, Mastercard, RuPay' },
-            { icon: Landmark, label: 'Bank account', sub: 'For payouts and refunds' },
+            { icon: Bank, label: 'Bank account', sub: 'For payouts and refunds' },
           ].map((o, i) => {
             const Icon = o.icon
             return (
@@ -184,7 +184,7 @@ export default function PaymentMethods() {
           placeholder="name@okhdfcbank"
           value={newUpi}
           onChange={(e) => setNewUpi(e.target.value)}
-          prefix={<Smartphone size={15} />}
+          prefix={<DeviceMobile size={15} />}
           hint="We'll send ₹1 to verify and refund it immediately."
         />
       </Sheet>
@@ -198,7 +198,7 @@ export default function PaymentMethods() {
           setRemoving(null)
         }}
         tone="danger"
-        icon={<Trash2 size={26} />}
+        icon={<Trash size={26} />}
         title="Remove this method?"
         body={removing?.label}
         confirmLabel="Remove"

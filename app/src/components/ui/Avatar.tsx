@@ -1,4 +1,4 @@
-import { Star } from 'lucide-react'
+import { Star } from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 import { initials as toInitials } from '@/lib/format'
 

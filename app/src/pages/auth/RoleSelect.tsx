@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRight, Building2, Car, Package, Users } from 'lucide-react'
+import { ArrowRight, Buildings, Car, Package, Users } from '@phosphor-icons/react'
 import { Screen } from '@/components/layout/Screen'
 import { Button } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -43,7 +43,7 @@ const ROLES: Array<{
   },
   {
     id: 'hub',
-    icon: Building2,
+    icon: Buildings,
     title: 'Run a hub',
     body: 'Manage intake, handoffs and inventory at your shop',
     home: '/hub',
@@ -52,7 +52,7 @@ const ROLES: Array<{
 ]
 
 /**
- * Role picker. DikkiConnect is one account across four apps — the PRD's whole
+ * Role picker. Stowza is one account across four apps — the PRD's whole
  * economics depend on a single driver-acquisition funnel serving both lines.
  */
 export default function RoleSelect() {
@@ -80,7 +80,7 @@ export default function RoleSelect() {
             Welcome, {user.name.split(' ')[0]}
           </p>
           <h1 className="text-display mt-2 text-[28px] leading-[1.14] font-extrabold text-ink-900">
-            What brings you to DikkiConnect?
+            What brings you to Stowza?
           </h1>
           <p className="mt-2.5 text-[14.5px] leading-[1.55] text-ink-500">
             Pick one to start. You can switch any time from your profile — it&apos;s all one account.

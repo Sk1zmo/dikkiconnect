@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Headphones, MessageCircle } from 'lucide-react'
+import { Headphones } from '@phosphor-icons/react'
 import { Screen, ScreenBody, LargeTitle } from '@/components/layout/Screen'
 import { Avatar, Card, EmptyState, SkeletonRow } from '@/components/ui'
 import { RIDE_CHAT, SUPPORT_THREAD, TRIPS, travelerById } from '@/lib/data'
@@ -37,7 +37,7 @@ export default function Messages() {
 
   return (
     <Screen>
-      <LargeTitle title="Messages" subtitle="Drivers and DikkiConnect support" className="pt-safe" />
+      <LargeTitle title="Messages" subtitle="Drivers and Stowza support" className="pt-safe" />
 
       <ScreenBody>
         {loading ? (
@@ -48,7 +48,7 @@ export default function Messages() {
           </Card>
         ) : THREADS.length === 0 ? (
           <EmptyState
-            icon={<MessageCircle size={26} />}
+            kind="messages"
             title="No conversations yet"
             body="Once you book a ride you can message the driver here."
             actionLabel="Find a ride"
@@ -58,7 +58,7 @@ export default function Messages() {
           <Card padded={false}>
             {THREADS.map((t, i) => {
               const driver = travelerById(t.travelerId ?? undefined)
-              const name = t.kind === 'support' ? 'DikkiConnect Support' : (driver?.name ?? 'Driver')
+              const name = t.kind === 'support' ? 'Stowza Support' : (driver?.name ?? 'Driver')
               return (
                 <button
                   key={t.id}

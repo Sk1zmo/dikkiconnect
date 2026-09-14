@@ -30,7 +30,7 @@ const SMTP_PASS = process.env.SMTP_PASS
 
 const FROM =
   process.env.MAIL_FROM ??
-  (SMTP_USER ? `DikkiConnect <${SMTP_USER}>` : 'DikkiConnect <onboarding@resend.dev>')
+  (SMTP_USER ? `Stowza <${SMTP_USER}>` : 'Stowza <onboarding@resend.dev>')
 
 export function mailProvider(): 'resend' | 'smtp' | null {
   if (KEY) return 'resend'
@@ -89,10 +89,10 @@ export async function sendMail(
 
 /** The verification email. Plain, high-contrast, and legible in any client. */
 export function otpEmail(code: string, minutes: number) {
-  const subject = `${code} is your DikkiConnect code`
+  const subject = `${code} is your Stowza code`
 
   const text = [
-    `Your DikkiConnect verification code is ${code}.`,
+    `Your Stowza verification code is ${code}.`,
     ``,
     `It expires in ${minutes} minutes and can only be used once.`,
     `If you didn't ask for this, you can ignore this email — nobody can sign in without the code.`,
@@ -105,7 +105,7 @@ export function otpEmail(code: string, minutes: number) {
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:440px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 2px 10px rgba(16,26,56,.07);">
         <tr><td style="background:#0b0e15;padding:22px 28px;">
-          <span style="color:#ffffff;font-size:17px;font-weight:800;letter-spacing:-.02em;">DikkiConnect</span>
+          <span style="color:#ffffff;font-size:17px;font-weight:800;letter-spacing:-.02em;">Stowza</span>
         </td></tr>
         <tr><td style="padding:32px 28px 8px;">
           <p style="margin:0 0 6px;font-size:19px;font-weight:800;color:#101a38;">Your verification code</p>
@@ -125,7 +125,7 @@ export function otpEmail(code: string, minutes: number) {
         <tr><td style="padding:24px 28px 28px;">
           <div style="height:1px;background:#e7ecf5;margin-bottom:16px;"></div>
           <p style="margin:0;font-size:11.5px;line-height:1.6;color:#98a2b6;">
-            DikkiConnect — intercity parcel delivery and cost-shared travel.
+            Stowza — intercity parcel delivery and cost-shared travel.
           </p>
         </td></tr>
       </table>
@@ -138,15 +138,15 @@ export function otpEmail(code: string, minutes: number) {
 
 /** Sent once, when an account is first created. */
 export function welcomeEmail(name: string) {
-  const subject = 'Your DikkiConnect account is ready'
-  const text = `Welcome to DikkiConnect, ${name}.\n\nYour account is live. Sign in any time with your mobile number or this email address — we'll send a fresh code each time. There is no password to remember or lose.`
+  const subject = 'Your Stowza account is ready'
+  const text = `Welcome to Stowza, ${name}.\n\nYour account is live. Sign in any time with your mobile number or this email address — we'll send a fresh code each time. There is no password to remember or lose.`
   const html = `<!doctype html>
 <html><body style="margin:0;padding:0;background:#f4f6fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;padding:32px 16px;">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:440px;background:#ffffff;border-radius:18px;overflow:hidden;">
         <tr><td style="background:#0b0e15;padding:22px 28px;">
-          <span style="color:#ffffff;font-size:17px;font-weight:800;letter-spacing:-.02em;">DikkiConnect</span>
+          <span style="color:#ffffff;font-size:17px;font-weight:800;letter-spacing:-.02em;">Stowza</span>
         </td></tr>
         <tr><td style="padding:32px 28px;">
           <p style="margin:0 0 6px;font-size:19px;font-weight:800;color:#101a38;">Welcome, ${name}</p>

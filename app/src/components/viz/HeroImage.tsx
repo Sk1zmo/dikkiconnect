@@ -3,19 +3,22 @@ import { cn } from '@/lib/cn'
 import { HeroScene } from './HeroScene'
 
 /**
- * The launch/login hero artwork.
+ * The hero artwork — one file, `app/public/hero.webp`, behind the landing
+ * screen and the login banner. (The launch screen has its own picture; see
+ * components/brand/LaunchScreen.)
  *
- * Drop a file into `app/public/` named `hero.jpg` (or .png / .webp) and it is
- * used everywhere automatically — splash and login both render this component.
- * Candidates are tried in order and the first that loads wins; if none exist
- * the drawn scene stands in, so the screen is never broken or blank.
+ * Replace that file to change both at once. If the WebP is missing the other
+ * names are tried in order, and if none exist the drawn scene stands in, so
+ * the screen is never broken or blank.
  *
  * Sizing note: the art is cropped with `object-cover`, so anything roughly
  * portrait works. `focus` shifts which part survives the crop — the splash
  * keeps the horizon high so the headline sits over sky, the login banner keeps
  * the top.
  */
-const CANDIDATES = ['/hero.jpg', '/hero.jpeg', '/hero.png', '/hero.webp', '/login-hero.jpg']
+export const HERO_ART = '/hero.webp'
+
+const CANDIDATES = [HERO_ART, '/hero.jpg', '/hero.jpeg', '/hero.png', '/login-hero.jpg']
 
 export function HeroImage({
   className,

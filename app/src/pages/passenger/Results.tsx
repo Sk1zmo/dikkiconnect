@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { SlidersHorizontal, Users } from 'lucide-react'
+import { SlidersHorizontal, Users } from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   Card,
@@ -10,14 +10,15 @@ import {
   IconButton,
   Note,
   Sheet,
+  MarkLoader,
   SkeletonList,
   Switch,
 } from '@/components/ui'
 import { TripCard } from '@/components/domain/Cards'
-import { EmptyRoadArt } from '@/components/viz/Illustrations'
 import { cityName, travelerById } from '@/lib/data'
 import { dayDate, inr } from '@/lib/format'
 import { useLoaded } from '@/lib/hooks'
+import { LOADING } from '@/lib/copy'
 import { useTrips } from '@/lib/store'
 
 type SortKey = 'earliest' | 'cheapest' | 'rating'
@@ -111,12 +112,18 @@ export default function RideResults() {
         )}
 
         {loading ? (
-          <SkeletonList count={3} />
+          <>
+            <p className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-ink-600" role="status">
+              <MarkLoader size={18} />
+              {LOADING.rides.line}…
+            </p>
+            <SkeletonList count={3} />
+          </>
         ) : visible.length === 0 ? (
           <Card padded={false}>
             <EmptyState
-              art={<EmptyRoadArt />}
-              title="No rides match"
+              kind="search-results"
+              title="Nobody is driving that yet"
               body={`Nobody is driving ${cityName(from)} → ${cityName(to)} with ${seatsWanted} free seat${seatsWanted > 1 ? 's' : ''} under your filters. Try another date or widen the range.`}
               actionLabel="Adjust filters"
               onAction={() => setFiltersOpen(true)}

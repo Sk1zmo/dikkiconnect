@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { X } from 'lucide-react'
+import { X } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 import { useScrollLock } from '@/lib/hooks'
@@ -81,7 +81,7 @@ export function Sheet({
                     aria-label="Close"
                     className="pressable-sm -mt-1 grid size-8 shrink-0 place-items-center rounded-full bg-ink-100 text-ink-500"
                   >
-                    <X size={16} strokeWidth={2.6} />
+                    <X size={16} />
                   </button>
                 )}
               </div>

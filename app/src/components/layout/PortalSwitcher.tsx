@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Building2, Car, Check, ChevronsUpDown, Package, Users } from 'lucide-react'
+import { Buildings, Car, Check, CaretUpDown, Package, Users } from '@phosphor-icons/react'
 import { Sheet } from '@/components/ui'
 import { useApp } from '@/lib/store'
 import type { Role } from '@/lib/types'
@@ -40,7 +40,7 @@ export const PORTALS: Array<{
   },
   {
     id: 'hub',
-    icon: Building2,
+    icon: Buildings,
     label: 'Hub manager',
     blurb: 'Intake, handoffs, inventory and settlement',
     home: '/hub',
@@ -84,14 +84,14 @@ export function PortalSwitcher({ tone = 'onBrand' }: { tone?: 'onBrand' | 'light
       >
         <Icon size={13} />
         {current.label}
-        <ChevronsUpDown size={13} className="opacity-70" />
+        <CaretUpDown size={13} className="opacity-70" />
       </button>
 
       <Sheet
         open={open}
         onClose={() => setOpen(false)}
         title="Switch portal"
-        subtitle="One DikkiConnect account, four apps. Your data follows you."
+        subtitle="One Stowza account, four apps. Your data follows you."
       >
         <div className="flex flex-col gap-2.5">
           {PORTALS.map((p) => {

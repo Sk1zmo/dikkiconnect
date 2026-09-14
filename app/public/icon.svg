@@ -1,11 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="512" height="512">
-  <rect width="48" height="48" rx="11" fill="#1650e0" />
-  <path
-    fill-rule="evenodd"
-    clip-rule="evenodd"
-    d="M9 6.5h11.5C31.8 6.5 40 14.3 40 24s-8.2 17.5-19.5 17.5H9V6.5Zm8.6 8.2v18.6h2.9c5.9 0 10-3.9 10-9.3s-4.1-9.3-10-9.3h-2.9Z"
-    fill="#fff"
-  />
-  <circle cx="13.3" cy="15.6" r="2.9" fill="#1650e0" />
-  <circle cx="33.4" cy="31.6" r="2.9" fill="#1650e0" />
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+    <defs><linearGradient id="t" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1d5cf2"/><stop offset="1" stop-color="#0e3aa8"/></linearGradient></defs>
+    <rect width="512" height="512" rx="112" fill="url(#t)"/>
+    <g transform="translate(102.4 102.4) scale(6.3999999999999995)">
+      <path d="M36 9.5H14.5a5.75 5.75 0 0 0 0 11.5h17a5.75 5.75 0 0 1 0 11.5H9" fill="none" stroke="#fff" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="39.5" cy="38.5" r="4.25" fill="#96b8ff"/>
+    </g></svg>

@@ -38,7 +38,7 @@ export interface UpiPayee {
  */
 export const DIKKI_PAYEE: UpiPayee = {
   vpa: import.meta.env.VITE_UPI_VPA ?? 'dikkiconnect@okaxis',
-  name: import.meta.env.VITE_UPI_NAME ?? 'DikkiConnect',
+  name: import.meta.env.VITE_UPI_NAME ?? 'Stowza',
 }
 
 export type UpiApp = 'gpay' | 'phonepe' | 'paytm' | 'bhim' | 'any'

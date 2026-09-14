@@ -1,12 +1,12 @@
 {
-  "name": "DikkiConnect",
-  "short_name": "DikkiConnect",
-  "description": "Intercity parcel delivery using the empty boot space of cars already making your route.",
+  "name": "Stowza",
+  "short_name": "Stowza",
+  "description": "Intercity parcel delivery in the empty boot space of cars already making your route, plus cost-shared carpooling.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#1650e0",
+  "background_color": "#071231",
   "theme_color": "#1650e0",
   "icons": [
     {

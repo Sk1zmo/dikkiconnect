@@ -1,15 +1,15 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import {
-  Ban,
+  Prohibit,
   Copy,
   Headphones,
-  MessageCircle,
+  ChatCircle,
   Phone,
   QrCode,
-  Share2,
+  ShareNetwork,
   ShieldCheck,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -103,7 +103,7 @@ export default function Tracking() {
           action={
             <>
               <IconButton
-                icon={<Share2 size={17} />}
+                icon={<ShareNetwork size={17} />}
                 label="Share tracking"
                 tone="onBrand"
                 onClick={() => toast.info('Link copied', 'Anyone with it can follow this parcel.')}
@@ -180,7 +180,7 @@ export default function Tracking() {
                 </div>
               </div>
               <div className="flex shrink-0 gap-2">
-                <IconButton icon={<MessageCircle size={16} />} label="Message traveler" size={36} />
+                <IconButton icon={<ChatCircle size={16} />} label="Message traveler" size={36} />
                 <IconButton icon={<Phone size={16} />} label="Call traveler" tone="solid" size={36} />
               </div>
             </div>
@@ -233,7 +233,7 @@ export default function Tracking() {
             variant={canCancel ? 'danger' : 'outline'}
             disabled={!canCancel}
             onClick={() => setCancelOpen(true)}
-            icon={<Ban size={16} />}
+            icon={<Prohibit size={16} />}
           >
             Cancel
           </Button>
@@ -294,11 +294,11 @@ export default function Tracking() {
           }, 1200)
         }}
         tone="danger"
-        icon={<Ban size={28} />}
+        icon={<Prohibit size={28} />}
         title="Cancel this booking?"
         body={
           <>
-            {inr(parcel.price)} will be refunded to your DikkiConnect wallet immediately. Your slot is
+            {inr(parcel.price)} will be refunded to your Stowza wallet immediately. Your slot is
             released.
           </>
         }

@@ -1,15 +1,15 @@
 import { useNavigate } from 'react-router-dom'
 import {
   Bell,
-  ChevronRight,
+  CaretRight,
   Clock,
   Headphones,
   MapPin,
   Package,
-  Search,
+  MagnifyingGlass,
   Ticket,
-  TrendingDown,
-} from 'lucide-react'
+  TrendDown,
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody, BrandHeader } from '@/components/layout/Screen'
 import { PortalSwitcher } from '@/components/layout/PortalSwitcher'
 import {
@@ -22,7 +22,6 @@ import {
   SkeletonList,
 } from '@/components/ui'
 import { ParcelCard, PromoBanner } from '@/components/domain/Cards'
-import { EmptyBoxArt } from '@/components/viz/Illustrations'
 import { HubMap } from '@/components/viz/Map'
 import { useApp } from '@/lib/store'
 import { useLoaded } from '@/lib/hooks'
@@ -82,14 +81,14 @@ export default function SenderHome() {
           </div>
         </div>
 
-        {/* Search entry into booking */}
+        {/* MagnifyingGlass entry into booking */}
         <button
           onClick={() => navigate('/sender/book')}
           className="pressable mt-5 flex w-full items-center gap-3 rounded-(--radius-lg) bg-white/12 px-4 py-3.5 ring-1 ring-white/20 backdrop-blur-md"
         >
-          <Search size={17} className="shrink-0 text-white/70" />
+          <MagnifyingGlass size={17} className="shrink-0 text-white/70" />
           <span className="text-[14.5px] text-white/70">Where is your parcel headed?</span>
-          <ChevronRight size={16} className="ml-auto shrink-0 text-white/45" />
+          <CaretRight size={16} className="ml-auto shrink-0 text-white/45" />
         </button>
 
         {/* Quick actions */}
@@ -126,8 +125,8 @@ export default function SenderHome() {
           <Card className="py-2">
             <EmptyState
               compact
-              art={<EmptyBoxArt />}
-              title="Nothing in transit"
+              kind="parcels"
+              title="Nothing on the road yet"
               body="Book your first parcel and watch it move city to city in real time."
               actionLabel="Book a parcel"
               actionTo="/sender/book"
@@ -202,7 +201,7 @@ export default function SenderHome() {
         {/* Savings strip */}
         <Card className="mt-5 flex items-center gap-3.5 border-success-100 bg-success-50">
           <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-success-500/15 text-success-600">
-            <TrendingDown size={20} />
+            <TrendDown size={20} />
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[14px] font-bold text-success-800">

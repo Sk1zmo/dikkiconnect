@@ -7,6 +7,7 @@ import {
   newTimeline,
   otpFor,
   quote,
+  hubShort,
   resolveHub,
   type PriceBreakdown,
 } from './data'
@@ -31,6 +32,8 @@ import {
 } from './places'
 import type { LngLat } from './geo'
 import { useAuth } from './auth'
+import { parcelNotification, rideNotification, stamp } from './notifications'
+import { cancelScheduled, deliver, scheduleFor } from './push'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    App-wide state: session, the in-progress booking draft, wallet, parcels.
@@ -80,8 +83,9 @@ export const EMPTY_DRAFT: BookingDraft = {
   dropLandmark: '',
   pickupCoord: null,
   dropCoord: null,
-  fromCityId: 'blr',
-  toCityId: 'mys',
+  /* Empty on purpose: nothing is booked by default. See BookRoute. */
+  fromCityId: '',
+  toCityId: '',
   originHubId: null,
   destinationHubId: null,
   category: 'documents',
@@ -317,18 +321,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLastBookedId(id)
     if (draft.paymentMethod === 'wallet') setBalance((b) => Math.max(0, b - price.total))
 
-    setNotifications((n) => [
-      {
-        id: `n-${id}`,
-        title: 'Booking confirmed',
-        body: `${id} is booked. Drop it at your chosen hub within 24 hours.`,
-        at: now,
-        read: false,
-        kind: 'parcel',
-        href: `/sender/track/${id}`,
-      },
-      ...n,
-    ])
+    const booked = parcelNotification('booked', id, hubShort(parcel.originHubId))
+    if (booked) {
+      const item = stamp(booked, `n-${id}`, now)
+      setNotifications((n) => [item, ...n])
+      deliver(item)
+    }
+    /* The drop-off window is 24 hours. Two reminders from the OS, whether or
+       not the app is open: one with four hours left, one with one. Cancelled
+       by the hub's intake scan (see advanceParcel). */
+    if (draft.mode === 'hub') {
+      const hub = hubShort(parcel.originHubId)
+      const t0 = Date.parse(now)
+      scheduleFor(
+        new Date(t0 + 20 * 3_600_000),
+        stamp(
+          { kind: 'parcel', tier: 'contextual', title: 'Four hours left to drop it off', body: `${id} is still expected at ${hub}. After the window closes the slot is released.`, href: `/sender/qr/${id}` },
+          `n-${id}-remind-4h`,
+        ),
+      )
+      scheduleFor(
+        new Date(t0 + 23 * 3_600_000),
+        stamp(
+          { kind: 'parcel', tier: 'critical', title: 'One hour left', body: `${id} needs to be at ${hub} within the hour, or the booking lapses.`, href: `/sender/qr/${id}` },
+          `n-${id}-remind-1h`,
+        ),
+      )
+    }
 
     return id
   }, [account, draft, price.total, setParcels, setBalance, setNotifications])
@@ -373,20 +392,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }),
       )
 
-      const COPY: Partial<Record<ParcelStatus, { title: string; body: string }>> = {
-        at_origin_hub: { title: 'Parcel received at hub', body: `${id} is logged and waiting for a traveler.` },
-        assigned: { title: 'Traveler assigned', body: `${id} has been picked up by a verified traveler.` },
-        in_transit: { title: 'On the way', body: `${id} has left the origin hub.` },
-        at_destination_hub: { title: 'Ready for pickup', body: `${id} has arrived. Receiver OTP sent.` },
-        delivered: { title: 'Delivered', body: `${id} was collected. Delivery loop closed.` },
+      const draft = parcelNotification(to, id)
+      if (draft) {
+        const item = stamp(draft, `n-${id}-${to}`, now)
+        setNotifications((n) => [item, ...n])
+        deliver(item)
       }
-      const copy = COPY[to]
-      if (copy) {
-        setNotifications((n) => [
-          { id: `n-${id}-${to}`, ...copy, at: now, read: false, kind: 'parcel' as const, href: `/sender/track/${id}` },
-          ...n,
-        ])
-      }
+      if (to === 'at_origin_hub') void cancelScheduled([`n-${id}-remind-4h`, `n-${id}-remind-1h`])
     },
     [setParcels, setNotifications],
   )
@@ -452,27 +464,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
         },
         ...list,
       ])
-      setNotifications((n) => [
-        {
-          id: `n-${id}`,
-          title: 'Seat confirmed',
-          body: `${seats} seat${seats > 1 ? 's' : ''} booked. Your boarding OTP is ready.`,
-          at: new Date().toISOString(),
-          read: false,
-          kind: 'ride' as const,
-          href: `/passenger/boarding/${tripId}`,
-        },
-        ...n,
-      ])
+      const confirmed = rideNotification('upcoming', tripId)
+      if (confirmed) {
+        const item = stamp(confirmed, `n-${id}`)
+        setNotifications((n) => [item, ...n])
+        deliver(item)
+      }
       return id
     },
     [setTrips, setRideBookings, setNotifications],
   )
 
   const advanceRide = useCallback<AppState['advanceRide']>(
-    (id, to) =>
-      setRideBookings((list) => list.map((r) => (r.id === id ? { ...r, status: to } : r))),
-    [setRideBookings],
+    (id, to) => {
+      setRideBookings((list) => list.map((r) => (r.id === id ? { ...r, status: to } : r)))
+      const draft = rideNotification(to, id)
+      if (draft) {
+        const item = stamp(draft, `n-${id}-${to}`)
+        setNotifications((n) => [item, ...n])
+        deliver(item)
+      }
+    },
+    [setRideBookings, setNotifications],
   )
 
   const cancelRide = useCallback<AppState['cancelRide']>(

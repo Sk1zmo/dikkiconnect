@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Camera, Scale, ShieldCheck } from 'lucide-react'
+import { Camera, Scales, ShieldCheck } from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -166,7 +166,7 @@ export default function HubIntake() {
             </Card>
 
             <div className="mb-2 flex items-center gap-2">
-              <Scale size={15} className="text-ink-400" />
+              <Scales size={15} className="text-ink-400" />
               <p className="text-[12.5px] font-semibold text-ink-700">Actual weight on the scale</p>
             </div>
             <Counter
@@ -225,7 +225,7 @@ export default function HubIntake() {
               Enter the sender&apos;s OTP
             </h2>
             <p className="mt-2 text-[13.5px] leading-relaxed text-ink-500">
-              Ask them to show the 6-digit code on their DikkiConnect app. Entering it confirms you
+              Ask them to show the 6-digit code on their Stowza app. Entering it confirms you
               received exactly this parcel from this sender.
             </p>
 

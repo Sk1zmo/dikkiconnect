@@ -3,14 +3,14 @@ import {
   Armchair,
   Car,
   Cigarette,
-  Languages,
-  Luggage,
-  MessageCircle,
-  Music,
+  Translate,
+  Suitcase,
+  ChatCircle,
+  MusicNotes,
   PawPrint,
   ShieldCheck,
   Star,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -29,10 +29,10 @@ import { useTrip } from '@/lib/store'
 import { dayDate, inr, time } from '@/lib/format'
 
 const PREFERENCES = [
-  { icon: Music, label: 'Music welcome', ok: true },
+  { icon: MusicNotes, label: 'Music welcome', ok: true },
   { icon: Cigarette, label: 'No smoking', ok: false },
   { icon: PawPrint, label: 'Pets on request', ok: true },
-  { icon: Luggage, label: '1 cabin bag each', ok: true },
+  { icon: Suitcase, label: '1 cabin bag each', ok: true },
 ]
 
 const REVIEWS = [
@@ -144,7 +144,7 @@ export default function RideDetail() {
               </div>
               <VerifiedChip tier={driver.kycTier} className="mt-2" />
             </div>
-            <IconButton icon={<MessageCircle size={17} />} label="Message driver" />
+            <IconButton icon={<ChatCircle size={17} />} label="Message driver" />
           </div>
 
           <div className="mt-4 flex items-center gap-3 rounded-(--radius-md) bg-ink-50 p-3.5">
@@ -165,7 +165,7 @@ export default function RideDetail() {
           </div>
 
           <div className="mt-3 flex items-center gap-2 text-[12px] text-ink-500">
-            <Languages size={13} className="shrink-0 text-ink-400" />
+            <Translate size={13} className="shrink-0 text-ink-400" />
             Speaks {driver.languages.join(', ')}
           </div>
         </Card>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CreditCard, Landmark, Lock, Smartphone, Wallet as WalletIcon } from 'lucide-react'
+import { CreditCard, Bank, Lock, DeviceMobile, Wallet as WalletIcon } from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -20,6 +20,7 @@ import { UPI_APPS, buildUpiUrl, canPayByUpi, launchUpi, upiReference } from '@/l
 import { LottieMark } from '@/components/brand/LottieMark'
 import { useFakeProgress } from '@/lib/hooks'
 import { bookSteps } from './BookRoute'
+import { ERROR } from '@/lib/copy'
 
 
 
@@ -59,7 +60,7 @@ export default function BookPayment() {
       const req = {
         amount: price.total,
         reference,
-        note: `DikkiConnect parcel ${draft.fromCityId.toUpperCase()}-${draft.toCityId.toUpperCase()}`,
+        note: `Stowza parcel ${draft.fromCityId.toUpperCase()}-${draft.toCityId.toUpperCase()}`,
       }
       const result = await launchUpi(req, upiApp.id)
 
@@ -173,7 +174,7 @@ export default function BookPayment() {
           <RadioCard
             selected={draft.paymentMethod === 'upi'}
             onSelect={() => patchDraft({ paymentMethod: 'upi' })}
-            icon={<Smartphone size={18} />}
+            icon={<DeviceMobile size={18} />}
             title="UPI"
             subtitle="Google Pay, PhonePe, Paytm, BHIM"
           />
@@ -208,7 +209,7 @@ export default function BookPayment() {
             selected={draft.paymentMethod === 'wallet'}
             onSelect={() => !walletShort && patchDraft({ paymentMethod: 'wallet' })}
             icon={<WalletIcon size={18} />}
-            title="DikkiConnect Wallet"
+            title="Stowza Wallet"
             subtitle={
               walletShort
                 ? `Balance ${inr(balance)} — not enough for this booking`
@@ -228,7 +229,7 @@ export default function BookPayment() {
           <RadioCard
             selected={false}
             onSelect={() => toast.info('Net banking', 'Coming in the next release.')}
-            icon={<Landmark size={18} />}
+            icon={<Bank size={18} />}
             title="Net banking"
             subtitle="All major Indian banks"
             className="opacity-60"
@@ -236,7 +237,7 @@ export default function BookPayment() {
         </div>
 
         <Note tone="neutral" icon={<Lock size={15} />} className="mt-5">
-          Payments are processed over a PCI-DSS compliant gateway. DikkiConnect never stores your card or
+          Payments are processed over a PCI-DSS compliant gateway. Stowza never stores your card or
           UPI credentials.
         </Note>
 
@@ -278,10 +279,10 @@ export default function BookPayment() {
         <div className="flex flex-col gap-4 py-1">
           <div className="flex items-center gap-3.5 rounded-(--radius-md) border border-brand-100 bg-brand-50/60 p-4">
             <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-600 text-white">
-              <Smartphone size={19} />
+              <DeviceMobile size={19} />
             </span>
             <div className="min-w-0">
-              <p className="text-[14px] font-bold text-ink-900">{inr(price.total)} to DikkiConnect</p>
+              <p className="text-[14px] font-bold text-ink-900">{inr(price.total)} to Stowza</p>
               <p className="mt-0.5 text-[12px] text-ink-500">
                 Approve it in {upiApp.label}, then come back here.
               </p>
@@ -341,15 +342,14 @@ export default function BookPayment() {
         tone="danger"
         icon={<LottieMark name="payment-failed" size={92} />}
         plainIcon
-        title="Payment failed"
+        title={ERROR.payment.title}
         body={
           <>
-            Your bank declined the transaction. No money was deducted — if you see a debit it will
-            reverse within 3 working days.
+            {ERROR.payment.body} If you do see a debit, it reverses within 3 working days.
           </>
         }
-        confirmLabel="Try again"
-        cancelLabel="Change method"
+        confirmLabel={ERROR.payment.action}
+        cancelLabel={ERROR.payment.secondary}
       />
     </Screen>
   )

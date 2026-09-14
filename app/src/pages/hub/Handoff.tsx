@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Package, RefreshCw, ShieldCheck, Truck } from 'lucide-react'
+import { Package, ArrowsClockwise, ShieldCheck, Truck } from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -268,7 +268,7 @@ export default function HubHandoff() {
                     }}
                     className="pressable-sm inline-flex items-center gap-2 text-[13px] font-bold text-brand-600"
                   >
-                    <RefreshCw size={14} />
+                    <ArrowsClockwise size={14} />
                     Generate a new code
                   </button>
                 ) : (

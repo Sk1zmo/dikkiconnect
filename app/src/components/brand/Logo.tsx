@@ -1,10 +1,26 @@
+import { useId } from 'react'
 import { cn } from '@/lib/cn'
+import { BRAND } from '@/lib/brand'
 
-/**
- * The DikkiConnect mark — a forward double-chevron. The trailing arm is lighter
- * and set back, so the pair reads as motion rather than as a static arrow, and
- * echoes the route arrows used across tracking and trip cards.
- */
+/* ═══════════════════════════════════════════════════════════════════════════
+   The Stowza mark — a switchback road that spells an S, and the dot it is
+   heading for.
+
+   Three straight runs joined by two hairpins: a route drawn the way a map
+   draws one, with the parcel's destination sitting just past the last bend.
+   It is one stroke and one circle, which is what lets it hold up at 16px in a
+   tab bar and at 432px on a launcher. The stroke is the heavy part; the dot
+   is the accent, always the lighter blue, so it reads as "where to" and not
+   as a full stop.
+
+   The path is shared with `public/icon.svg`, the launcher icons and the
+   native launch assets — regenerate those (scripts/brand-icons.mjs) if it
+   ever changes here.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+export const MARK_PATH = 'M36 9.5H14.5a5.75 5.75 0 0 0 0 11.5h17a5.75 5.75 0 0 1 0 11.5H9'
+export const MARK_DOT = { cx: 39.5, cy: 38.5, r: 4.25 }
+
 export function LogoMark({
   size = 36,
   tone = 'gradient',
@@ -14,9 +30,11 @@ export function LogoMark({
   tone?: 'gradient' | 'white' | 'brand'
   className?: string
 }) {
-  const id = `dkc-mark-${tone}`
-  const lead = tone === 'white' ? '#ffffff' : tone === 'brand' ? '#1650e0' : `url(#${id})`
-  const trail = tone === 'white' ? '#ffffff' : tone === 'brand' ? '#1650e0' : '#7ba5ff'
+  /* One gradient per instance, not per tone: two marks of the same tone on a
+     page would otherwise share an id and the second silently paints black. */
+  const id = useId()
+  const stroke = tone === 'white' ? '#ffffff' : tone === 'brand' ? '#1650e0' : `url(#${id})`
+  const dot = tone === 'white' ? '#96b8ff' : tone === 'brand' ? '#3a68f5' : '#3a68f5'
 
   return (
     <svg
@@ -26,23 +44,24 @@ export function LogoMark({
       className={cn('shrink-0', className)}
       aria-hidden
     >
-      <defs>
-        <linearGradient id={id} x1="20" y1="5" x2="45" y2="43" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#7ba5ff" />
-          <stop offset="46%" stopColor="#1650e0" />
-          <stop offset="100%" stopColor="#0c2f92" />
-        </linearGradient>
-      </defs>
-
-      {/* Trailing arm — set back and lighter, so it reads as a motion trail */}
+      {tone === 'gradient' && (
+        <defs>
+          <linearGradient id={id} x1="8" y1="6" x2="40" y2="42" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#7ba5ff" />
+            <stop offset="50%" stopColor="#1650e0" />
+            <stop offset="100%" stopColor="#0c2f92" />
+          </linearGradient>
+        </defs>
+      )}
       <path
-        d="M3 11.5h9.8L23 24 12.8 36.5H3L13.2 24Z"
-        fill={trail}
-        opacity={tone === 'gradient' ? 1 : 0.5}
+        d={MARK_PATH}
+        fill="none"
+        stroke={stroke}
+        strokeWidth="7.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
-
-      {/* Leading arm */}
-      <path d="M21.5 6h11.9L45.5 24 33.4 42H21.5L33.6 24Z" fill={lead} />
+      <circle cx={MARK_DOT.cx} cy={MARK_DOT.cy} r={MARK_DOT.r} fill={dot} />
     </svg>
   )
 }
@@ -73,12 +92,12 @@ export function Logo({
         <LogoMark size={dims} tone={markTone ?? tone} />
         <span
           className={cn(
-            'text-display font-extrabold',
+            'text-display font-extrabold tracking-[-0.045em]',
             text,
             tone === 'white' ? 'text-white' : 'text-ink-900',
           )}
         >
-          DikkiConnect
+          {BRAND.name}
         </span>
       </span>
       {tagline && (
@@ -97,7 +116,7 @@ export function Logo({
   )
 }
 
-/** App-icon treatment — near-black squircle with the blue mark, like the icon. */
+/** App-icon treatment — near-black squircle with the mark, like the launcher icon. */
 export function LogoTile({ size = 56, className }: { size?: number; className?: string }) {
   return (
     <span
@@ -107,7 +126,7 @@ export function LogoTile({ size = 56, className }: { size?: number; className?: 
       )}
       style={{ width: size, height: size, borderRadius: size * 0.29 }}
     >
-      <LogoMark size={size * 0.58} tone="gradient" />
+      <LogoMark size={size * 0.6} tone="white" />
     </span>
   )
 }

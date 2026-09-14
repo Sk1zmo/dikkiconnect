@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import type { Map as MapLibreMap, LngLatBoundsLike } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { Layers, MapPin, Minus, Navigation, Plus } from 'lucide-react'
+import { Stack, MapPin, Minus, NavigationArrow, Plus } from '@phosphor-icons/react'
 import { IconButton } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import {
@@ -419,11 +419,11 @@ export function LiveMap({
           size={36}
           onClick={withMap((m) => m.zoomOut({ duration: 260 }))}
         />
-        <IconButton icon={<Layers size={16} />} label="Map layers" tone="glass" size={36} />
+        <IconButton icon={<Stack size={16} />} label="Map layers" tone="glass" size={36} />
       </div>
       <div className="absolute right-3 bottom-3 z-20">
         <IconButton
-          icon={<Navigation size={16} className="fill-current" />}
+          icon={<NavigationArrow size={16} className="fill-current" />}
           label="Recentre on me"
           tone="solid"
           size={40}

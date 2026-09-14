@@ -1,5 +1,6 @@
-import { Camera, Check, Images, MapPin, Smartphone } from 'lucide-react'
+import { Camera, Check, Images, MapPin, DeviceMobile } from '@phosphor-icons/react'
 import { LogoMark } from '@/components/brand/Logo'
+import { APP_VERSION, BRAND } from '@/lib/brand'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Download page.
@@ -20,7 +21,7 @@ import { LogoMark } from '@/components/brand/Logo'
        denied and a feature that then looks broken.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const APK = '/DikkiConnect.apk'
+const APK = '/Stowza.apk'
 
 const PERMISSIONS = [
   {
@@ -39,7 +40,7 @@ const PERMISSIONS = [
     body: 'To save a proof-of-condition photo at intake. Nothing is read from your library.',
   },
   {
-    icon: Smartphone,
+    icon: DeviceMobile,
     title: 'Network',
     body: 'To reach the API for sign-in and tracking. Granted at install on both platforms.',
   },
@@ -49,7 +50,7 @@ const ANDROID_STEPS = [
   'Download the APK using the button above.',
   'Open it. Android will warn that it is from an unknown source — that is expected for a pilot build, and is the same prompt every pre-release app produces.',
   'Tap Settings, allow installs from your browser, then go back and tap Install.',
-  'Open DikkiConnect and sign in with your email.',
+  'Open Stowza and sign in with your email.',
 ]
 
 export default function Download() {
@@ -60,7 +61,7 @@ export default function Download() {
         <header className="flex items-center gap-3">
           <LogoMark size={34} tone="brand" />
           <span className="text-display text-[22px] font-extrabold tracking-[-0.035em]">
-            DikkiConnect
+            Stowza
           </span>
         </header>
 
@@ -96,7 +97,7 @@ export default function Download() {
               will add you to the build.
             </p>
             <a
-              href="mailto:info.quantumbay@gmail.com?subject=DikkiConnect%20TestFlight"
+              href="mailto:info.quantumbay@gmail.com?subject=Stowza%20TestFlight"
               className="springy focus-ring mt-5 flex h-[52px] w-full items-center justify-center rounded-(--radius-md) border border-ink-300 px-5 text-[15px] font-semibold text-ink-900 hover:bg-ink-50"
             >
               Request a TestFlight invite
@@ -127,7 +128,7 @@ export default function Download() {
           {PERMISSIONS.map(({ icon: Icon, title, body }) => (
             <div key={title} className="bg-white p-5">
               <div className="flex items-center gap-2.5">
-                <Icon size={17} strokeWidth={1.9} className="text-ink-500" />
+                <Icon size={17} className="text-ink-500" />
                 <h3 className="text-[14px] font-bold">{title}</h3>
               </div>
               <p className="mt-1.5 text-[13px] leading-[1.55] text-ink-500">{body}</p>
@@ -136,13 +137,13 @@ export default function Download() {
         </div>
 
         <p className="mt-6 flex items-start gap-2.5 text-[13px] leading-[1.55] text-ink-500">
-          <Check size={16} strokeWidth={2.2} className="mt-0.5 shrink-0 text-ink-400" />
+          <Check size={16} className="mt-0.5 shrink-0 text-ink-400" />
           Each one is requested at the moment it is first needed, not in a wall at launch.
           Declining any of them leaves the rest of the app working.
         </p>
 
         <footer className="mt-20 border-t border-ink-200 pt-6 text-[12.5px] text-ink-400">
-          DikkiConnect 1.0.0 · pilot build · Bangalore to Mysore
+          {BRAND.name} {APP_VERSION} · pilot build · Bangalore to Mysore
         </footer>
       </div>
     </div>

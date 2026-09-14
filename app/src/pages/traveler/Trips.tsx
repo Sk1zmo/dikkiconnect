@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarClock, Navigation, Package, Plus, Users, X } from 'lucide-react'
+import { CalendarDots, NavigationArrow, Package, Plus, Users, X } from '@phosphor-icons/react'
 import { Screen, ScreenBody, LargeTitle } from '@/components/layout/Screen'
 import {
   Badge,
@@ -14,7 +14,6 @@ import {
   useToast,
 } from '@/components/ui'
 import { CapacityMeter, TripCard } from '@/components/domain/Cards'
-import { EmptyRoadArt } from '@/components/viz/Illustrations'
 import { compactInr, dayDate, inr, relative } from '@/lib/format'
 import { useLoaded } from '@/lib/hooks'
 import { useApp, useMe, useMyTrips, useTrips } from '@/lib/store'
@@ -87,7 +86,7 @@ export default function TravelerTrips() {
               <Stat label="Parcels" value="14" tone="brand" />
             </div>
             {mine.scheduled.length > 0 && (
-              <Note tone="brand" icon={<CalendarClock size={15} />} className="mb-4" title="Posted in advance">
+              <Note tone="brand" icon={<CalendarDots size={15} />} className="mb-4" title="Posted in advance">
                 {mine.scheduled.length} ride{mine.scheduled.length === 1 ? ' is' : 's are'} live for
                 passengers and parcel matching. Start one when you actually set off.
               </Note>
@@ -100,8 +99,8 @@ export default function TravelerTrips() {
         ) : list.length === 0 ? (
           <Card padded={false}>
             <EmptyState
-              art={<EmptyRoadArt />}
-              title={tab === 'upcoming' ? 'No rides posted yet' : 'No past trips yet'}
+              kind="trips"
+              title={tab === 'upcoming' ? 'You haven’t posted a trip' : 'No past trips yet'}
               body={
                 tab === 'upcoming'
                   ? 'Post a drive up to weeks ahead. It goes live straight away so seats and parcels fill before you leave.'
@@ -182,7 +181,7 @@ export default function TravelerTrips() {
                           className="pressable h-11 flex-[1.6] rounded-(--radius-md) bg-action text-[13.5px] font-bold text-white shadow-(--shadow-action) hover:bg-action-hover"
                         >
                           <span className="inline-flex items-center gap-1.5">
-                            <Navigation size={15} /> Start trip
+                            <NavigationArrow size={15} /> Start trip
                           </span>
                         </button>
                       </>
@@ -192,7 +191,7 @@ export default function TravelerTrips() {
                         className="pressable h-11 w-full rounded-(--radius-md) bg-brand-600 text-[13.5px] font-bold text-white shadow-(--shadow-brand-sm)"
                       >
                         <span className="inline-flex items-center gap-1.5">
-                          <Navigation size={15} /> Open navigation
+                          <NavigationArrow size={15} /> Open navigation
                         </span>
                       </button>
                     )}

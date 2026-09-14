@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { AlertTriangle, CheckCircle2, Info, XCircle } from 'lucide-react'
+import { Warning, CheckCircle, Info, XCircle } from '@phosphor-icons/react'
 import {
   createContext,
   useCallback,
@@ -30,10 +30,10 @@ interface ToastApi {
 const ToastContext = createContext<ToastApi | null>(null)
 
 const TONE_META: Record<ToastTone, { icon: ReactNode; ring: string }> = {
-  success: { icon: <CheckCircle2 size={19} className="text-success-500" />, ring: 'ring-success-500/25' },
+  success: { icon: <CheckCircle size={19} className="text-success-500" />, ring: 'ring-success-500/25' },
   error: { icon: <XCircle size={19} className="text-danger-500" />, ring: 'ring-danger-500/25' },
   info: { icon: <Info size={19} className="text-brand-400" />, ring: 'ring-brand-500/25' },
-  warn: { icon: <AlertTriangle size={19} className="text-warn-500" />, ring: 'ring-warn-500/25' },
+  warn: { icon: <Warning size={19} className="text-warn-500" />, ring: 'ring-warn-500/25' },
 }
 
 let nextId = 1

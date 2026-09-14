@@ -5,7 +5,7 @@ import {
   type ReactNode,
   type TextareaHTMLAttributes,
 } from 'react'
-import { Check, ChevronDown, Minus, Plus, Search, X } from 'lucide-react'
+import { Check, CaretDown, Minus, Plus, MagnifyingGlass, X } from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 
 /* ═══ Text field ═══════════════════════════════════════════════════════════ */
@@ -114,7 +114,7 @@ export function TextArea({
   )
 }
 
-/* ═══ Search ═══════════════════════════════════════════════════════════════ */
+/* ═══ MagnifyingGlass ═══════════════════════════════════════════════════════════════ */
 
 export function SearchField({
   value,
@@ -138,7 +138,7 @@ export function SearchField({
         className,
       )}
     >
-      <Search size={17} className="shrink-0 text-ink-400" />
+      <MagnifyingGlass size={17} className="shrink-0 text-ink-400" />
       <input
         value={value}
         autoFocus={autoFocus}
@@ -156,7 +156,7 @@ export function SearchField({
           }}
           className="pressable-sm grid size-5 shrink-0 place-items-center rounded-full bg-ink-200 text-ink-600"
         >
-          <X size={12} strokeWidth={3} />
+          <X size={12} />
         </button>
       )}
     </div>
@@ -170,12 +170,15 @@ export function Select({
   value,
   onChange,
   options,
+  placeholder,
   className,
 }: {
   label?: string
   value: string
   onChange: (v: string) => void
   options: Array<{ value: string; label: string }>
+  /** Shown while `value` is empty; the field starts unchosen rather than on the first option. */
+  placeholder?: string
   className?: string
 }) {
   const id = useId()
@@ -191,15 +194,23 @@ export function Select({
           id={id}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="h-[50px] w-full appearance-none rounded-(--radius-md) border border-ink-200 bg-white px-3.5 pr-10 text-[15px] font-medium text-ink-900 focus:border-brand-600 focus:ring-4 focus:ring-brand-600/12"
+          className={cn(
+            'h-[50px] w-full appearance-none rounded-(--radius-md) border border-ink-200 bg-white px-3.5 pr-10 text-[15px] font-medium focus:border-brand-600 focus:ring-4 focus:ring-brand-600/12',
+            value ? 'text-ink-900' : 'text-ink-400',
+          )}
         >
+          {placeholder && (
+            <option value="" disabled>
+              {placeholder}
+            </option>
+          )}
           {options.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
           ))}
         </select>
-        <ChevronDown
+        <CaretDown
           size={17}
           className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-ink-400"
         />
@@ -237,7 +248,7 @@ export function Counter({
         onClick={() => onChange(clamp(value - step))}
         className="pressable-sm grid size-10 place-items-center rounded-(--radius-sm) bg-ink-50 text-ink-700 disabled:opacity-35"
       >
-        <Minus size={17} strokeWidth={2.6} />
+        <Minus size={17} />
       </button>
       <div className="tabular flex-1 text-center text-[16px] font-bold text-ink-900">
         {value.toFixed(decimals)}
@@ -250,7 +261,7 @@ export function Counter({
         onClick={() => onChange(clamp(value + step))}
         className="pressable-sm grid size-10 place-items-center rounded-(--radius-sm) bg-brand-50 text-brand-700 disabled:opacity-35"
       >
-        <Plus size={17} strokeWidth={2.6} />
+        <Plus size={17} />
       </button>
     </div>
   )
@@ -263,12 +274,15 @@ export function Switch({
   onChange,
   label,
   description,
+  disabled,
   className,
 }: {
   checked: boolean
   onChange: (v: boolean) => void
   label?: string
   description?: string
+  /** Shown in its state but not changeable — for the settings that are not settings. */
+  disabled?: boolean
   className?: string
 }) {
   const control = (
@@ -277,9 +291,10 @@ export function Switch({
       role="switch"
       aria-checked={checked}
       aria-label={label}
+      disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        'focus-ring relative h-[30px] w-[52px] shrink-0 rounded-full transition-colors duration-250',
+        'focus-ring relative h-[30px] w-[52px] shrink-0 rounded-full transition-colors duration-250 disabled:opacity-50',
         checked ? 'bg-brand-600' : 'bg-ink-300',
       )}
     >
@@ -330,7 +345,7 @@ export function Checkbox({
           checked ? 'border-brand-600 bg-brand-600' : 'border-ink-300 bg-white',
         )}
       >
-        {checked && <Check size={14} strokeWidth={3.4} className="text-white" />}
+        {checked && <Check size={14} className="text-white" />}
       </span>
       {children && <span className="text-[13px] leading-[1.5] text-ink-600">{children}</span>}
     </button>
@@ -351,7 +366,7 @@ export function CheckMark({ checked, className }: { checked: boolean; className?
         className,
       )}
     >
-      {checked && <Check size={14} strokeWidth={3.4} className="text-white" />}
+      {checked && <Check size={14} className="text-white" />}
     </span>
   )
 }

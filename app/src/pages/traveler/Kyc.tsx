@@ -1,19 +1,19 @@
 import { useState } from 'react'
 import {
-  AlertCircle,
+  WarningCircle,
   Camera,
-  CheckCircle2,
-  ChevronRight,
+  CheckCircle,
+  CaretRight,
   CreditCard,
-  FileCheck,
+  SealCheck,
   Fingerprint,
-  Landmark,
+  Bank,
   Lock,
   Package,
-  ScanFace,
+  ScanSmiley,
   ShieldCheck,
   Users,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import { Badge, Card, Note, ProgressBar, Sheet, Button, useToast } from '@/components/ui'
 import { KYC_STEPS } from '@/lib/data'
@@ -22,11 +22,11 @@ import { cn } from '@/lib/cn'
 
 const ICONS: Record<KycStepId, typeof Fingerprint> = {
   mobile: Fingerprint,
-  aadhaar: FileCheck,
-  selfie: ScanFace,
+  aadhaar: SealCheck,
+  selfie: ScanSmiley,
   license: CreditCard,
-  rc: Landmark,
-  bank: Landmark,
+  rc: Bank,
+  bank: Bank,
   police: ShieldCheck,
 }
 
@@ -91,7 +91,7 @@ export default function TravelerKyc() {
                         : 'bg-ink-100 text-ink-400',
                 )}
               >
-                {s.status === 'verified' ? <CheckCircle2 size={19} /> : <Icon size={19} />}
+                {s.status === 'verified' ? <CheckCircle size={19} /> : <Icon size={19} />}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
@@ -107,7 +107,7 @@ export default function TravelerKyc() {
               <Badge tone={meta.tone} size="sm">
                 {meta.label}
               </Badge>
-              <ChevronRight size={16} className="shrink-0 text-ink-300" />
+              <CaretRight size={16} className="shrink-0 text-ink-300" />
             </button>
           )
         })}
@@ -185,12 +185,12 @@ export default function TravelerKyc() {
         />
         <Section
           title="Payouts"
-          subtitle="Needed before money can leave your DikkiConnect wallet."
+          subtitle="Needed before money can leave your Stowza wallet."
           steps={payoutSteps}
         />
 
         <Note tone="neutral" icon={<Lock size={15} />} className="mt-6" title="How we handle Aadhaar">
-          DikkiConnect never stores your Aadhaar number. Verification runs through a UIDAI-licensed KUA
+          Stowza never stores your Aadhaar number. Verification runs through a UIDAI-licensed KUA
           partner and we keep only their verification token and a masked reference — as required by
           UIDAI regulations.
         </Note>
@@ -229,9 +229,9 @@ export default function TravelerKyc() {
               )}
             >
               {active.status === 'verified' ? (
-                <CheckCircle2 size={20} className="shrink-0" />
+                <CheckCircle size={20} className="shrink-0" />
               ) : (
-                <AlertCircle size={20} className="shrink-0" />
+                <WarningCircle size={20} className="shrink-0" />
               )}
               <p className="text-[13px] font-bold">
                 {active.status === 'verified'

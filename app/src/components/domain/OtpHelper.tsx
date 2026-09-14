@@ -1,4 +1,4 @@
-import { Eye, KeyRound, ShieldCheck } from 'lucide-react'
+import { Eye, Key, ShieldCheck } from '@phosphor-icons/react'
 import type { OtpGate } from '@/lib/otp'
 
 /**
@@ -12,7 +12,7 @@ export function OtpHelper({ gate, source }: { gate: OtpGate; source: string }) {
     return (
       <div className="anim-fade-in mt-6 rounded-(--radius-lg) border border-brand-100 bg-brand-50/70 p-4">
         <p className="flex items-center gap-2 text-[12px] font-bold tracking-wide text-brand-700 uppercase">
-          <KeyRound size={13} /> This parcel&apos;s code
+          <Key size={13} /> This parcel&apos;s code
         </p>
         <p className="tabular text-display mt-2 text-[28px] leading-none font-extrabold tracking-[0.14em] text-brand-800">
           {gate.expected}

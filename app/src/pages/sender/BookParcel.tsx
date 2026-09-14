@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, ArrowRight, Info, ShieldAlert, ShieldCheck } from 'lucide-react'
+import { Warning, ArrowRight, Info, ShieldWarning, ShieldCheck } from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -137,7 +137,7 @@ export default function BookParcel() {
             suffix="kg"
           />
           {overWeight && (
-            <Note tone="danger" icon={<AlertTriangle size={15} />} className="mt-2.5">
+            <Note tone="danger" icon={<Warning size={15} />} className="mt-2.5">
               {kg(draft.weightKg)} exceeds the {size.label} limit. Pick a larger size or reduce the
               weight.
             </Note>
@@ -177,7 +177,7 @@ export default function BookParcel() {
           <Switch
             checked={draft.insured}
             onChange={(v) => patchDraft({ insured: v })}
-            label="DikkiConnect Protect"
+            label="Stowza Protect"
             description={`₹25 · covers up to ${inr(DECLARED_VALUE_CAP)} against loss or damage in transit.`}
           />
         </Card>
@@ -267,7 +267,7 @@ export default function BookParcel() {
               key={item}
               className="flex items-start gap-3 rounded-(--radius-md) bg-danger-50 p-3.5"
             >
-              <ShieldAlert size={17} className="mt-px shrink-0 text-danger-500" />
+              <ShieldWarning size={17} className="mt-px shrink-0 text-danger-500" />
               <p className="text-[13.5px] font-medium text-danger-800">{item}</p>
             </div>
           ))}

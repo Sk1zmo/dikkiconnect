@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Camera, PenLine, ShieldCheck, User } from 'lucide-react'
+import { Camera, PencilLine, ShieldCheck, User } from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -194,7 +194,7 @@ export default function ReceiverPickup() {
 
             <Note tone="warn" icon={<ShieldCheck size={15} />} className="mt-2" title="This matters">
               This OTP is what protects against wrong pickup. If the receiver cannot produce it, ask
-              them to check their SMS or contact DikkiConnect support — do not release the parcel.
+              them to check their SMS or contact Stowza support — do not release the parcel.
             </Note>
           </div>
         )}
@@ -222,7 +222,7 @@ export default function ReceiverPickup() {
               {signature && (
                 <div className="anim-fade-up mt-3 grid h-24 place-items-center rounded-(--radius-md) border-2 border-dashed border-ink-200 bg-ink-50">
                   <span className="flex items-center gap-2 text-[12.5px] font-semibold text-ink-400">
-                    <PenLine size={15} />
+                    <PencilLine size={15} />
                     Sign here
                   </span>
                 </div>

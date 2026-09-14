@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Check, Pencil, ShieldCheck, Tag, TrendingDown } from 'lucide-react'
+import { ArrowRight, Check, Pencil, ShieldCheck, Tag, TrendDown } from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -201,7 +201,7 @@ export default function BookReview() {
               {price.weight > 0 && <KeyValue label="Weight surcharge" value={inr(price.weight)} />}
               {price.fragile > 0 && <KeyValue label="Fragile handling" value={inr(price.fragile)} />}
               {price.insurance > 0 && (
-                <KeyValue label="DikkiConnect Protect" value={inr(price.insurance)} />
+                <KeyValue label="Stowza Protect" value={inr(price.insurance)} />
               )}
               {price.discount > 0 && (
                 <KeyValue
@@ -221,7 +221,7 @@ export default function BookReview() {
         {!loading && (
           <Card className="mt-3 flex items-center gap-3.5 border-success-100 bg-success-50">
             <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-success-500/15 text-success-600">
-              <TrendingDown size={19} />
+              <TrendDown size={19} />
             </span>
             <div className="min-w-0">
               <p className="text-[13.5px] font-bold text-success-800">

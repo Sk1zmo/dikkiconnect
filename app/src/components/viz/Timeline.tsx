@@ -1,4 +1,4 @@
-import { Camera, Check, ShieldCheck } from 'lucide-react'
+import { Camera, Check, ShieldCheck } from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 import { dateTime } from '@/lib/format'
 import type { TrackingEvent } from '@/lib/types'
@@ -51,7 +51,7 @@ export function Timeline({
               )}
             >
               {e.done ? (
-                <Check size={14} strokeWidth={3.4} />
+                <Check size={14} />
               ) : (
                 <span className={cn('size-2 rounded-full', isNext ? 'bg-brand-400' : 'bg-ink-300')} />
               )}

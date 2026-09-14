@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Calendar, ChevronRight, Search, Star } from 'lucide-react'
+import { Calendar, CaretRight, MagnifyingGlass, Star } from '@phosphor-icons/react'
 import { Screen, ScreenBody, LargeTitle } from '@/components/layout/Screen'
 import {
   Avatar,
@@ -13,7 +13,6 @@ import {
   SkeletonList,
   Stars,
 } from '@/components/ui'
-import { EmptyRoadArt } from '@/components/viz/Illustrations'
 import { cityName, travelerById } from '@/lib/data'
 import { dayDate, inr, time } from '@/lib/format'
 import { useLoaded } from '@/lib/hooks'
@@ -40,7 +39,7 @@ export default function PassengerBookings() {
         className="pt-safe"
         action={
           <IconButton
-            icon={<Search size={17} />}
+            icon={<MagnifyingGlass size={17} />}
             label="Find a ride"
             onClick={() => navigate('/passenger')}
           />
@@ -64,8 +63,8 @@ export default function PassengerBookings() {
         ) : list.length === 0 ? (
           <Card padded={false}>
             <EmptyState
-              art={<EmptyRoadArt />}
-              title={tab === 'upcoming' ? 'No rides booked' : 'No past rides'}
+              kind={tab === 'upcoming' ? 'rides' : 'rides-done'}
+              title={tab === 'upcoming' ? 'No seat booked yet' : 'No trips taken yet'}
               body={
                 tab === 'upcoming'
                   ? 'Search a route and grab a seat in a car already heading that way.'
@@ -142,7 +141,7 @@ export default function PassengerBookings() {
                           <span className="tabular truncate">{driver.vehicle.plate}</span>
                         </div>
                       </div>
-                      <ChevronRight size={16} className="shrink-0 text-ink-300" />
+                      <CaretRight size={16} className="shrink-0 text-ink-300" />
                     </div>
                   </button>
 

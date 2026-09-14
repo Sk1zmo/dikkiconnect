@@ -8,7 +8,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
    call to the deployment is cross-origin. Without these headers the browser
    blocks the request before it is sent, fetch throws, and the app can only
    report a network failure it cannot distinguish from being offline — which
-   is exactly the "could not reach DikkiConnect" people were seeing on Android
+   is exactly the "could not reach Stowza" people were seeing on Android
    while the web version worked perfectly.
 
    The allow-list is explicit rather than `*`. These endpoints issue sessions,

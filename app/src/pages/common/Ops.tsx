@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
-  Activity,
-  AlertTriangle,
+  Pulse,
+  Warning,
   Database,
-  KeyRound,
-  Mail,
-  RefreshCw,
-  Send,
+  Key,
+  Envelope,
+  ArrowsClockwise,
+  PaperPlaneTilt,
   ShieldCheck,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -128,7 +128,7 @@ export default function Ops() {
         <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="font-mono text-[10.5px] tracking-[0.3em] text-ink-400 uppercase">
-              DikkiConnect
+              Stowza
             </p>
             <h1 className="text-display mt-1.5 text-[28px] font-extrabold text-ink-900">
               Operations
@@ -139,7 +139,7 @@ export default function Ops() {
               onClick={() => void load(key)}
               className="pressable inline-flex items-center gap-2 rounded-full border border-ink-200 bg-white px-4 py-2 text-[13px] font-bold text-ink-700"
             >
-              <RefreshCw size={14} className={loading ? 'anim-spin' : undefined} />
+              <ArrowsClockwise size={14} className={loading ? 'anim-spin' : undefined} />
               Refresh
             </button>
           )}
@@ -148,7 +148,7 @@ export default function Ops() {
         {!feed && (
           <div className="mx-auto max-w-sm rounded-(--radius-lg) border border-ink-200 bg-white p-6">
             <span className="grid size-11 place-items-center rounded-(--radius-md) bg-ink-900 text-white">
-              <KeyRound size={20} />
+              <Key size={20} />
             </span>
             <h2 className="mt-4 text-[17px] font-extrabold text-ink-900">Ops key required</h2>
             <p className="mt-1.5 text-[13px] leading-relaxed text-ink-500">
@@ -178,7 +178,7 @@ export default function Ops() {
                     key={w}
                     className="flex items-start gap-3 rounded-(--radius-md) border border-warn-200 bg-warn-50 p-4"
                   >
-                    <AlertTriangle size={17} className="mt-px shrink-0 text-warn-600" />
+                    <Warning size={17} className="mt-px shrink-0 text-warn-600" />
                     <p className="text-[13px] leading-relaxed font-semibold text-warn-800">{w}</p>
                   </div>
                 ))}
@@ -193,7 +193,7 @@ export default function Ops() {
                 good={feed.health.storageDurable}
               />
               <Health
-                icon={<Mail size={16} />}
+                icon={<Envelope size={16} />}
                 label="Email"
                 value={feed.health.mailProvider ?? 'not configured'}
                 good={feed.health.mailConfigured}
@@ -209,8 +209,8 @@ export default function Ops() {
             {/* ── Test send ─────────────────────────────────────────────── */}
             <div className="mb-6 rounded-(--radius-lg) border border-ink-200 bg-white p-5">
               <h2 className="flex items-center gap-2 text-[13.5px] font-bold text-ink-800">
-                <Send size={15} className="text-ink-400" />
-                Send a test
+                <PaperPlaneTilt size={15} className="text-ink-400" />
+                PaperPlaneTilt a test
               </h2>
               <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-500">
                 Sends one real email and shows the provider&apos;s own answer, including its
@@ -274,7 +274,7 @@ export default function Ops() {
 
             <div className="rounded-(--radius-lg) border border-ink-200 bg-white">
               <div className="flex items-center gap-2 border-b border-ink-100 px-5 py-3.5">
-                <Activity size={15} className="text-ink-400" />
+                <Pulse size={15} className="text-ink-400" />
                 <h2 className="text-[13.5px] font-bold text-ink-800">Event log</h2>
                 <span className="ml-auto font-mono text-[10.5px] text-ink-400">
                   {feed.events.length} most recent

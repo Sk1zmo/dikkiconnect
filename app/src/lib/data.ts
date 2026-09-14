@@ -50,7 +50,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   /* ── Bangalore ─────────────────────────────────────────────────────────── */
   {
     id: 'hub-blr-kor',
-    name: 'DikkiConnect Hub · Koramangala',
+    name: 'Stowza Hub · Koramangala',
     cityId: 'blr',
     address: '80 Feet Rd, 4th Block, Koramangala',
     landmark: 'Next to Sony World Signal',
@@ -63,7 +63,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-blr-ind',
-    name: 'DikkiConnect Hub · Indiranagar',
+    name: 'Stowza Hub · Indiranagar',
     cityId: 'blr',
     address: '100 Feet Rd, Indiranagar',
     landmark: 'Opposite CMH Road Junction',
@@ -76,7 +76,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-blr-whf',
-    name: 'DikkiConnect Hub · Whitefield',
+    name: 'Stowza Hub · Whitefield',
     cityId: 'blr',
     address: 'ITPL Main Rd, Whitefield',
     landmark: 'Beside Forum Value Mall',
@@ -89,7 +89,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-blr-jay',
-    name: 'DikkiConnect Hub · Jayanagar',
+    name: 'Stowza Hub · Jayanagar',
     cityId: 'blr',
     address: '11th Main, 4th Block, Jayanagar',
     landmark: 'Above Sri Krishna Stores',
@@ -102,7 +102,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-blr-hbr',
-    name: 'DikkiConnect Hub · Hebbal',
+    name: 'Stowza Hub · Hebbal',
     cityId: 'blr',
     address: 'Bellary Rd, Hebbal',
     landmark: 'Under the Hebbal Flyover',
@@ -115,7 +115,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-blr-ele',
-    name: 'DikkiConnect Hub · Electronic City',
+    name: 'Stowza Hub · Electronic City',
     cityId: 'blr',
     address: 'Phase 1, Hosur Rd, Electronic City',
     landmark: 'Inside HP Petrol Pump',
@@ -130,7 +130,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   /* ── Mysore ────────────────────────────────────────────────────────────── */
   {
     id: 'hub-mys-sar',
-    name: 'DikkiConnect Hub · Saraswathipuram',
+    name: 'Stowza Hub · Saraswathipuram',
     cityId: 'mys',
     address: '5th Main, Saraswathipuram, Mysore',
     landmark: 'Opposite Ayyappa Temple',
@@ -143,7 +143,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-mys-vij',
-    name: 'DikkiConnect Hub · Vijayanagar',
+    name: 'Stowza Hub · Vijayanagar',
     cityId: 'mys',
     address: '2nd Stage, Vijayanagar, Mysore',
     landmark: 'Beside Ring Road Junction',
@@ -156,7 +156,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-mys-nan',
-    name: 'DikkiConnect Hub · Nanjangud Road',
+    name: 'Stowza Hub · Nanjangud Road',
     cityId: 'mys',
     address: 'Nanjangud Rd, Bannimantap, Mysore',
     landmark: 'Near the APMC Yard gate',
@@ -171,7 +171,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   /* ── Mangalore ─────────────────────────────────────────────────────────── */
   {
     id: 'hub-mng-hmp',
-    name: 'DikkiConnect Hub · Hampankatta',
+    name: 'Stowza Hub · Hampankatta',
     cityId: 'mng',
     address: 'Kadri Rd, Hampankatta, Mangalore',
     landmark: 'Next to Hampankatta Circle',
@@ -184,7 +184,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-mng-kad',
-    name: 'DikkiConnect Hub · Kadri',
+    name: 'Stowza Hub · Kadri',
     cityId: 'mng',
     address: 'Kadri Temple Rd, Kadri, Mangalore',
     landmark: 'Opposite the Kadri Park gate',
@@ -199,7 +199,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   /* ── Hubballi ──────────────────────────────────────────────────────────── */
   {
     id: 'hub-hbl-vid',
-    name: 'DikkiConnect Hub · Vidyanagar',
+    name: 'Stowza Hub · Vidyanagar',
     cityId: 'hbl',
     address: 'Gokul Rd, Vidyanagar, Hubballi',
     landmark: 'Near Vidyanagar Circle',
@@ -214,7 +214,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   /* ── Coimbatore ────────────────────────────────────────────────────────── */
   {
     id: 'hub-cbe-gan',
-    name: 'DikkiConnect Hub · Gandhipuram',
+    name: 'Stowza Hub · Gandhipuram',
     cityId: 'cbe',
     address: 'Cross Cut Rd, Gandhipuram, Coimbatore',
     landmark: 'Beside the Central Bus Stand',
@@ -227,7 +227,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-cbe-pee',
-    name: 'DikkiConnect Hub · Peelamedu',
+    name: 'Stowza Hub · Peelamedu',
     cityId: 'cbe',
     address: 'Avinashi Rd, Peelamedu, Coimbatore',
     landmark: 'Opposite the PSG Tech gate',
@@ -242,7 +242,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   /* ── Chennai ───────────────────────────────────────────────────────────── */
   {
     id: 'hub-che-tnr',
-    name: 'DikkiConnect Hub · T. Nagar',
+    name: 'Stowza Hub · T. Nagar',
     cityId: 'che',
     address: 'Usman Rd, T. Nagar, Chennai',
     landmark: 'Near Panagal Park',
@@ -255,7 +255,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-che-vel',
-    name: 'DikkiConnect Hub · Velachery',
+    name: 'Stowza Hub · Velachery',
     cityId: 'che',
     address: '100 Feet Rd, Velachery, Chennai',
     landmark: 'Beside Phoenix MarketCity',
@@ -268,7 +268,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-che-anv',
-    name: 'DikkiConnect Hub · Anna Nagar',
+    name: 'Stowza Hub · Anna Nagar',
     cityId: 'che',
     address: '2nd Avenue, Anna Nagar, Chennai',
     landmark: 'Near Anna Nagar Tower Park',
@@ -281,7 +281,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-che-omr',
-    name: 'DikkiConnect Hub · OMR Perungudi',
+    name: 'Stowza Hub · OMR Perungudi',
     cityId: 'che',
     address: 'Rajiv Gandhi Salai, Perungudi, Chennai',
     landmark: 'Opposite the Thoraipakkam toll',
@@ -296,7 +296,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   /* ── Hyderabad ─────────────────────────────────────────────────────────── */
   {
     id: 'hub-hyd-gac',
-    name: 'DikkiConnect Hub · Gachibowli',
+    name: 'Stowza Hub · Gachibowli',
     cityId: 'hyd',
     address: 'Gachibowli–Miyapur Rd, Hyderabad',
     landmark: 'Near DLF Cyber City',
@@ -309,7 +309,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-hyd-sec',
-    name: 'DikkiConnect Hub · Secunderabad',
+    name: 'Stowza Hub · Secunderabad',
     cityId: 'hyd',
     address: 'SD Rd, Secunderabad',
     landmark: 'Near the Clock Tower',
@@ -322,7 +322,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-hyd-ban',
-    name: 'DikkiConnect Hub · Banjara Hills',
+    name: 'Stowza Hub · Banjara Hills',
     cityId: 'hyd',
     address: 'Road No. 12, Banjara Hills, Hyderabad',
     landmark: 'Above Karachi Bakery',
@@ -337,7 +337,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   /* ── Goa ───────────────────────────────────────────────────────────────── */
   {
     id: 'hub-goa-pan',
-    name: 'DikkiConnect Hub · Panjim',
+    name: 'Stowza Hub · Panjim',
     cityId: 'goa',
     address: '18th June Rd, Panjim, Goa',
     landmark: 'Near the Municipal Garden',
@@ -955,7 +955,7 @@ export const NOTIFICATIONS: NotificationItem[] = [
   {
     id: 'n3',
     title: '₹40 cashback credited',
-    body: 'FIRSTDROP promo applied to your DikkiConnect wallet.',
+    body: 'FIRSTDROP promo applied to your Stowza wallet.',
     at: hoursFromNow(-26),
     read: true,
     kind: 'payment',
@@ -982,12 +982,12 @@ export const NOTIFICATIONS: NotificationItem[] = [
 /* ── Support chat ─────────────────────────────────────────────────────────── */
 
 export const SUPPORT_THREAD: ChatMessage[] = [
-  { id: 'c0', from: 'system', text: 'Connected to DikkiConnect Support · avg reply 2 min', at: hoursFromNow(-0.5) },
+  { id: 'c0', from: 'system', text: 'Connected to Stowza Support · avg reply 2 min', at: hoursFromNow(-0.5) },
   { id: 'c1', from: 'them', text: 'Hi Aditi — I can see DKC-4821 is in transit with Arjun. How can I help?', at: hoursFromNow(-0.48) },
   { id: 'c2', from: 'me', text: 'The receiver wants to collect from a different Mysore hub. Is that possible?', at: hoursFromNow(-0.4) },
   { id: 'c3', from: 'them', text: 'Yes — while the parcel is still in transit we can re-route it to Vijayanagar Hub at no extra cost. Want me to do that?', at: hoursFromNow(-0.36) },
   { id: 'c4', from: 'me', text: 'Please do. Thanks!', at: hoursFromNow(-0.3) },
-  { id: 'c5', from: 'them', text: 'Done. Destination updated to DikkiConnect Hub · Vijayanagar. A fresh receiver OTP will be sent once it lands.', at: hoursFromNow(-0.26) },
+  { id: 'c5', from: 'them', text: 'Done. Destination updated to Stowza Hub · Vijayanagar. A fresh receiver OTP will be sent once it lands.', at: hoursFromNow(-0.26) },
 ]
 
 export const RIDE_CHAT: ChatMessage[] = [
@@ -1002,7 +1002,7 @@ export const cityById = (id: string) => CITIES.find((c) => c.id === id)
 export const cityName = (id: string) => cityById(id)?.name ?? id
 export const hubById = (id: string) => HUBS.find((h) => h.id === id)
 export const hubName = (id: string) => hubById(id)?.name ?? id
-/** "Koramangala" from "DikkiConnect Hub · Koramangala" */
+/** "Koramangala" from "Stowza Hub · Koramangala" */
 export const hubShort = (id: string) => hubById(id)?.name.split('·').pop()?.trim() ?? id
 export const hubsInCity = (cityId: string) => HUBS.filter((h) => h.cityId === cityId)
 /**

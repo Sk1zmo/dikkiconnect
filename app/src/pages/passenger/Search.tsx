@@ -1,6 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowUpDown, Calendar, MapPin, Search as SearchIcon, Sparkles, Users } from 'lucide-react'
+import {
+  ArrowsDownUp,
+  Calendar,
+  MapPin,
+  MagnifyingGlass as SearchIcon,
+  Sparkle,
+  Users,
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody, BrandHeader } from '@/components/layout/Screen'
 import { PortalSwitcher } from '@/components/layout/PortalSwitcher'
 import {
@@ -17,6 +24,7 @@ import { TripCard } from '@/components/domain/Cards'
 import { CITIES, TRAVELERS, corridorKm } from '@/lib/data'
 import { inr } from '@/lib/format'
 import { useLoaded } from '@/lib/hooks'
+import { LOADING } from '@/lib/copy'
 import { useApp, useTrips } from '@/lib/store'
 
 const POPULAR = [
@@ -29,8 +37,9 @@ export default function PassengerSearch() {
   const navigate = useNavigate()
   const { user } = useApp()
 
-  const [from, setFrom] = useState('blr')
-  const [to, setTo] = useState('mys')
+  /* Both empty on purpose — a preselected route is a search nobody meant. */
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [seats, setSeats] = useState(1)
   const [searching, setSearching] = useState(false)
@@ -41,7 +50,8 @@ export default function PassengerSearch() {
   const { loading } = useLoaded(suggested, 1200)
 
   const cityOptions = CITIES.map((c) => ({ value: c.id, label: `${c.name}, ${c.state}` }))
-  const sameCity = from === to
+  const both = Boolean(from && to)
+  const sameCity = both && from === to
 
   const search = () => {
     setSearching(true)
@@ -72,7 +82,7 @@ export default function PassengerSearch() {
         {/* Search card */}
         <Card elevation={3}>
           <div className="relative">
-            <Select label="From" value={from} onChange={setFrom} options={cityOptions} />
+            <Select label="From" value={from} onChange={setFrom} options={cityOptions} placeholder="Choose a city" />
             <button
               onClick={() => {
                 setFrom(to)
@@ -81,10 +91,10 @@ export default function PassengerSearch() {
               aria-label="Swap cities"
               className="pressable-sm absolute top-[62px] right-11 z-1 grid size-9 place-items-center rounded-full border border-ink-200 bg-white text-ink-600 shadow-(--shadow-e2)"
             >
-              <ArrowUpDown size={15} />
+              <ArrowsDownUp size={15} />
             </button>
             <div className="mt-4">
-              <Select label="To" value={to} onChange={setTo} options={cityOptions} />
+              <Select label="To" value={to} onChange={setTo} options={cityOptions} placeholder="Choose a city" />
             </div>
           </div>
 
@@ -118,17 +128,17 @@ export default function PassengerSearch() {
             size="lg"
             className="mt-4"
             loading={searching}
-            disabled={sameCity}
+            disabled={!both || sameCity}
             onClick={search}
             icon={!searching ? <SearchIcon size={18} /> : undefined}
           >
-            {searching ? 'Finding rides…' : 'Search rides'}
+            {searching ? `${LOADING.search.line}…` : 'Search rides'}
           </Button>
         </Card>
 
         {/* Cost-sharing disclosure — required framing per PRD §10 */}
         <Note tone="brand" icon={<Users size={15} />} className="mt-4" title="Cost-sharing, not a taxi">
-          DikkiConnect rides are private cars sharing fuel and toll costs between people already making the
+          Stowza rides are private cars sharing fuel and toll costs between people already making the
           trip. Drivers are not commercial operators and fares are capped at cost.
         </Note>
 
@@ -195,7 +205,7 @@ export default function PassengerSearch() {
         {/* Trust */}
         <Card className="mt-5">
           <div className="flex items-center gap-2.5">
-            <Sparkles size={17} className="shrink-0 text-brand-600" />
+            <Sparkle size={17} className="shrink-0 text-brand-600" />
             <p className="text-[13.5px] font-bold text-ink-900">Every driver is verified</p>
           </div>
           <div className="mt-3 flex items-center gap-2">

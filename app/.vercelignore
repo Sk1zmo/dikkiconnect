@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-single
+dist-demo
+demo-out
+font-demo
+android
+ios
+.vercel
+*.tsbuildinfo

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/cn'
 
 /**
- * OTP entry. Custody handoffs in DikkiConnect are OTP-gated (PRD §6), so this gets
+ * OTP entry. Custody handoffs in Stowza are OTP-gated (PRD §6), so this gets
  * used on six different screens — paste, arrow keys and backspace all behave.
  */
 export function OtpInput({

@@ -1,19 +1,32 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Navigate, useNavigate } from 'react-router-dom'
 import {
   ArrowRight,
-  ArrowUpDown,
-  Building2,
+  ArrowsDownUp,
+  Buildings,
   Clock,
-  Home,
+  Crosshair,
+  House,
   MapPin,
+  MapPinLine,
   Repeat,
-  Search,
-  Zap,
-} from 'lucide-react'
+  MagnifyingGlass,
+  Lightning,
+  Warning,
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
-import { ActionBar, Button, Card, Note, SearchField, Sheet, Stepper } from '@/components/ui'
-import { CITIES, corridorKm } from '@/lib/data'
+import { ActionBar, Button, Card, Note, SearchField, Sheet, Spinner, Stepper } from '@/components/ui'
+import { CITIES, cityName, corridorKm } from '@/lib/data'
+import {
+  SERVICE_RADIUS_KM,
+  currentPosition,
+  geocode,
+  nearestCity,
+  reverseGeocode,
+  type LngLat,
+  type Place,
+} from '@/lib/geo'
+import { useDebounced } from '@/lib/hooks'
 import { useApp } from '@/lib/store'
 import { cn } from '@/lib/cn'
 
@@ -23,23 +36,55 @@ export const BOOK_STEPS_P2P = ['Route', 'Parcel', 'Pickup', 'Review', 'Pay']
 export const bookSteps = (mode: 'hub' | 'p2p') =>
   mode === 'p2p' ? BOOK_STEPS_P2P : BOOK_STEPS
 
-const RECENT_ROUTES = [
+/**
+ * Every step after this one needs both ends of the route. With no default
+ * route any more, a deep link or a refresh into step 3 would otherwise be
+ * pricing a corridor between two empty strings — so it comes back here.
+ */
+export function RequireRoute({ children }: { children: ReactNode }) {
+  const { draft } = useApp()
+  if (!draft.fromCityId || !draft.toCityId) return <Navigate to="/sender/book" replace />
+  return <>{children}</>
+}
+
+const POPULAR_ROUTES = [
   { from: 'blr', to: 'mys' },
   { from: 'blr', to: 'che' },
   { from: 'mys', to: 'blr' },
 ]
 
-/** Step 1 — origin and destination city. */
+/**
+ * Step 1 — where it leaves from and where it is going.
+ *
+ * Nothing is chosen for you. The old default of Bangalore → Mysore was
+ * convenient for demos and wrong for everyone else: a preselected route is a
+ * route somebody books by accident. Both ends start empty and the button
+ * stays off until they are filled.
+ *
+ * Either end can be one of the cities on the network, the device's own
+ * position, or any place typed into the search — a town, a street, a
+ * landmark. A place that is not a network city is snapped to the nearest one
+ * (that is what prices the corridor and picks the hubs) and kept as the exact
+ * address, so the door-to-door step already knows the street and the hub
+ * step already knows which hubs are near.
+ */
 export default function BookRoute() {
   const navigate = useNavigate()
   const { draft, patchDraft } = useApp()
   const [picking, setPicking] = useState<'from' | 'to' | null>(null)
   const [query, setQuery] = useState('')
+  const [places, setPlaces] = useState<Place[]>([])
+  const [searching, setSearching] = useState(false)
+  const [locating, setLocating] = useState(false)
+  const [locateFailed, setLocateFailed] = useState(false)
+  /* A place off the network: how far, and from which city we measured. */
+  const [offNetwork, setOffNetwork] = useState<{ side: 'from' | 'to'; km: number; cityId: string } | null>(null)
 
-  const from = CITIES.find((c) => c.id === draft.fromCityId)!
-  const to = CITIES.find((c) => c.id === draft.toCityId)!
-  const km = corridorKm(from.id, to.id)
-  const sameCity = from.id === to.id
+  const from = CITIES.find((c) => c.id === draft.fromCityId)
+  const to = CITIES.find((c) => c.id === draft.toCityId)
+  const both = Boolean(from && to)
+  const sameCity = both && from!.id === to!.id
+  const km = both ? corridorKm(from!.id, to!.id) : 0
 
   const filtered = CITIES.filter(
     (c) =>
@@ -47,14 +92,89 @@ export default function BookRoute() {
       c.state.toLowerCase().includes(query.toLowerCase()),
   )
 
-  const swap = () =>
-    patchDraft({ fromCityId: draft.toCityId, toCityId: draft.fromCityId, originHubId: null, destinationHubId: null })
+  /* Any place, not only our cities: after three characters the query also
+     goes to the geocoder, debounced so a phone keyboard does not fire one
+     request per key. Network cities always list first. */
+  const debounced = useDebounced(query, 350)
+  useEffect(() => {
+    if (debounced.trim().length < 3) {
+      setPlaces([])
+      setSearching(false)
+      return
+    }
+    let alive = true
+    setSearching(true)
+    geocode(debounced, 5).then((found) => {
+      if (!alive) return
+      setPlaces(found)
+      setSearching(false)
+    })
+    return () => {
+      alive = false
+    }
+  }, [debounced])
 
-  const pick = (cityId: string) => {
-    if (picking === 'from') patchDraft({ fromCityId: cityId, originHubId: null })
-    else patchDraft({ toCityId: cityId, destinationHubId: null })
+  const close = () => {
     setPicking(null)
     setQuery('')
+    setPlaces([])
+    setLocateFailed(false)
+  }
+
+  const swap = () =>
+    patchDraft({
+      fromCityId: draft.toCityId,
+      toCityId: draft.fromCityId,
+      pickupAddress: draft.dropAddress,
+      dropAddress: draft.pickupAddress,
+      pickupCoord: draft.dropCoord,
+      dropCoord: draft.pickupCoord,
+      originHubId: null,
+      destinationHubId: null,
+    })
+
+  /** A city on the network, chosen by name. Clears any exact address for that end. */
+  const pick = (cityId: string) => {
+    if (picking === 'from') patchDraft({ fromCityId: cityId, originHubId: null, pickupAddress: '', pickupCoord: null })
+    else patchDraft({ toCityId: cityId, destinationHubId: null, dropAddress: '', dropCoord: null })
+    setOffNetwork((o) => (o?.side === picking ? null : o))
+    close()
+  }
+
+  /** An exact point — typed or located — snapped to the nearest network city. */
+  const pickPlace = (side: 'from' | 'to', at: LngLat, line: string) => {
+    const near = nearestCity(at)
+    if (side === 'from') {
+      patchDraft({ fromCityId: near.cityId, originHubId: null, pickupAddress: line, pickupCoord: at })
+    } else {
+      patchDraft({ toCityId: near.cityId, destinationHubId: null, dropAddress: line, dropCoord: at })
+    }
+    setOffNetwork(near.serviced ? (o) => (o?.side === side ? null : o) : { side, km: Math.round(near.km), cityId: near.cityId })
+    close()
+  }
+
+  const locate = async () => {
+    if (!picking) return
+    const side = picking
+    setLocating(true)
+    setLocateFailed(false)
+    const at = await currentPosition()
+    if (!at) {
+      setLocating(false)
+      setLocateFailed(true)
+      return
+    }
+    const line = (await reverseGeocode(at)) ?? 'My current location'
+    setLocating(false)
+    pickPlace(side, at, line)
+  }
+
+  /** The address shown under a city when the end is an exact place. */
+  const detail = (side: 'from' | 'to') => {
+    const line = side === 'from' ? draft.pickupAddress : draft.dropAddress
+    const city = side === 'from' ? from : to
+    if (line) return line.split(',').slice(0, 2).join(',')
+    return city ? `${city.state} · ${city.hubCount} hubs` : 'City, town or exact address'
   }
 
   return (
@@ -79,14 +199,14 @@ export default function BookRoute() {
             [
               {
                 id: 'hub' as const,
-                icon: Building2,
+                icon: Buildings,
                 label: 'Hub to hub',
                 blurb: 'Drop at a hub, receiver collects',
                 meta: 'Cheapest · 4 OTP checkpoints',
               },
               {
                 id: 'p2p' as const,
-                icon: Home,
+                icon: House,
                 label: 'Door to door',
                 blurb: 'Traveler collects from your address',
                 meta: 'Fastest · 2 OTP checkpoints',
@@ -144,12 +264,15 @@ export default function BookRoute() {
               <span className="block text-[11px] font-bold tracking-wide text-ink-400 uppercase">
                 Pick up from
               </span>
-              <span className="mt-0.5 block truncate text-[16px] font-bold text-ink-900">
-                {from.name}
+              <span
+                className={cn(
+                  'mt-0.5 block truncate text-[16px] font-bold',
+                  from ? 'text-ink-900' : 'text-ink-400',
+                )}
+              >
+                {from ? from.name : 'Choose where it leaves from'}
               </span>
-              <span className="text-[12px] text-ink-500">
-                {from.state} · {from.hubCount} hubs
-              </span>
+              <span className="block truncate text-[12px] text-ink-500">{detail('from')}</span>
             </span>
           </button>
 
@@ -161,7 +284,7 @@ export default function BookRoute() {
               aria-label="Swap cities"
               className="pressable-sm absolute top-1/2 right-4 grid size-9 -translate-y-1/2 place-items-center rounded-full border border-ink-200 bg-white text-ink-600 shadow-(--shadow-e1)"
             >
-              <ArrowUpDown size={15} />
+              <ArrowsDownUp size={15} />
             </button>
           </div>
 
@@ -176,26 +299,38 @@ export default function BookRoute() {
               <span className="block text-[11px] font-bold tracking-wide text-ink-400 uppercase">
                 Deliver to
               </span>
-              <span className="mt-0.5 block truncate text-[16px] font-bold text-ink-900">
-                {to.name}
+              <span
+                className={cn(
+                  'mt-0.5 block truncate text-[16px] font-bold',
+                  to ? 'text-ink-900' : 'text-ink-400',
+                )}
+              >
+                {to ? to.name : 'Choose where it is going'}
               </span>
-              <span className="text-[12px] text-ink-500">
-                {to.state} · {to.hubCount} hubs
-              </span>
+              <span className="block truncate text-[12px] text-ink-500">{detail('to')}</span>
             </span>
           </button>
         </Card>
 
         {sameCity && (
           <Note tone="warn" className="mt-3">
-            Origin and destination are the same city. DikkiConnect is built for intercity moves — pick a
+            Origin and destination are the same city. Stowza is built for intercity moves — pick a
             different destination.
           </Note>
         )}
 
-        {!sameCity && (
+        {offNetwork && (
+          <Note tone="neutral" icon={<Warning size={15} />} className="mt-3">
+            That spot is about {offNetwork.km} km from {cityName(offNetwork.cityId)}, the nearest city on
+            the network — we serve up to {SERVICE_RADIUS_KM} km out. The corridor is priced from{' '}
+            {cityName(offNetwork.cityId)}; a traveler on that route may still collect from your
+            address.
+          </Note>
+        )}
+
+        {both && !sameCity && (
           <Card className="mt-3 flex items-center gap-3 border-brand-100 bg-brand-50">
-            <Zap size={17} className="shrink-0 text-brand-600" />
+            <Lightning size={17} className="shrink-0 text-brand-600" />
             <p className="text-[12.5px] font-semibold text-brand-800">
               {km} km corridor · typically{' '}
               {km < 200 ? 'same-day delivery' : 'next-day delivery'}
@@ -203,13 +338,13 @@ export default function BookRoute() {
           </Card>
         )}
 
-        {/* Recent routes */}
+        {/* The corridors most parcels travel — a shortcut, never a default. */}
         <div className="mt-7">
           <p className="mb-3 text-[12px] font-bold tracking-wide text-ink-400 uppercase">
-            Recent routes
+            Popular corridors
           </p>
           <div className="flex flex-col gap-2">
-            {RECENT_ROUTES.map((r) => {
+            {POPULAR_ROUTES.map((r) => {
               const f = CITIES.find((c) => c.id === r.from)!
               const t = CITIES.find((c) => c.id === r.to)!
               return (
@@ -221,6 +356,10 @@ export default function BookRoute() {
                       toCityId: r.to,
                       originHubId: null,
                       destinationHubId: null,
+                      pickupAddress: '',
+                      dropAddress: '',
+                      pickupCoord: null,
+                      dropCoord: null,
                     })
                   }
                   className={cn(
@@ -254,7 +393,7 @@ export default function BookRoute() {
         <Button
           block
           size="lg"
-          disabled={sameCity}
+          disabled={!both || sameCity}
           onClick={() => navigate('/sender/book/parcel')}
           iconRight={<ArrowRight size={18} />}
         >
@@ -262,33 +401,47 @@ export default function BookRoute() {
         </Button>
       </ActionBar>
 
-      {/* City picker */}
+      {/* City picker — a network city, the device's position, or any place. */}
       <Sheet
         open={picking !== null}
-        onClose={() => {
-          setPicking(null)
-          setQuery('')
-        }}
-        title={picking === 'from' ? 'Pick up city' : 'Delivery city'}
-        subtitle="We currently operate across Karnataka and neighbouring states"
+        onClose={close}
+        title={picking === 'from' ? 'Where does it leave from?' : 'Where is it going?'}
+        subtitle="A city on the network, your location, or any address"
         fullHeight
       >
         <SearchField
           value={query}
           onChange={setQuery}
-          placeholder="Search city or state"
+          placeholder="City, town, street or landmark"
           autoFocus
-          className="mb-4"
+          className="mb-3"
         />
+
+        <button
+          onClick={locate}
+          disabled={locating}
+          className="pressable mb-2 flex w-full items-center gap-3.5 rounded-(--radius-md) px-3 py-3.5 text-left hover:bg-ink-50 disabled:opacity-70"
+        >
+          <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-600 text-white">
+            {locating ? <Spinner size={16} tone="light" /> : <Crosshair size={17} />}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14.5px] font-bold text-ink-900">
+              {locating ? 'Finding you…' : 'Use my current location'}
+            </span>
+            <span className="text-[12px] text-ink-500">
+              {locateFailed
+                ? 'We couldn’t get a fix — allow location, or type the address instead'
+                : 'Snapped to the nearest city on the network'}
+            </span>
+          </span>
+        </button>
+
         <div className="flex flex-col">
-          {filtered.length === 0 && (
-            <div className="py-12 text-center">
-              <Search size={26} className="mx-auto mb-3 text-ink-300" />
-              <p className="text-[14px] font-semibold text-ink-700">No city matches “{query}”</p>
-              <p className="mt-1 text-[12.5px] text-ink-500">
-                Tell us where you need DikkiConnect next from Settings.
-              </p>
-            </div>
+          {filtered.length > 0 && (
+            <p className="mt-2 mb-1 px-3 text-[11px] font-bold tracking-wide text-ink-400 uppercase">
+              Cities we serve
+            </p>
           )}
           {filtered.map((c) => {
             const selected =
@@ -322,6 +475,52 @@ export default function BookRoute() {
               </button>
             )
           })}
+
+          {/* Anywhere else — the geocoder's answers, snapped on pick. */}
+          {(places.length > 0 || searching) && (
+            <p className="mt-4 mb-1 px-3 text-[11px] font-bold tracking-wide text-ink-400 uppercase">
+              Places
+            </p>
+          )}
+          {searching && places.length === 0 && (
+            <div className="flex items-center gap-3 px-3 py-3.5 text-[13px] text-ink-500">
+              <Spinner size={16} /> Looking up “{debounced}”…
+            </div>
+          )}
+          {places.map((pl) => {
+            const near = nearestCity({ lng: pl.lng, lat: pl.lat })
+            return (
+              <button
+                key={`${pl.lat},${pl.lng}`}
+                onClick={() => picking && pickPlace(picking, { lng: pl.lng, lat: pl.lat }, pl.label)}
+                className="pressable flex items-center gap-3.5 rounded-(--radius-md) px-3 py-3.5 text-left transition-colors hover:bg-ink-50"
+              >
+                <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-ink-500">
+                  <MapPinLine size={17} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14.5px] font-bold text-ink-900">{pl.name}</span>
+                  <span className="block truncate text-[12px] text-ink-500">
+                    {near.serviced
+                      ? `Near ${cityName(near.cityId)} · ${pl.label.split(',').slice(1, 3).join(',').trim()}`
+                      : `${Math.round(near.km)} km from ${cityName(near.cityId)}, our nearest city`}
+                  </span>
+                </span>
+              </button>
+            )
+          })}
+
+          {filtered.length === 0 && places.length === 0 && !searching && (
+            <div className="py-12 text-center">
+              <MagnifyingGlass size={26} className="mx-auto mb-3 text-ink-300" />
+              <p className="text-[14px] font-semibold text-ink-700">Nothing called “{query}” yet</p>
+              <p className="mt-1 text-[12.5px] text-ink-500">
+                {query.trim().length < 3
+                  ? 'Keep typing — we search every town and street after three letters.'
+                  : 'Try the nearest town, a landmark, or a pin code.'}
+              </p>
+            </div>
+          )}
         </div>
       </Sheet>
     </Screen>

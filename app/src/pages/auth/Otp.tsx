@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle2, MailCheck, RefreshCw } from 'lucide-react'
+import { CheckCircle, EnvelopeOpen, ArrowsClockwise } from '@phosphor-icons/react'
 import { Screen, TopBar } from '@/components/layout/Screen'
 import { Button, Note, OtpInput, useToast } from '@/components/ui'
 import { useCountdown } from '@/lib/hooks'
@@ -58,7 +58,7 @@ export default function Otp() {
       } else if (result.reason === 'no-api') {
         setError('This build has no sign-in server attached. Reinstall the latest APK.')
       } else if (result.reason === 'offline') {
-        setError('Could not reach DikkiConnect. Check your connection.')
+        setError('Could not reach Stowza. Check your connection.')
       } else {
         setError(
           `That code didn't match. ${result.attemptsLeft} attempt${
@@ -106,7 +106,7 @@ export default function Otp() {
 
       <div className="device-scroll flex-1 px-7">
         <div className="mb-6 grid size-14 place-items-center rounded-(--radius-lg) bg-brand-50 text-brand-600">
-          <MailCheck size={24} />
+          <EnvelopeOpen size={24} />
         </div>
 
         <h1 className="text-display text-[28px] leading-[1.14] font-extrabold text-ink-900">
@@ -121,7 +121,7 @@ export default function Otp() {
           {verified ? (
             <div className="anim-pop flex flex-col items-center py-6">
               <div className="grid size-16 place-items-center rounded-full bg-success-50 text-success-600">
-                <CheckCircle2 size={34} />
+                <CheckCircle size={34} />
               </div>
               <p className="mt-4 text-[16px] font-bold text-ink-900">Verified</p>
               <p className="mt-1 text-[13px] text-ink-500">Taking you in…</p>
@@ -159,7 +159,7 @@ export default function Otp() {
                     onClick={resend}
                     className="pressable-sm inline-flex items-center gap-2 text-[13.5px] font-bold text-brand-600"
                   >
-                    <RefreshCw size={14} />
+                    <ArrowsClockwise size={14} />
                     Send a new code
                   </button>
                 ) : (

@@ -1,4 +1,4 @@
-package in.dikkiconnect.app;
+package in.stowza.app;
 
 import com.getcapacitor.BridgeActivity;
 

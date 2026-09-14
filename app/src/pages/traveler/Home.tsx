@@ -2,16 +2,16 @@ import { useNavigate } from 'react-router-dom'
 import {
   Bell,
   Briefcase,
-  CalendarClock,
+  CalendarDots,
   Car,
-  ChevronRight,
-  Navigation,
+  CaretRight,
+  NavigationArrow,
   Package,
   Plus,
-  ShieldAlert,
-  TrendingUp,
+  ShieldWarning,
+  TrendUp,
   Users,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody, BrandHeader } from '@/components/layout/Screen'
 import { PortalSwitcher } from '@/components/layout/PortalSwitcher'
 import {
@@ -140,7 +140,7 @@ export default function TravelerHome() {
             className="mb-5 flex items-center gap-3.5 border-warn-100 bg-warn-50"
           >
             <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-warn-500/15 text-warn-600">
-              <ShieldAlert size={19} />
+              <ShieldWarning size={19} />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[13.5px] font-bold text-warn-800">Finish KYC to carry passengers</p>
@@ -148,7 +148,7 @@ export default function TravelerHome() {
                 Licence + RC verification unlocks seat bookings
               </p>
             </div>
-            <ChevronRight size={17} className="shrink-0 text-warn-600" />
+            <CaretRight size={17} className="shrink-0 text-warn-600" />
           </Card>
         )}
 
@@ -158,7 +158,7 @@ export default function TravelerHome() {
           className="springy focus-ring mb-5 flex w-full items-center gap-3.5 rounded-(--radius-lg) bg-action p-4 text-left text-white shadow-(--shadow-action)"
         >
           <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-md) bg-white/15 backdrop-blur-md">
-            <CalendarClock size={20} />
+            <CalendarDots size={20} />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-[15px] font-extrabold">Post a ride in advance</span>
@@ -166,7 +166,7 @@ export default function TravelerHome() {
               Publish today, drive any day — seats and parcels fill before you leave
             </span>
           </span>
-          <ChevronRight size={18} className="shrink-0 text-white/60" />
+          <CaretRight size={18} className="shrink-0 text-white/60" />
         </button>
 
         {/* Today's trip */}
@@ -216,7 +216,7 @@ export default function TravelerHome() {
               onClick={() => navigate('/traveler/navigate')}
               className="pressable mt-3.5 flex w-full items-center justify-center gap-2 rounded-(--radius-md) bg-action py-3.5 text-[14px] font-bold text-white shadow-(--shadow-action) hover:bg-action-hover"
             >
-              <Navigation size={16} />
+              <NavigationArrow size={16} />
               Start navigation
             </button>
           </Card>
@@ -231,7 +231,7 @@ export default function TravelerHome() {
                 Post the route and free boot space for a day that suits you
               </p>
             </div>
-            <ChevronRight size={17} className="shrink-0 text-ink-300" />
+            <CaretRight size={17} className="shrink-0 text-ink-300" />
           </Card>
         )}
 
@@ -248,7 +248,7 @@ export default function TravelerHome() {
               {laterTrips.slice(0, 3).map((t) => (
                 <Card key={t.id} to="/traveler/trips" className="flex items-center gap-3.5">
                   <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-50 text-brand-600">
-                    <CalendarClock size={18} />
+                    <CalendarDots size={18} />
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[13.5px] font-bold text-ink-900">
@@ -318,7 +318,7 @@ export default function TravelerHome() {
           <SectionHeader title="Your performance" subtitle="Last 30 days" />
           <div className="grid grid-cols-2 gap-3">
             <Stat
-              icon={<TrendingUp size={15} />}
+              icon={<TrendUp size={15} />}
               label="Total earned"
               value={compactInr(18420)}
               delta={{ value: '12%', up: true }}
@@ -361,7 +361,7 @@ export default function TravelerHome() {
                   <p className="flex-1 text-left text-[13.5px] font-bold text-ink-900">
                     Post your first ride
                   </p>
-                  <ChevronRight size={17} className="shrink-0 text-ink-300" />
+                  <CaretRight size={17} className="shrink-0 text-ink-300" />
                 </Card>
               ) : (
                 mine.all

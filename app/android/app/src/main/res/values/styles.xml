@@ -18,5 +18,8 @@
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <!-- Android 12+ system splash: the same dusk as the plate and the
+             in-app launch screen, so the three read as one surface. -->
+        <item name="windowSplashScreenBackground">#071231</item>
     </style>
 </resources>

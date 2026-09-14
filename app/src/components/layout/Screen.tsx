@@ -1,7 +1,7 @@
 import { forwardRef, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -54,7 +54,7 @@ export function TopBar({
               : 'text-ink-900 hover:bg-ink-100',
           )}
         >
-          <ArrowLeft size={19} strokeWidth={2.2} />
+          <ArrowLeft size={19} />
         </button>
       ) : (
         <span className="size-10 shrink-0" />

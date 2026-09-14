@@ -1,8 +1,8 @@
-# DikkiConnect
+# Stowza
 
 Intercity parcel delivery using the empty **dikki** (boot) space of cars already
 making the trip — plus cost-shared carpooling on the same driver network.
-Built from `PRD_DikkiConnect.pdf`; MVP corridor is **Bangalore ↔ Mysore**.
+Built from `PRD_Stowza.pdf`; MVP corridor is **Bangalore ↔ Mysore**.
 
 This is a complete, working front end: 59 routes, five roles, real loading and
 empty states, and a desktop ops console.
@@ -31,8 +31,8 @@ Writes `demo-out/`:
 
 | File | What it's for |
 | --- | --- |
-| `DikkiConnect-demo.html` | One self-contained file, ~1.2 MB. Double-click, works offline, nothing to install. Email or WhatsApp it. Uses hash URLs (`#/sender`) since it runs off disk. |
-| `DikkiConnect-demo-site.zip` | The hosted version. Unzip and drag the folder onto [app.netlify.com/drop](https://app.netlify.com/drop) for a public link — best for phones. Clean URLs, installable to a home screen. |
+| `Stowza-demo.html` | One self-contained file, ~1.2 MB. Double-click, works offline, nothing to install. Email or WhatsApp it. Uses hash URLs (`#/sender`) since it runs off disk. |
+| `Stowza-demo-site.zip` | The hosted version. Unzip and drag the folder onto [app.netlify.com/drop](https://app.netlify.com/drop) for a public link — best for phones. Clean URLs, installable to a home screen. |
 | `HOW-TO-VIEW.txt` | A short note for whoever receives it. |
 
 Connecting a git repo to Netlify/Vercel also works — `netlify.toml` and

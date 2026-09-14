@@ -1,22 +1,70 @@
 import { Suspense, useEffect, useState } from 'react'
-import { Outlet, useLocation, useNavigationType } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { WifiOff } from 'lucide-react'
+import { ArrowsClockwise, CellSignalLow, CheckCircle, WifiSlash } from '@phosphor-icons/react'
 import { ScreenLoader } from '@/components/ui'
 import { BottomNav } from './BottomNav'
-import { useOnline } from '@/lib/hooks'
+import { ErrorBoundary } from './ErrorBoundary'
+import { RouteSettled } from '@/lib/boot'
+import { NETWORK } from '@/lib/copy'
+import { useConnection, useUpdateReady } from '@/lib/hooks'
 import { useApp } from '@/lib/store'
 import type { Role } from '@/lib/types'
 
-/** Thin offline banner — appears the moment connectivity drops. */
-function OfflineBanner() {
-  const online = useOnline()
-  if (online) return null
+const HOME: Record<Role, string> = { sender: '/sender', traveler: '/traveler', passenger: '/passenger', hub: '/hub' }
+
+/**
+ * One strip for the state of the line. Offline is dark and stays; slow is
+ * amber and stays while it is slow; "back online" is green for a breath and
+ * goes, so the recovery is acknowledged and then out of the way. Below it,
+ * if the service worker has fetched a newer build, a one-tap reload.
+ */
+function NetworkBanner() {
+  const { online, slow, justBack } = useConnection()
+  const updateReady = useUpdateReady()
+
+  const line = !online
+    ? { icon: <WifiSlash size={13} />, text: NETWORK.offline, tone: 'bg-ink-900 text-white' }
+    : justBack
+      ? { icon: <CheckCircle size={13} />, text: NETWORK.back, tone: 'bg-success-600 text-white' }
+      : slow
+        ? { icon: <CellSignalLow size={13} />, text: NETWORK.slow, tone: 'bg-warn-500 text-ink-900' }
+        : null
+
   return (
-    <div className="flex shrink-0 items-center justify-center gap-2 bg-ink-900 py-1.5 text-[11.5px] font-semibold text-white">
-      <WifiOff size={13} />
-      You&apos;re offline — showing your last synced data
-    </div>
+    <AnimatePresence initial={false}>
+      {line && (
+        <motion.div
+          key={line.text}
+          role="status"
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.22 }}
+          className={`flex shrink-0 items-center justify-center gap-2 overflow-hidden text-[11.5px] font-semibold ${line.tone}`}
+        >
+          <span className="flex items-center gap-2 py-1.5">
+            {line.icon}
+            {line.text}
+          </span>
+        </motion.div>
+      )}
+      {updateReady && (
+        <motion.button
+          key="update"
+          onClick={() => window.location.reload()}
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="pressable flex shrink-0 items-center justify-center gap-2 overflow-hidden bg-brand-600 text-[11.5px] font-semibold text-white"
+        >
+          <span className="flex items-center gap-2 py-1.5">
+            <ArrowsClockwise size={13} />
+            A newer Stowza is ready — tap to reload
+          </span>
+        </motion.button>
+      )}
+    </AnimatePresence>
   )
 }
 
@@ -30,7 +78,7 @@ export function DeviceShell({ children }: { children: React.ReactNode }) {
     <div className="device-stage">
       <div className="device-shell">
         <RouteProgress />
-        <OfflineBanner />
+        <NetworkBanner />
         {children}
       </div>
     </div>
@@ -64,6 +112,7 @@ function RouteProgress() {
 /** Layout for the four tabbed mobile roles. */
 export function RoleLayout({ role }: { role: Role }) {
   const location = useLocation()
+  const navigate = useNavigate()
   const { role: storedRole, setRole } = useApp()
 
   // Landing on /hub (deep link, refresh, portal switch) has to become the
@@ -76,13 +125,16 @@ export function RoleLayout({ role }: { role: Role }) {
   return (
     <>
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <Suspense fallback={<ScreenLoader />}>
-          <AnimatePresence mode="wait" initial={false}>
-            <RouteFrame key={location.pathname} variant="tab">
-              <Outlet />
-            </RouteFrame>
-          </AnimatePresence>
-        </Suspense>
+        <ErrorBoundary resetKey={location.pathname} onHome={() => navigate(HOME[role])}>
+          <Suspense fallback={<ScreenLoader />}>
+            <AnimatePresence mode="wait" initial={false}>
+              <RouteFrame key={location.pathname} variant="tab">
+                <Outlet />
+              </RouteFrame>
+            </AnimatePresence>
+            <RouteSettled />
+          </Suspense>
+        </ErrorBoundary>
       </div>
       <BottomNav role={role} />
     </>
@@ -92,15 +144,20 @@ export function RoleLayout({ role }: { role: Role }) {
 /** Layout for full-bleed flows (booking, scanning, auth) — no tab bar. */
 export function FlowLayout() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { role } = useApp()
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
-      <Suspense fallback={<ScreenLoader />}>
-        <AnimatePresence mode="wait" initial={false}>
-          <RouteFrame key={location.pathname} variant="flow">
-            <Outlet />
-          </RouteFrame>
-        </AnimatePresence>
-      </Suspense>
+      <ErrorBoundary resetKey={location.pathname} onHome={() => navigate(HOME[role] ?? '/')}>
+        <Suspense fallback={<ScreenLoader />}>
+          <AnimatePresence mode="wait" initial={false}>
+            <RouteFrame key={location.pathname} variant="flow">
+              <Outlet />
+            </RouteFrame>
+          </AnimatePresence>
+          <RouteSettled />
+        </Suspense>
+      </ErrorBoundary>
     </div>
   )
 }

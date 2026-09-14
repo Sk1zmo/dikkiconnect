@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { LucideIcon } from 'lucide-react'
+import { type Icon as LucideIcon } from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 
 /**
@@ -59,7 +59,7 @@ export function FeatureRow({
           )}
         >
           <span className="grid size-11 place-items-center rounded-full bg-brand-50 text-brand-600">
-            <Icon size={19} strokeWidth={2} />
+            <Icon size={19} />
           </span>
           <span className="mt-2.5 text-[12.5px] leading-tight font-bold text-ink-900">{label}</span>
           <span className="mt-1 text-[10.5px] leading-snug text-ink-500">{detail}</span>

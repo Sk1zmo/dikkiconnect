@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { Camera, ImageIcon, Keyboard, Zap } from 'lucide-react'
+import { Camera, Image, Keyboard, Lightning } from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 import { Spinner } from '@/components/ui'
 
@@ -145,10 +145,10 @@ export function ScannerViewfinder({
         <p className="mb-5 text-center text-[13.5px] font-medium text-white/80">{hint}</p>
         <div className="flex items-center justify-center gap-3">
           <button className="pressable-sm glass-dark grid size-12 place-items-center rounded-full text-white ring-1 ring-white/20">
-            <Zap size={19} />
+            <Lightning size={19} />
           </button>
           <button className="pressable-sm glass-dark grid size-12 place-items-center rounded-full text-white ring-1 ring-white/20">
-            <ImageIcon size={19} />
+            <Image size={19} />
           </button>
           <button className="pressable-sm glass-dark grid size-12 place-items-center rounded-full text-white ring-1 ring-white/20">
             <Keyboard size={19} />

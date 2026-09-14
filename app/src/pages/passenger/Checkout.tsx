@@ -1,6 +1,13 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
-import { CreditCard, Lock, Phone, Smartphone, Users, Wallet as WalletIcon } from 'lucide-react'
+import {
+  CreditCard,
+  Lock,
+  Phone,
+  DeviceMobile,
+  Users,
+  Wallet as WalletIcon,
+} from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -146,7 +153,7 @@ export default function RideCheckout() {
           <RadioCard
             selected={method === 'upi'}
             onSelect={() => setMethod('upi')}
-            icon={<Smartphone size={18} />}
+            icon={<DeviceMobile size={18} />}
             title="UPI"
             subtitle="Google Pay, PhonePe, Paytm"
           />
@@ -154,7 +161,7 @@ export default function RideCheckout() {
             selected={method === 'wallet'}
             onSelect={() => !walletShort && setMethod('wallet')}
             icon={<WalletIcon size={18} />}
-            title="DikkiConnect Wallet"
+            title="Stowza Wallet"
             subtitle={walletShort ? `Balance ${inr(balance)} — not enough` : `Balance ${inr(balance)}`}
             className={walletShort ? 'opacity-55' : undefined}
           />
@@ -176,7 +183,7 @@ export default function RideCheckout() {
         </Card>
 
         <Note tone="brand" icon={<Users size={15} />} className="mt-3" title="This is cost-sharing">
-          You are contributing to fuel and tolls on a trip the driver is already making. DikkiConnect is
+          You are contributing to fuel and tolls on a trip the driver is already making. Stowza is
           not a taxi service and drivers are not commercial operators.
         </Note>
 

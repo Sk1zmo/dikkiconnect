@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
-import { Clock, MapPin, Sun } from 'lucide-react'
+import { Clock, MapPin, Sun } from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import { Card, Note, OtpDisplay, Skeleton } from '@/components/ui'
 import { QrTicket } from '@/components/viz/Scanner'
 import { hubById, otpFor } from '@/lib/data'
 import { kg } from '@/lib/format'
 import { useApp } from '@/lib/store'
+import { BRAND } from '@/lib/brand'
 import { categoryById } from '@/lib/data'
 import { CategoryIcon } from '@/components/domain/CategoryIcon'
 
@@ -40,7 +41,7 @@ export default function DropOffQr() {
           {ready ? (
             <div className="anim-scale-in">
               <QrTicket
-                value={`dikkiconnect://parcel/${parcel.id}/${isP2P ? 'pickup' : 'dropoff'}`}
+                value={`${BRAND.scheme}://parcel/${parcel.id}/${isP2P ? 'pickup' : 'dropoff'}`}
                 caption={parcel.id}
               />
             </div>
