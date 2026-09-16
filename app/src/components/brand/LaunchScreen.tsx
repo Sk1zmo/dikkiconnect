@@ -107,11 +107,13 @@ export function LaunchScreen({ ready, onDone }: { ready: boolean; onDone: () => 
       onPointerDown={play}
       className="absolute inset-0 z-200 grid place-items-center overflow-hidden bg-dusk-900 select-none"
       initial={false}
+      /* The pixel wipe covers the frame before this unmounts (App.tsx), so
+         the exit itself is nothing — except under reduced motion, where
+         there is no wipe and this fades. */
       exit={{
         opacity: 0,
-        scale: reduced ? 1 : 1.04,
         pointerEvents: 'none',
-        transition: { duration: reduced ? 0.2 : 0.45, ease: EASE },
+        transition: { duration: reduced ? 0.25 : 0, ease: EASE },
       }}
     >
       {/* ── Atmosphere ────────────────────────────────────────────────────

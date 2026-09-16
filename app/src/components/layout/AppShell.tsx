@@ -5,6 +5,7 @@ import { ArrowsClockwise, CellSignalLow, CheckCircle, WifiSlash } from '@phospho
 import { ScreenLoader } from '@/components/ui'
 import { BottomNav } from './BottomNav'
 import { ErrorBoundary } from './ErrorBoundary'
+import { PIXEL_WIPE_MID_MS, PixelWipeHost, RouteWipe } from './PixelWipe'
 import { RouteSettled } from '@/lib/boot'
 import { NETWORK } from '@/lib/copy'
 import { useConnection, useUpdateReady } from '@/lib/hooks'
@@ -80,6 +81,8 @@ export function DeviceShell({ children }: { children: React.ReactNode }) {
         <RouteProgress />
         <NetworkBanner />
         {children}
+        <RouteWipe />
+        <PixelWipeHost />
       </div>
     </div>
   )
@@ -165,16 +168,14 @@ export function FlowLayout() {
 /**
  * Route transitions.
  *
- * Two different gestures, because the two layouts mean different things.
- * Switching tabs is lateral movement between peers, so it gets a quick lift
- * and fade — anything more literal turns a one-tap switch into a wait. Moving
- * through a flow is directional, so it slides: forward pushes in from the
- * right, Back pulls in from the left, which is the only cue that tells you
- * whether you advanced or retreated.
+ * The pixel wipe (PixelWipe.tsx) carries the change: it floods the frame,
+ * the screens swap underneath at its midpoint, and it drains. So the frames
+ * themselves do very little — the outgoing one holds until the frame is
+ * covered, the incoming one is simply there when it uncovers, with a touch
+ * of lift so it does not feel pasted. Flows keep a hint of direction (a few
+ * pixels of slide, forward or back) under the wipe.
  *
- * Exits are deliberately faster than entrances (a third of the duration). The
- * screen you are leaving has nothing left to say, and the asymmetry is what
- * keeps the whole thing feeling quick rather than animated-at.
+ * Under reduced motion there is no wipe, and the frames crossfade.
  */
 function RouteFrame({
   children,
@@ -189,23 +190,22 @@ function RouteFrame({
   if (reduced) return <div className="flex h-full min-h-0 flex-col">{children}</div>
 
   const back = navigationType === 'POP'
-  const slide = variant === 'flow' ? (back ? -26 : 26) : 0
+  const slide = variant === 'flow' ? (back ? -10 : 10) : 0
+  const hold = PIXEL_WIPE_MID_MS / 1000
 
   return (
     <motion.div
       className="flex h-full min-h-0 flex-col"
-      initial={{ opacity: 0, x: slide, y: variant === 'tab' ? 8 : 0 }}
+      initial={{ opacity: 0, x: slide, y: variant === 'tab' ? 6 : 0 }}
       animate={{
         opacity: 1,
         x: 0,
         y: 0,
-        transition: { duration: 0.26, ease: [0.16, 1, 0.3, 1] },
+        transition: { duration: 0.22, delay: hold * 0.6, ease: [0.16, 1, 0.3, 1] },
       }}
       exit={{
-        opacity: 0,
-        x: -slide * 0.55,
-        y: variant === 'tab' ? -4 : 0,
-        transition: { duration: 0.11, ease: [0.4, 0, 1, 1] },
+        opacity: 1,
+        transition: { duration: hold },
       }}
     >
       {children}

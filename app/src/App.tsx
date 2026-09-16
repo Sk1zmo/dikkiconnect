@@ -9,6 +9,7 @@ import { DemoBadge } from '@/components/brand/DemoBadge'
 import { LaunchScreen } from '@/components/brand/LaunchScreen'
 import { Maintenance } from '@/components/layout/Maintenance'
 import { LiveAlerts } from '@/components/layout/LiveAlerts'
+import { PIXEL_WIPE_MID_MS, playPixelWipe } from '@/components/layout/PixelWipe'
 import { initPush } from '@/lib/push'
 import { useMaintenance } from '@/lib/maintenance'
 import { ToastProvider } from '@/components/ui'
@@ -228,7 +229,12 @@ function Launch({ children }: { children: ReactNode }) {
   const [settled, setSettled] = useState(false)
   const [done, setDone] = useState(false)
   const settle = useCallback(() => setSettled(true), [])
-  const finish = useCallback(() => setDone(true), [])
+  /* The opening leaves through the pixel wipe: ask for one, and unmount the
+     screen at its midpoint, when the frame is fully covered. */
+  const finish = useCallback(() => {
+    playPixelWipe()
+    setTimeout(() => setDone(true), PIXEL_WIPE_MID_MS)
+  }, [])
   const maintenance = useMaintenance()
   const navigate = useNavigate()
 

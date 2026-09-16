@@ -615,6 +615,22 @@ svg .anim-blink {
   animation: stowza-dash 1.4s linear infinite;
 }
 
+/* One cell of the pixel wipe: pops in, holds while the screens swap, pops
+   out. Scale from the cell's own centre so the flood reads as squares
+   growing, not a curtain. Duration and delay are set per cell inline. */
+@keyframes stowza-pixel {
+  0% { transform: scale(0); opacity: 0; }
+  25% { transform: scale(1.04); opacity: 1; }
+  70% { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(0); opacity: 0; }
+}
+.anim-pixel {
+  transform: scale(0);
+  opacity: 0;
+  animation: stowza-pixel 620ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  will-change: transform, opacity;
+}
+
 /* The mark drawing itself: the brand's loader. `pathLength="1"` on the path
    makes the dash units fractions of the whole, whatever its real length. */
 @keyframes stowza-draw-loop {
