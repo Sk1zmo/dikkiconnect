@@ -65,10 +65,11 @@ keytool -list -v -keystore <your-backup-path>/waypool-upload.keystore
 
 ## Stage 1 — Make the server real
 
-**About an hour. Free.** Right now the API at `dikkiconnect-mail.vercel.app`
-is 35 days old, has **zero environment variables**, and `/api/parcels` returns
-404. Nothing of the booking or custody work is live. Until this stage is done,
-nobody can sign in and nothing can be booked.
+**Done.** The API at `dikkiconnect-mail.vercel.app` is live, has Upstash Redis
+connected and verified durable, and mail is flowing over Gmail SMTP.
+`/api/parcels` and `/api/rides` both answer 401 (not 404) without a token, and
+a real sign-in gets through end to end. The steps below are kept for the
+record and in case a redeploy ever needs to rebuild this from zero.
 
 ### 1.0 — The one command that does most of it
 
@@ -248,7 +249,7 @@ start Stage 2 — the identity check runs in the background while you write.
 waiting for something that is not blocking.
 
 - [ ] Play Console → **Testing → Closed testing** → create a track
-- [ ] Upload **`apks final/WayPool-2.1.0-release-signed.aab`** — the `.aab`, not
+- [ ] Upload **`apks final/WayPool-2.6.0-release-signed.aab`** — the `.aab`, not
       the `.apk`. Play has not accepted APKs for new apps since 2021
 - [ ] Accept **Play App Signing** when offered. Your upload key stays the key
       you sign with; Google re-signs for distribution and keeps a backup of the
@@ -261,7 +262,7 @@ waiting for something that is not blocking.
 - [ ] Confirm in the console that the testers show as opted in
 
 **The build is ready today.** Signed, verified not debuggable, package
-`in.waypool.app`, versionCode 8, targetSdk 36 — which already satisfies the
+`in.waypool.app`, versionCode 15, targetSdk 36 — which already satisfies the
 [August 31 2026 target-API requirement](https://developer.android.com/google/play/requirements/target-sdk).
 
 ---
