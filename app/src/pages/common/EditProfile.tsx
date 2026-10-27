@@ -102,7 +102,7 @@ export default function EditProfile() {
               <p className="text-[11px] font-bold tracking-wide text-ink-400 uppercase">
                 Mobile number
               </p>
-              <p className="tabular mt-0.5 truncate text-[14px] font-bold text-ink-900">
+              <p className="tabular mt-0.5 truncate text-[15px] font-extrabold text-ink-900">
                 {maskPhone(user.phone)}
               </p>
             </div>

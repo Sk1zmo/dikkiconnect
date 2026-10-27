@@ -43,7 +43,7 @@ interface OpsFeed {
   events: Array<{ at: string; kind: string; identifier?: string; detail?: string; ok?: boolean }>
 }
 
-const KEY_STORE = 'dikkiconnect.opskey'
+const KEY_STORE = 'waypool.opskey'
 
 export default function Ops() {
   const [key, setKey] = useState(() => localStorage.getItem(KEY_STORE) ?? '')
@@ -128,7 +128,7 @@ export default function Ops() {
         <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="font-mono text-[10.5px] tracking-[0.3em] text-ink-400 uppercase">
-              Stowza
+              WayPool
             </p>
             <h1 className="text-display mt-1.5 text-[28px] font-extrabold text-ink-900">
               Operations

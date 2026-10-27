@@ -17,13 +17,13 @@ import {
   LiveDot,
   ProgressBar,
   Sheet,
-  Stars,
   useToast,
 } from '@/components/ui'
 import { LiveMap } from '@/components/viz/Map'
-import { cityName, otpFor, travelerById } from '@/lib/data'
+import { cityName } from '@/lib/data'
 import { useRideForTrip } from '@/lib/store'
 import { useTrip } from '@/lib/store'
+import { rides } from '@/lib/api'
 import { inr, time } from '@/lib/format'
 import { useCountdown } from '@/lib/hooks'
 
@@ -37,13 +37,20 @@ export default function RideTracking() {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [sosOpen, setSosOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
+  const [code, setCode] = useState<string | null>(null)
   const { label } = useCountdown(2 * 3600 + 48 * 60)
 
   const trip = useTrip(id)
   const ride = useRideForTrip(id)
-  if (!trip) return <Navigate to="/passenger" replace />
+  if (trip === null) return <Navigate to="/passenger" replace />
 
-  const driver = travelerById(trip.travelerId)!
+  const openDetails = () => {
+    setDetailsOpen(true)
+    if (ride) void rides.otp(ride.id).then(({ code: c }) => setCode(c))
+  }
+
+  if (!trip) return null
+
   const stage = 2
   const progress = ((stage + 1) / STAGES.length) * 100
 
@@ -88,8 +95,11 @@ export default function RideTracking() {
             <div className="mb-4">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-[13px] font-bold text-ink-900">{STAGES[stage]}</p>
-                <p className="tabular text-[12px] font-semibold text-ink-500">
-                  ETA {time(trip.arriveAt)}
+                <p className="flex items-baseline gap-1.5">
+                  <span className="text-[11px] font-semibold text-ink-500">ETA</span>
+                  <span className="tabular text-[15px] font-extrabold tracking-title text-ink-900">
+                    {time(trip.arriveAt)}
+                  </span>
                 </p>
               </div>
               <ProgressBar value={progress} />
@@ -109,13 +119,14 @@ export default function RideTracking() {
 
             {/* Driver */}
             <div className="flex items-center gap-3 border-t border-ink-100 pt-3.5">
-              <Avatar name={driver.name} size={44} tone={driver.avatarTone} />
+              <Avatar name={trip.travelerName} size={44} />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[14.5px] font-bold text-ink-900">{driver.name}</p>
-                <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-ink-500">
-                  <Stars value={driver.rating} size={10} />
-                  <span className="tabular truncate font-semibold">{driver.vehicle.plate}</span>
-                </div>
+                <p className="truncate text-[14.5px] font-bold text-ink-900">{trip.travelerName}</p>
+                {trip.vehicle && (
+                  <p className="tabular mt-0.5 truncate text-[11.5px] font-semibold text-ink-500">
+                    {trip.vehicle.plate}
+                  </p>
+                )}
               </div>
               <div className="flex shrink-0 gap-2">
                 <IconButton
@@ -128,7 +139,7 @@ export default function RideTracking() {
             </div>
 
             <div className="mt-3 grid grid-cols-2 gap-2.5">
-              <Button variant="outline" onClick={() => setDetailsOpen(true)}>
+              <Button variant="outline" onClick={openDetails}>
                 Trip details
               </Button>
               <Button onClick={() => navigate(`/passenger/complete/${trip.id}`)}>
@@ -147,11 +158,11 @@ export default function RideTracking() {
               Boarding OTP
             </p>
             <p className="tabular mt-1 text-[24px] font-extrabold tracking-[0.18em] text-brand-700">
-              {ride?.boardingOtp ?? otpFor(trip.id + 'board')}
+              {code ?? '······'}
             </p>
           </div>
 
-          <div className="flex gap-3.5 rounded-(--radius-md) border border-ink-100 p-4">
+          <div className="flex gap-3.5 rounded-(--radius-md) border border-ink-200 p-4">
             <span className="mt-1.5 flex flex-col items-center gap-1">
               <span className="size-2.5 rounded-full bg-brand-600 ring-4 ring-brand-600/15" />
               <span className="h-9 w-px border-l-2 border-dashed border-ink-200" />
@@ -159,7 +170,7 @@ export default function RideTracking() {
             </span>
             <div className="min-w-0 flex-1">
               <div className="mb-3.5">
-                <p className="tabular text-[15px] font-extrabold text-ink-900">
+                <p className="tabular text-[17px] font-extrabold tracking-title text-ink-900">
                   {time(trip.departAt)}
                 </p>
                 <p className="text-[12.5px] text-ink-500">
@@ -167,7 +178,7 @@ export default function RideTracking() {
                 </p>
               </div>
               <div>
-                <p className="tabular text-[15px] font-extrabold text-ink-900">
+                <p className="tabular text-[17px] font-extrabold tracking-title text-ink-900">
                   {time(trip.arriveAt)}
                 </p>
                 <p className="text-[12.5px] text-ink-500">
@@ -177,9 +188,9 @@ export default function RideTracking() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-(--radius-md) border border-ink-100 p-4">
-            <span className="text-[13px] font-semibold text-ink-600">Paid</span>
-            <span className="tabular text-[16px] font-extrabold text-ink-900">
+          <div className="flex min-h-12 items-center justify-between rounded-(--radius-md) border border-ink-200 p-4">
+            <span className="text-[11.5px] font-semibold text-ink-500">Paid</span>
+            <span className="tabular text-[19px] font-extrabold tracking-title text-ink-900">
               {inr(Math.round(trip.farePerSeat * 1.06))}
             </span>
           </div>
@@ -208,7 +219,7 @@ export default function RideTracking() {
         <div className="flex flex-col gap-2.5">
           {[
             { label: 'Call emergency services (112)', tone: 'danger' as const },
-            { label: 'Call Stowza safety desk', tone: 'brand' as const },
+            { label: 'Call WayPool safety desk', tone: 'brand' as const },
             { label: 'Alert my emergency contact now', tone: 'neutral' as const },
             { label: 'Report unsafe driving', tone: 'neutral' as const },
           ].map((a) => (
@@ -218,7 +229,7 @@ export default function RideTracking() {
                 setSosOpen(false)
                 toast.info('Safety desk notified', 'An agent will call you within 60 seconds.')
               }}
-              className={`pressable rounded-(--radius-md) p-4 text-left text-[14px] font-bold ${
+              className={`pressable flex min-h-14 items-center rounded-(--radius-md) p-4 text-left text-[14px] font-bold ${
                 a.tone === 'danger'
                   ? 'bg-danger-600 text-white'
                   : a.tone === 'brand'

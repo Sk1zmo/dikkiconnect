@@ -91,7 +91,7 @@ export function PortalSwitcher({ tone = 'onBrand' }: { tone?: 'onBrand' | 'light
         open={open}
         onClose={() => setOpen(false)}
         title="Switch portal"
-        subtitle="One Stowza account, four apps. Your data follows you."
+        subtitle="One WayPool account, four apps. Your data follows you."
       >
         <div className="flex flex-col gap-2.5">
           {PORTALS.map((p) => {

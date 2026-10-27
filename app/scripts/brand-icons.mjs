@@ -21,20 +21,18 @@ import { homedir } from 'node:os'
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)))
 
 /* Kept in step with Logo.tsx by hand — the two files are the whole brand. */
-const MARK_PATH = 'M36 9.5H14.5a5.75 5.75 0 0 0 0 11.5h17a5.75 5.75 0 0 1 0 11.5H9'
-const DOT = { cx: 39.5, cy: 38.5, r: 4.25 }
+const MARK_PATH =
+  'M6 12 L12.6 29.5 a5 5 0 0 0 9.3 0 L24 20.5 L26.1 29.5 a5 5 0 0 0 9.3 0 L42 12'
 
 const TILE = ['#1d5cf2', '#0e3aa8'] // brand-600-ish → brand-800: the launcher field
-const DOT_ON_TILE = '#96b8ff'
 
 /** The mark alone, white, on nothing. `box` is the size of the SVG canvas. */
-const markSvg = (box, markSize, dot = DOT_ON_TILE) => {
+const markSvg = (box, markSize) => {
   const s = markSize / 48
   const off = (box - markSize) / 2
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${box}" height="${box}" viewBox="0 0 ${box} ${box}">
     <g transform="translate(${off} ${off}) scale(${s})">
       <path d="${MARK_PATH}" fill="none" stroke="#fff" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="${DOT.cx}" cy="${DOT.cy}" r="${DOT.r}" fill="${dot}"/>
     </g></svg>`
 }
 
@@ -52,7 +50,6 @@ const tileSvg = (box, radius, markScale = 0.6, shape = 'rect') => {
     ${field}
     <g transform="translate(${off} ${off}) scale(${s})">
       <path d="${MARK_PATH}" fill="none" stroke="#fff" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="${DOT.cx}" cy="${DOT.cy}" r="${DOT.r}" fill="${DOT_ON_TILE}"/>
     </g></svg>`
 }
 

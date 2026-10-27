@@ -1,31 +1,18 @@
-import { Eye, Key, ShieldCheck } from '@phosphor-icons/react'
-import type { OtpGate } from '@/lib/otp'
+import { ShieldCheck } from '@phosphor-icons/react'
+import type { CustodyGate } from '@/lib/custody'
 
 /**
- * The "where do I find this code?" panel that sits under every handoff OTP
- * input. It names the screen the counterpart is holding, and — because a
- * single device can't show two people two screens at once — will disclose the
- * code on request. The check above it stays strict either way.
+ * The "where do I find this code?" panel under every hand-off OTP input.
+ *
+ * It used to offer to show the code on this device, because on one phone
+ * running a demo there was no second screen to read it off and the code was
+ * derived locally anyway. Both halves of that are now gone: the server issues
+ * the code to the party holding the parcel and never returns it to the party
+ * about to type it. A button here that revealed it would be a button that
+ * defeats the checkpoint, so what is left is the only thing this panel can
+ * honestly do — name the screen the code is on, and say what is at stake.
  */
-export function OtpHelper({ gate, source }: { gate: OtpGate; source: string }) {
-  if (gate.revealed) {
-    return (
-      <div className="anim-fade-in mt-6 rounded-(--radius-lg) border border-brand-100 bg-brand-50/70 p-4">
-        <p className="flex items-center gap-2 text-[12px] font-bold tracking-wide text-brand-700 uppercase">
-          <Key size={13} /> This parcel&apos;s code
-        </p>
-        <p className="tabular text-display mt-2 text-[28px] leading-none font-extrabold tracking-[0.14em] text-brand-800">
-          {gate.expected}
-        </p>
-        <p className="mt-2.5 text-[12px] leading-relaxed text-brand-800/80">
-          Normally you&apos;d read this off {source}. It still has to be typed in correctly — any
-          other code is rejected, and you have {gate.attemptsLeft} attempt
-          {gate.attemptsLeft === 1 ? '' : 's'} left.
-        </p>
-      </div>
-    )
-  }
-
+export function OtpHelper({ gate, source }: { gate: CustodyGate; source: string }) {
   return (
     <div className="mt-6 rounded-(--radius-lg) border border-ink-200 bg-white p-4">
       <p className="flex items-center gap-2 text-[13px] font-bold text-ink-800">
@@ -33,16 +20,14 @@ export function OtpHelper({ gate, source }: { gate: OtpGate; source: string }) {
         Where is this code?
       </p>
       <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-500">
-        It&apos;s on {source}. Only that code opens this checkpoint —{' '}
-        {gate.attemptsLeft} attempt{gate.attemptsLeft === 1 ? '' : 's'} left before it locks.
+        It&apos;s on {source}, and only on there — it was issued to them, not to you. Only that
+        code opens this checkpoint.
       </p>
-      <button
-        onClick={gate.reveal}
-        className="pressable-sm mt-3 inline-flex items-center gap-2 rounded-full border border-ink-200 px-3.5 py-2 text-[12.5px] font-bold text-ink-700 hover:bg-ink-50"
-      >
-        <Eye size={14} />
-        Show it on this device
-      </button>
+      <p className="mt-2 text-[12.5px] leading-relaxed font-semibold text-ink-700">
+        {gate.locked
+          ? 'This checkpoint is locked after too many wrong entries. Start the hand-off again.'
+          : `${gate.attemptsLeft} attempt${gate.attemptsLeft === 1 ? '' : 's'} left before it locks.`}
+      </p>
     </div>
   )
 }

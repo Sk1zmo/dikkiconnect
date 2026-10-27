@@ -77,7 +77,7 @@ export default function TravelerKyc() {
             <button
               key={s.id}
               onClick={() => setActive(s)}
-              className="pressable flex w-full items-center gap-3.5 rounded-(--radius-lg) border border-ink-100 bg-white p-4 text-left shadow-(--shadow-e1)"
+              className="pressable flex min-h-12 w-full items-center gap-3.5 rounded-(--radius-lg) border border-ink-200 bg-white p-4 text-left"
             >
               <span
                 className={cn(
@@ -164,9 +164,13 @@ export default function TravelerKyc() {
         </div>
 
         <Card className="mt-3">
-          <div className="mb-2.5 flex items-center justify-between">
-            <p className="text-[12.5px] font-semibold text-ink-600">Verification progress</p>
-            <p className="tabular text-[13px] font-extrabold text-brand-700">
+          {/* How far along you are is the one number on this screen, so it is
+              set above the label rather than level with it. The bar underneath
+              repeats the same fact spatially — the figure is for the person who
+              wants it exactly, the bar for the person glancing. */}
+          <div className="mb-2.5 flex items-baseline justify-between gap-3">
+            <p className="text-[11.5px] font-semibold text-ink-500">Verification progress</p>
+            <p className="tabular text-[20px] leading-none font-extrabold tracking-title text-brand-700">
               {Math.round((doneCount / KYC_STEPS.length) * 100)}%
             </p>
           </div>
@@ -185,12 +189,12 @@ export default function TravelerKyc() {
         />
         <Section
           title="Payouts"
-          subtitle="Needed before money can leave your Stowza wallet."
+          subtitle="Needed before money can leave your WayPool wallet."
           steps={payoutSteps}
         />
 
         <Note tone="neutral" icon={<Lock size={15} />} className="mt-6" title="How we handle Aadhaar">
-          Stowza never stores your Aadhaar number. Verification runs through a UIDAI-licensed KUA
+          WayPool never stores your Aadhaar number. Verification runs through a UIDAI-licensed KUA
           partner and we keep only their verification token and a masked reference — as required by
           UIDAI regulations.
         </Note>

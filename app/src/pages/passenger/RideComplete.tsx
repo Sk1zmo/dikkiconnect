@@ -15,8 +15,9 @@ import {
 } from '@/components/ui'
 import { Confetti } from '@/components/viz/Illustrations'
 import { LottieMark } from '@/components/brand/LottieMark'
-import { cityName, travelerById } from '@/lib/data'
+import { cityName } from '@/lib/data'
 import { useTrip } from '@/lib/store'
+import { rides, explain } from '@/lib/api'
 import { inr, time } from '@/lib/format'
 import { cn } from '@/lib/cn'
 
@@ -41,9 +42,9 @@ export default function RideComplete() {
   const [submitting, setSubmitting] = useState(false)
 
   const trip = useTrip(id)
-  if (!trip) return <Navigate to="/passenger" replace />
+  if (trip === null) return <Navigate to="/passenger" replace />
+  if (!trip) return null
 
-  const driver = travelerById(trip.travelerId)!
   const fare = Math.round(trip.farePerSeat * 1.06)
 
   const toggle = (t: string) =>
@@ -51,10 +52,21 @@ export default function RideComplete() {
 
   const submit = () => {
     setSubmitting(true)
-    setTimeout(() => {
-      toast.success('Thanks for the feedback', tip > 0 ? `${inr(tip)} tip sent to ${driver.name.split(' ')[0]}` : undefined)
-      navigate('/passenger', { replace: true })
-    }, 1200)
+    // Tags, the written note and the star rating have nowhere to be stored
+    // yet — no reviews domain exists server-side. The tip is real money
+    // moving between two real wallets, so that part is not held back on it.
+    void (tip > 0 ? rides.tip(trip.id, tip) : Promise.resolve())
+      .then(() => {
+        toast.success(
+          'Thanks for the feedback',
+          tip > 0 ? `${inr(tip)} tip sent to ${trip.travelerName.split(' ')[0]}` : undefined,
+        )
+        navigate('/passenger', { replace: true })
+      })
+      .catch((e) => {
+        setSubmitting(false)
+        toast.error('Could not send tip', explain(e))
+      })
   }
 
   return (
@@ -75,9 +87,9 @@ export default function RideComplete() {
         {/* Rating */}
         <Card className="mt-7">
           <div className="flex flex-col items-center">
-            <Avatar name={driver.name} size={56} tone={driver.avatarTone} />
+            <Avatar name={trip.travelerName} size={56} />
             <p className="mt-3 text-[15.5px] font-bold text-ink-900">
-              How was your ride with {driver.name.split(' ')[0]}?
+              How was your ride with {trip.travelerName.split(' ')[0]}?
             </p>
             <Stars value={rating} size={34} onChange={setRating} className="mt-4" />
             <p className="mt-2 h-4 text-[12.5px] font-semibold text-ink-500">
@@ -98,7 +110,7 @@ export default function RideComplete() {
                     key={t}
                     onClick={() => toggle(t)}
                     className={cn(
-                      'pressable-sm rounded-full border px-3.5 py-2 text-[12.5px] font-semibold transition-colors',
+                      'pressable-sm inline-flex min-h-10 items-center rounded-full border px-4 text-[12.5px] font-semibold transition-colors',
                       tags.includes(t)
                         ? 'border-brand-600 bg-brand-600 text-white'
                         : 'border-ink-200 bg-white text-ink-600',
@@ -111,7 +123,7 @@ export default function RideComplete() {
 
               <div className="mt-4">
                 <TextArea
-                  placeholder="Anything else you'd like to add? (only Stowza sees this)"
+                  placeholder="Anything else you'd like to add? (only WayPool sees this)"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={2}
@@ -128,15 +140,20 @@ export default function RideComplete() {
               <Heart size={16} className="text-danger-500" />
               <p className="text-[13.5px] font-bold text-ink-900">Add a tip?</p>
             </div>
+            {/* The 2px border used to be the selection, which meant the tile
+                changed size-class between states and the row of four visibly
+                shuffled on every tap. A ring paints outside the box, so the
+                grid holds still and the brand-50 tint keeps saying which one
+                is chosen. */}
             <div className="grid grid-cols-4 gap-2">
               {[0, 20, 50, 100].map((amount) => (
                 <button
                   key={amount}
                   onClick={() => setTip(amount)}
                   className={cn(
-                    'pressable rounded-(--radius-sm) border-2 py-2.5 text-[13px] font-bold transition-colors',
+                    'pressable tabular min-h-12 rounded-(--radius-md) border text-[14px] font-extrabold transition-all',
                     tip === amount
-                      ? 'border-brand-600 bg-brand-50 text-brand-700'
+                      ? 'border-transparent bg-brand-50 text-brand-700 ring-2 ring-brand-600'
                       : 'border-ink-200 bg-white text-ink-600',
                   )}
                 >
@@ -145,7 +162,7 @@ export default function RideComplete() {
               ))}
             </div>
             <p className="mt-2.5 text-[11.5px] text-ink-400">
-              100% of tips go to the driver. Stowza takes nothing.
+              100% of tips go to the driver. WayPool takes nothing.
             </p>
           </Card>
         )}

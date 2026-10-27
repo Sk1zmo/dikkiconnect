@@ -14,9 +14,11 @@ import {
   useToast,
 } from '@/components/ui'
 import { CapacityMeter, TripCard } from '@/components/domain/Cards'
-import { compactInr, dayDate, inr, relative } from '@/lib/format'
+import { explain } from '@/lib/api'
+import { dayDate, inr, relative } from '@/lib/format'
 import { useLoaded } from '@/lib/hooks'
-import { useApp, useMe, useMyTrips, useTrips } from '@/lib/store'
+import { useApp, useMe, useMyTrips } from '@/lib/store'
+import { seatsScarce } from '@/lib/scarcity'
 
 
 type Tab = 'upcoming' | 'past'
@@ -27,10 +29,10 @@ export default function TravelerTrips() {
   const toast = useToast()
   const [tab, setTab] = useState<Tab>('upcoming')
 
-  const allTrips = useTrips()
   const mine = useMyTrips(ME.id)
-  const { startTrip, cancelTrip } = useApp()
-  const { loading } = useLoaded(allTrips, 950)
+  const { startTrip, cancelTrip, tripsLoading, walletTxns } = useApp()
+  const { loading: settling } = useLoaded(mine.all, 950)
+  const loading = tripsLoading || settling
 
   // Rides published ahead of time sit in "scheduled" until the driver starts
   // them, so a ride posted three days early is a first-class thing here.
@@ -38,23 +40,33 @@ export default function TravelerTrips() {
     () => [...mine.running, ...mine.scheduled],
     [mine.running, mine.scheduled],
   )
-  const past = useMemo(
-    () => (mine.completed.length ? mine.completed : allTrips.filter((t) => t.travelerId !== ME.id).slice(0, 2)),
-    [mine.completed, allTrips],
+  const list = tab === 'upcoming' ? upcoming : mine.completed
+
+  const weekEarnings = useMemo(() => {
+    const since = Date.now() - 7 * 86_400_000
+    return walletTxns
+      .filter((t) => t.kind === 'credit' && new Date(t.at).getTime() >= since)
+      .reduce((s, t) => s + t.amount, 0)
+  }, [walletTxns])
+  const seatsSold = useMemo(
+    () => mine.all.reduce((s, t) => s + (t.seatsTotal - t.seatsLeft), 0),
+    [mine.all],
   )
-  const list = tab === 'upcoming' ? upcoming : past
 
   const start = (id: string) => {
-    startTrip(id)
-    toast.success('Trip started', 'Navigation is live and passengers have been notified.')
-    navigate('/traveler/navigate')
+    void startTrip(id)
+      .then(() => {
+        toast.success('Trip started', 'Navigation is live and passengers have been notified.')
+        navigate('/traveler/navigate')
+      })
+      .catch((e) => toast.error('Could not start', explain(e)))
   }
 
   return (
     <Screen>
       <LargeTitle
         title="Trips"
-        subtitle={`${mine.scheduled.length} scheduled · ${mine.running.length} running · ${ME.trips} completed`}
+        subtitle={`${mine.scheduled.length} scheduled · ${mine.running.length} running · ${mine.completed.length} completed`}
         className="pt-safe"
         action={
           <IconButton
@@ -81,9 +93,9 @@ export default function TravelerTrips() {
         {tab === 'upcoming' && !loading && (
           <>
             <div className="mb-4 grid grid-cols-3 gap-2.5">
-              <Stat label="This week" value={compactInr(4820)} tone="success" />
-              <Stat label="Seats sold" value="7" tone="accent" />
-              <Stat label="Parcels" value="14" tone="brand" />
+              <Stat label="This week" value={inr(weekEarnings)} tone="success" />
+              <Stat label="Seats sold" value={String(seatsSold)} tone="accent" />
+              <Stat label="Parcels" value="0" tone="brand" />
             </div>
             {mine.scheduled.length > 0 && (
               <Note tone="brand" icon={<CalendarDots size={15} />} className="mb-4" title="Posted in advance">
@@ -118,25 +130,37 @@ export default function TravelerTrips() {
                   <p className="text-[11.5px] font-bold tracking-wide text-ink-400 uppercase">
                     {dayDate(t.departAt)}
                   </p>
-                  <Badge
-                    tone={
-                      t.status === 'running'
-                        ? 'brand'
+                  {/* Status stays in its own colour — it is a state, not an
+                      urgency. The yellow beside it is reserved for the single
+                      fact that decays: a ride with one or two seats left is
+                      about to stop being bookable, and the driver may want to
+                      drop the fare while it still can be. */}
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {t.status === 'published' && seatsScarce(t.seatsLeft) && (
+                      <Badge tone="signal" size="sm">
+                        {t.seatsLeft} seat{t.seatsLeft > 1 ? 's' : ''} left
+                      </Badge>
+                    )}
+                    <Badge
+                      tone={
+                        t.status === 'running'
+                          ? 'brand'
+                          : t.status === 'published'
+                            ? 'success'
+                            : 'neutral'
+                      }
+                      size="sm"
+                      dot
+                    >
+                      {t.status === 'running'
+                        ? 'On the road'
                         : t.status === 'published'
-                          ? 'success'
-                          : 'neutral'
-                    }
-                    size="sm"
-                    dot
-                  >
-                    {t.status === 'running'
-                      ? 'On the road'
-                      : t.status === 'published'
-                        ? `Live · departs ${relative(t.departAt)}`
-                        : t.status}
-                  </Badge>
+                          ? `Live · departs ${relative(t.departAt)}`
+                          : t.status}
+                    </Badge>
+                  </div>
                 </div>
-                <TripCard trip={t} showSeats={false} onClick={() => navigate('/traveler/navigate')} />
+                <TripCard trip={t} showSeats={false} onClick={() => navigate(`/traveler/trips/${t.id}`)} />
                 <div className="mt-2 grid grid-cols-2 gap-2.5">
                   <CapacityMeter
                     label="Seats"
@@ -152,9 +176,15 @@ export default function TravelerTrips() {
                     tone="success"
                   />
                 </div>
-                <div className="mt-2 flex items-center justify-between rounded-(--radius-md) bg-white px-4 py-3 ring-1 ring-ink-100">
-                  <span className="text-[12.5px] font-semibold text-ink-500">Projected earnings</span>
-                  <span className="tabular text-[15px] font-extrabold text-success-600">
+                {/* The only row on the card that is a number rather than a
+                    state, so it is the one set loud. "Projected earnings"
+                    drops to a caption: the driver already knows what the row
+                    is for, and the figure is what they came back to check. */}
+                <div className="mt-2 flex min-h-12 items-center justify-between gap-3 rounded-(--radius-md) border border-ink-200 bg-white px-4 py-3">
+                  <span className="text-[11.5px] font-semibold text-ink-500">
+                    Projected earnings
+                  </span>
+                  <span className="tabular text-[19px] leading-none font-extrabold tracking-title text-success-600">
                     {inr(
                       (t.seatsTotal - t.seatsLeft) * t.farePerSeat + t.parcelIds.length * 132,
                     )}
@@ -167,10 +197,16 @@ export default function TravelerTrips() {
                       <>
                         <button
                           onClick={() => {
-                            cancelTrip(t.id)
-                            toast.info('Ride cancelled', 'Anyone who booked has been refunded.')
+                            void cancelTrip(t.id)
+                              .then(() =>
+                                toast.info(
+                                  'Ride cancelled',
+                                  'Anyone who paid by wallet has been refunded.',
+                                ),
+                              )
+                              .catch((e) => toast.error('Could not cancel', explain(e)))
                           }}
-                          className="pressable h-11 flex-1 rounded-(--radius-md) border border-ink-200 bg-white text-[13px] font-semibold text-ink-600"
+                          className="pressable h-12 flex-1 rounded-(--radius-md) border border-ink-200 bg-white text-[13px] font-semibold text-ink-600"
                         >
                           <span className="inline-flex items-center gap-1.5">
                             <X size={14} /> Cancel
@@ -178,7 +214,7 @@ export default function TravelerTrips() {
                         </button>
                         <button
                           onClick={() => start(t.id)}
-                          className="pressable h-11 flex-[1.6] rounded-(--radius-md) bg-action text-[13.5px] font-bold text-white shadow-(--shadow-action) hover:bg-action-hover"
+                          className="pressable h-12 flex-[1.6] rounded-(--radius-md) bg-action text-[13.5px] font-bold text-white shadow-(--shadow-action) hover:bg-action-hover"
                         >
                           <span className="inline-flex items-center gap-1.5">
                             <NavigationArrow size={15} /> Start trip
@@ -188,7 +224,7 @@ export default function TravelerTrips() {
                     ) : (
                       <button
                         onClick={() => navigate('/traveler/navigate')}
-                        className="pressable h-11 w-full rounded-(--radius-md) bg-brand-600 text-[13.5px] font-bold text-white shadow-(--shadow-brand-sm)"
+                        className="pressable h-12 w-full rounded-(--radius-md) bg-brand-600 text-[13.5px] font-bold text-white shadow-(--shadow-brand-sm)"
                       >
                         <span className="inline-flex items-center gap-1.5">
                           <NavigationArrow size={15} /> Open navigation

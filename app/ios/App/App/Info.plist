@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>Stowza</string>
+        <string>WayPool</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -70,16 +70,14 @@
 	     user actually sees in the permission sheet, and App Review rejects
 	     vague ones. -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Stowza uses your location to set the pickup point for a parcel and to show where your delivery or ride is on the map.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Stowza uses your location to set the pickup point for a parcel and to show where your delivery or ride is on the map.</string>
+	<string>WayPool uses your location to set the pickup point for a parcel and to show where your delivery or ride is on the map.</string>
 
 	<!-- Camera and photos: the QR scanner and parcel photo evidence. Declared
 	     now so enabling the native camera later needs no plist change. -->
 	<key>NSCameraUsageDescription</key>
-	<string>Stowza uses the camera to scan parcel QR codes and to photograph parcels at each handover.</string>
+	<string>WayPool uses the camera to scan parcel QR codes and to photograph parcels at each handover.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Stowza saves delivery proof photos to your library when you ask it to.</string>
+	<string>WayPool saves delivery proof photos to your library when you ask it to.</string>
 
 	<!-- iOS refuses canOpenURL for any scheme not declared here, so without
 	     this list every UPI app looks uninstalled and the pay button appears

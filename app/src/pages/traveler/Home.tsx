@@ -31,7 +31,10 @@ import { CapacityMeter, JobCard, TripCard } from '@/components/domain/Cards'
 import { hubShort, jobFromParcel } from '@/lib/data'
 import { compactInr, dayDate, inr, relative, time } from '@/lib/format'
 import { useCountUp, useLoaded } from '@/lib/hooks'
+import { parcels as parcelsApi, explain } from '@/lib/api'
 import { useApp, useMe, useMyTrips, useOpenJobs } from '@/lib/store'
+import { cn } from '@/lib/cn'
+import { seatsScarce } from '@/lib/scarcity'
 import { useMemo, useState } from 'react'
 
 
@@ -46,7 +49,7 @@ export default function TravelerHome() {
   const ME = useMe()
   const navigate = useNavigate()
   const toast = useToast()
-  const { advanceParcel } = useApp()
+  const { adoptParcel, walletTxns } = useApp()
   const [online, setOnline] = useState(true)
   const [accepting, setAccepting] = useState<string | null>(null)
 
@@ -63,18 +66,34 @@ export default function TravelerHome() {
   const laterTrips = mine.scheduled.filter((t) => t !== todayTrip)
 
   const { loading } = useLoaded(jobs, 1150)
-  const earnings = useCountUp(4820, 1100)
+  // Real wallet credits from the last 7 days — not a number that was always
+  // going to read ₹4,820 no matter who signed in.
+  const weekEarnings = useMemo(() => {
+    const since = Date.now() - 7 * 86_400_000
+    return walletTxns
+      .filter((t) => t.kind === 'credit' && new Date(t.at).getTime() >= since)
+      .reduce((s, t) => s + t.amount, 0)
+  }, [walletTxns])
+  const earnings = useCountUp(weekEarnings, 1100)
 
   const accept = (jobId: string) => {
     const job = jobs.find((j) => j.id === jobId)
     if (!job) return
     setAccepting(jobId)
-    setTimeout(() => {
-      setAccepting(null)
-      advanceParcel(job.parcelId, 'assigned', { actor: ME.name, travelerId: ME.id })
-      toast.success('Job accepted', 'Added to your manifest. Scan at the hub to pick it up.')
-      navigate('/traveler/scan')
-    }, 1100)
+    void (async () => {
+      try {
+        /* The server decides this, not the device. Two travellers tapping at
+           the same moment both used to see "accepted". */
+        const { parcel } = await parcelsApi.claim(job.parcelId)
+        adoptParcel(parcel)
+        toast.success('Job accepted', 'Added to your manifest. Scan at the hub to pick it up.')
+        navigate('/traveler/scan')
+      } catch (e) {
+        toast.error('Not yours', explain(e))
+      } finally {
+        setAccepting(null)
+      }
+    })()
   }
 
   return (
@@ -89,7 +108,9 @@ export default function TravelerHome() {
             <div className="min-w-0">
               <p className="truncate text-[15.5px] font-bold">{ME.name}</p>
               <p className="flex items-center gap-1.5 text-[12px] text-white/70">
-                ★ {ME.rating.toFixed(1)} · {ME.trips} trips
+                {mine.completed.length > 0
+                  ? `${mine.completed.length} trip${mine.completed.length === 1 ? '' : 's'} completed`
+                  : 'New driver'}
               </p>
             </div>
           </div>
@@ -117,16 +138,37 @@ export default function TravelerHome() {
           <Switch checked={online} onChange={setOnline} />
         </div>
 
-        {/* Earnings */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            Earnings.
+
+            Three tiles, but not three equals. A driver opens this app to find
+            out what they made, and the week's total answering in the same
+            weight as "6 trips" made the reader do the sorting. The money tile
+            is set a step larger and the other two step back; the labels drop
+            to captions under the figures rather than sitting level with them.
+
+            The tile stayed a third of the row rather than spanning two — a
+            wide money tile left the remaining pair too narrow for four-digit
+            counts, and this header has to survive ₹1,24,000 without wrapping.
+            ═══════════════════════════════════════════════════════════════════ */}
         <div className="mt-4 grid grid-cols-3 gap-2.5">
-          {[
-            { label: 'This week', value: inr(earnings) },
-            { label: 'Trips', value: '6' },
-            { label: 'Parcels', value: '14' },
-          ].map((s) => (
+          {(
+            [
+              { label: 'This week', value: inr(earnings), lead: true },
+              { label: 'Trips', value: String(mine.completed.length) },
+              { label: 'Parcels', value: '0' },
+            ] as Array<{ label: string; value: string; lead?: boolean }>
+          ).map((s) => (
             <div key={s.label} className="rounded-(--radius-md) bg-white/12 px-3 py-2.5 backdrop-blur-md">
-              <p className="tabular text-[17px] leading-none font-extrabold">{s.value}</p>
-              <p className="mt-1.5 text-[10.5px] font-semibold text-white/65">{s.label}</p>
+              <p
+                className={cn(
+                  'tabular leading-none font-extrabold tracking-title',
+                  s.lead ? 'text-[21px]' : 'text-[17px] text-white/90',
+                )}
+              >
+                {s.value}
+              </p>
+              <p className="mt-1.5 text-[11px] font-semibold text-white/65">{s.label}</p>
             </div>
           ))}
         </div>
@@ -179,10 +221,20 @@ export default function TravelerHome() {
           <Card>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
+                {/* The yellow is spent here and nowhere else on this screen.
+                    Seats running out is the one fact on the dashboard that
+                    rewards acting today; departure time, trip status and job
+                    count all keep until the driver looks again. A full car
+                    gets no badge — scarcity you cannot act on is decoration. */}
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge tone="brand" dot>
                     Departs {time(todayTrip.departAt)}
                   </Badge>
+                  {seatsScarce(todayTrip.seatsLeft) && (
+                    <Badge tone="signal">
+                      {todayTrip.seatsLeft} seat{todayTrip.seatsLeft > 1 ? 's' : ''} left
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-display mt-2 truncate text-[18px] font-extrabold text-ink-900">
                   Bangalore → Mysore

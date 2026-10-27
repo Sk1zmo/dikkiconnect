@@ -16,26 +16,27 @@ import {
 } from '@/components/ui'
 import { PhotoCapture } from '@/components/viz/Scanner'
 import { LottieMark } from '@/components/brand/LottieMark'
-import { HUB_HANDLING_FEE, categoryById, otpFor } from '@/lib/data'
+import { HUB_HANDLING_FEE, categoryById } from '@/lib/data'
 import { useApp } from '@/lib/store'
-import { useOtpGate } from '@/lib/otp'
+import { useCustodyGate } from '@/lib/custody'
 import { OtpHelper } from '@/components/domain/OtpHelper'
 import { inr, kg } from '@/lib/format'
-import { CategoryIcon } from '@/components/domain/CategoryIcon'
+import { CategoryMark } from '@/components/domain/CategoryIcon'
 
 const STEPS = ['Weigh', 'Photos', 'OTP', 'Done']
 const SHELVES = ['A-01', 'A-04', 'A-09', 'B-01', 'B-05', 'C-02', 'C-07', 'D-03']
 
 /**
- * Parcel intake — custody checkpoint 1. The hub manager weighs, photographs,
- * then enters the OTP shown on the sender's phone.
+ * Parcel intake — custody checkpoints 1 and 3. The hub manager weighs,
+ * photographs, then enters the OTP held by whoever is handing the parcel over:
+ * the sender dropping it off, or the traveller who has just driven it here.
  */
 export default function HubIntake() {
   const { id } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
 
-  const { parcels, advanceParcel, earn } = useApp()
+  const { parcels, adoptParcel, earn } = useApp()
 
   // Work against the real parcel where one exists, so weight, category and the
   // declared value on screen are the sender's actual booking.
@@ -44,39 +45,46 @@ export default function HubIntake() {
   const [step, setStep] = useState(0)
   const [weight, setWeight] = useState(parcel?.weightKg ?? 2.5)
   const [shelf, setShelf] = useState('A-04')
-  const [shots, setShots] = useState(0)
+  const [photoIds, setPhotoIds] = useState<string[]>([])
   const [code, setCode] = useState('')
-  const [verifying, setVerifying] = useState(false)
+  const shots = photoIds.length
 
-  // Strict: only this parcel's real drop-off code opens the checkpoint.
-  const gate = useOtpGate(otpFor(parcel?.id ?? id ?? ''))
+  /* Which hand-off this is depends on where the parcel actually is, not on
+     which screen was opened. A parcel still with its sender is being taken in
+     (`intake`); one that a traveller has driven here is arriving (`arrive`).
+     They are different events in the record and the server will only accept
+     the one that is legal from the parcel's current status — before this, the
+     destination hub had no screen at all and the chain had nowhere to go
+     between "in transit" and "ready for collection".
+
+     The code is the server's. Entering it here does not "unlock" a screen; it
+     is the request that moves custody, with these photographs attached. */
+  const arriving = parcel?.status === 'in_transit'
+  const checkpoint = arriving ? 'arrive' : 'intake'
+  const gate = useCustodyGate(id, checkpoint, photoIds)
 
   const declared = parcel?.weightKg ?? 2.4
   const cat = categoryById(parcel?.category ?? 'electronics')
   const discrepancy = Math.abs(weight - declared) > 0.5
 
-  const verify = (value: string) => {
-    if (value.length < 6 || verifying) return
-    setVerifying(true)
-    setTimeout(() => {
-      setVerifying(false)
-      if (!gate.check(value)) {
-        setCode('')
-        toast.error('Incorrect OTP', 'Ask the sender to read out the code on their app.')
-        return
-      }
-      // Move the shared ledger — the sender's tracker and the driver's job
-      // feed both update from this single call.
-      if (id) {
-        advanceParcel(id, 'at_origin_hub', {
-          location: `Shelf ${shelf}`,
-          photos: shots,
-        })
-        earn(HUB_HANDLING_FEE, 'Handling fee credited', `${id} · intake complete`)
-      }
-      setStep(3)
-      toast.success('Custody accepted', `${id} logged to shelf ${shelf}`)
-    }, 1100)
+  const verify = async (value: string) => {
+    if (value.length < 6 || gate.submitting) return
+    const accepted = await gate.submit(value)
+    if (!accepted) {
+      setCode('')
+      toast.error(
+        'Hand-off not accepted',
+        gate.error ?? `Ask the ${arriving ? 'traveller' : 'sender'} to read the code again.`,
+      )
+      return
+    }
+    /* The server has moved it. Everything after this is drawing that fact:
+       the sender's tracker, the driver's job feed and this hub's shelf list
+       all read the one record. */
+    adoptParcel(accepted)
+    earn(HUB_HANDLING_FEE, 'Handling fee credited', `${id} · intake complete`)
+    setStep(3)
+    toast.success('Custody accepted', `${id} logged to shelf ${shelf}`)
   }
 
   /* ── Done ────────────────────────────────────────────────────────────── */
@@ -90,7 +98,9 @@ export default function HubIntake() {
               Parcel accepted
             </h1>
             <p className="mt-2 max-w-[280px] text-[14px] leading-relaxed text-ink-500">
-              The sender has been notified. It is now waiting for a matching traveler.
+              {arriving
+                ? 'The receiver has been notified that it is ready to collect.'
+                : 'The sender has been notified. It is now waiting for a matching traveler.'}
             </p>
           </div>
 
@@ -151,13 +161,18 @@ export default function HubIntake() {
         {/* ── Weigh ───────────────────────────────────────────────────── */}
         {step === 0 && (
           <div className="anim-fade-up">
+            {/* The box is in the worker's hands while they read this card, so it
+                is the one place where "does the screen match the thing" has to
+                be answerable without reading. The category as a drawn object in
+                its own colour answers it; the grey line glyph that was here did
+                not. */}
             <Card className="mb-4">
-              <div className="flex items-center gap-3">
-                <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-ink-700">
-                  <CategoryIcon id={cat.id} />
-                </span>
+              <div className="flex min-h-[52px] items-center gap-3.5">
+                <CategoryMark id={cat.id} size={48} />
                 <div className="min-w-0 flex-1">
-                  <p className="tabular truncate text-[14.5px] font-extrabold text-ink-900">{id}</p>
+                  <p className="tabular truncate text-[16px] font-extrabold tracking-title text-ink-900">
+                    {id}
+                  </p>
                   <p className="mt-0.5 truncate text-[12px] text-ink-500">
                     {cat.label} · declared {kg(declared)} · Bangalore → Mysore
                   </p>
@@ -210,9 +225,11 @@ export default function HubIntake() {
               evidence in a dispute.
             </p>
             <PhotoCapture
-              shots={shots}
+              photoIds={photoIds}
               required={3}
-              onCapture={() => setShots((s) => s + 1)}
+              onStored={(pid) => setPhotoIds((ids) => [...ids, pid])}
+              parcelId={id}
+              checkpoint={checkpoint}
               className="min-h-[300px] flex-1"
             />
           </div>
@@ -222,18 +239,19 @@ export default function HubIntake() {
         {step === 2 && (
           <div className="anim-fade-up">
             <h2 className="text-display text-[22px] leading-tight font-extrabold text-ink-900">
-              Enter the sender&apos;s OTP
+              {arriving ? 'Enter the traveller’s OTP' : "Enter the sender's OTP"}
             </h2>
             <p className="mt-2 text-[13.5px] leading-relaxed text-ink-500">
-              Ask them to show the 6-digit code on their Stowza app. Entering it confirms you
-              received exactly this parcel from this sender.
+              Ask them to show the 6-digit code on their WayPool app. Entering it confirms you
+              received exactly this parcel from{' '}
+              {arriving ? 'this traveller' : 'this sender'}.
             </p>
 
             <div className="mt-8">
               <OtpInput
                 value={code}
                 onChange={setCode}
-                onComplete={verify}
+                onComplete={(v) => void verify(v)}
                 error={Boolean(gate.error)}
                 disabled={gate.locked}
               />
@@ -253,7 +271,14 @@ export default function HubIntake() {
               <KeyValue label="Photos" value={`${shots} captured`} />
             </Card>
 
-            <OtpHelper gate={gate} source="the sender's drop-off screen in their app" />
+            <OtpHelper
+              gate={gate}
+              source={
+                arriving
+                  ? "the traveller's drop-off screen in their app"
+                  : "the sender's drop-off screen in their app"
+              }
+            />
 
             <Note tone="neutral" icon={<ShieldCheck size={15} />} className="mt-3" title="Why this matters">
               This code is what ties the parcel in your hands to the booking on screen. Logging
@@ -278,11 +303,11 @@ export default function HubIntake() {
           <Button
             block
             size="lg"
-            loading={verifying}
-            disabled={code.length < 6}
-            onClick={() => verify(code)}
+            loading={gate.submitting}
+            disabled={code.length < 6 || gate.locked}
+            onClick={() => void verify(code)}
           >
-            {verifying ? 'Verifying…' : 'Verify & accept custody'}
+            {gate.submitting ? 'Verifying…' : 'Verify & accept custody'}
           </Button>
         )}
       </ActionBar>

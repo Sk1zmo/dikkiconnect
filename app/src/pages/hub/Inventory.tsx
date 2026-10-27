@@ -3,14 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import { Warning, Package } from '@phosphor-icons/react'
 import { Screen, ScreenBody, LargeTitle } from '@/components/layout/Screen'
 import {
+  ActionBar,
+  Button,
   Card,
   ChipRow,
   EmptyState,
   SearchField,
   SkeletonList,
-  Stat,
 } from '@/components/ui'
 import { InventoryRow } from '@/components/domain/Cards'
+import { cn } from '@/lib/cn'
 import { isStale } from '@/lib/format'
 import { useDebounced, useLoaded } from '@/lib/hooks'
 import { useHubInventory } from '@/lib/store'
@@ -98,11 +100,48 @@ export default function HubInventory() {
       </div>
 
       <ScreenBody>
+        {/* ═══════════════════════════════════════════════════════════════════
+            Three counts, one strip.
+
+            These were three separate Stat tiles. Each tile spent most of its
+            height on padding and its own border, which left the numbers — the
+            only thing a worker at the counter actually reads here — at the same
+            weight as the words underneath them. One bordered strip divided by
+            hairlines gives the digits the whole cell: big, tabular, and set on
+            a shared baseline so three counts compare at a glance instead of
+            being read one at a time.
+
+            Deliberately not tappable. Making a count set the filter below would
+            be the obvious next move, but it invents an interaction the rest of
+            the app does not have, and the chip row directly above already does
+            that job.
+            ═══════════════════════════════════════════════════════════════════ */}
         {!loading && (
-          <div className="mb-4 grid grid-cols-3 gap-2.5">
-            <Stat label="Waiting" value={counts.waiting} />
-            <Stat label="Assigned" value={counts.assigned} tone="accent" />
-            <Stat label="Over 24h" value={aging} tone={aging ? 'warn' : 'success'} />
+          <div className="mb-4 grid grid-cols-3 overflow-hidden rounded-(--radius-lg) border border-ink-200 bg-white">
+            {[
+              { label: 'Waiting', value: counts.waiting, tone: 'text-ink-900' },
+              { label: 'Assigned', value: counts.assigned, tone: 'text-accent-600' },
+              {
+                label: 'Over 24h',
+                value: aging,
+                tone: aging ? 'text-warn-600' : 'text-success-600',
+              },
+            ].map((c, i) => (
+              <div
+                key={c.label}
+                className={cn('px-3 py-4 text-center', i > 0 && 'border-l border-ink-100')}
+              >
+                <p
+                  className={cn(
+                    'tabular text-display text-[27px] leading-none font-extrabold tracking-title',
+                    c.tone,
+                  )}
+                >
+                  {c.value}
+                </p>
+                <p className="mt-1.5 text-[11px] font-semibold text-ink-500">{c.label}</p>
+              </div>
+            ))}
           </div>
         )}
 
@@ -110,7 +149,8 @@ export default function HubInventory() {
           <Card className="mb-4 flex items-center gap-3 border-warn-100 bg-warn-50">
             <Warning size={18} className="shrink-0 text-warn-600" />
             <p className="text-[12.5px] font-semibold text-warn-800">
-              {aging} parcels have been here over 24 hours. Ops escalation triggers at 48.
+              <span className="tabular text-[14px] font-extrabold">{aging}</span> parcels have been
+              here over 24 hours. Ops escalation triggers at 48.
             </p>
           </Card>
         )}
@@ -124,7 +164,7 @@ export default function HubInventory() {
               title={debounced ? `No match for “${debounced}”` : 'Nothing on the shelves'}
               body={
                 debounced
-                  ? 'Try a parcel ID like DKC-4796 or a shelf like A-04.'
+                  ? 'Try a parcel ID like WYP-4796 or a shelf like A-04.'
                   : 'Parcels appear here after you complete intake.'
               }
               actionLabel={debounced ? 'Clear search' : 'Start intake'}
@@ -140,17 +180,25 @@ export default function HubInventory() {
             ))}
           </Card>
         )}
-
-        {!loading && visible.length > 0 && (
-          <button
-            onClick={() => navigate('/hub/handoff')}
-            className="pressable mt-4 flex w-full items-center justify-center gap-2 rounded-(--radius-md) bg-action py-3.5 text-[14px] font-bold text-white shadow-(--shadow-action) hover:bg-action-hover"
-          >
-            <Package size={16} />
-            Release parcels to a traveler
-          </button>
-        )}
       </ScreenBody>
+
+      {/* Releasing to a traveler is the one committing action on this screen, and
+          it used to sit under the last row — on a full shelf that is a long
+          scroll away from a worker who already knows they want it. Pinned, it is
+          always under the thumb, and it picks up the same sticky bar every other
+          committing screen in the app uses rather than a second shape. */}
+      {!loading && visible.length > 0 && (
+        <ActionBar>
+          <Button
+            block
+            size="lg"
+            onClick={() => navigate('/hub/handoff')}
+            icon={<Package size={18} />}
+          >
+            Release parcels to a traveler
+          </Button>
+        </ActionBar>
+      )}
     </Screen>
   )
 }

@@ -303,3 +303,61 @@ export function useLocalStorage<T>(key: string, initial: T) {
   }, [key, value])
   return [value, setValue] as const
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   The loader gate.
+
+   A loader that appears the instant something is pending makes a fast app
+   look broken: the eye catches a flash it cannot resolve, and reads it as a
+   stutter. A loader that appears and vanishes within a frame is worse.
+
+   So two thresholds, and both matter:
+
+     · `delay`  — nothing is shown for the first 350ms. Most waits in this app
+                  resolve inside that, and the user simply sees the next
+                  screen. This is what makes navigation feel instant.
+     · `min`    — once shown, it stays for at least 600ms even if the wait
+                  ends immediately after. This is what stops the flicker.
+
+   Together they mean the quote loader is never seen for less than 600ms and
+   never seen at all unless the wait was real.
+   ═══════════════════════════════════════════════════════════════════════════ */
+export function useDelayedLoader(
+  active: boolean,
+  { delay = 350, min = 600 }: { delay?: number; min?: number } = {},
+) {
+  const [visible, setVisible] = useState(false)
+  /* When the loader actually became visible, so `min` is measured from the
+     moment it was painted rather than from the moment the wait began. */
+  const shownAt = useRef(0)
+
+  useEffect(() => {
+    if (active) {
+      const t = setTimeout(() => {
+        shownAt.current = Date.now()
+        setVisible(true)
+      }, delay)
+      return () => clearTimeout(t)
+    }
+
+    /* The wait is over. If the loader never appeared, there is nothing to
+       take down. If it did, hold it for the remainder of its minimum. */
+    if (!shownAt.current) {
+      setVisible(false)
+      return
+    }
+    const remaining = shownAt.current + min - Date.now()
+    if (remaining <= 0) {
+      shownAt.current = 0
+      setVisible(false)
+      return
+    }
+    const t = setTimeout(() => {
+      shownAt.current = 0
+      setVisible(false)
+    }, remaining)
+    return () => clearTimeout(t)
+  }, [active, delay, min])
+
+  return visible
+}

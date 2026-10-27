@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 /**
- * Android wrapper for the Stowza PWA.
+ * Android wrapper for the WayPool PWA.
  *
  * The web build in `dist/` is bundled into the APK, so the app runs offline and
  * does not point at a server. Build order is always:
@@ -13,8 +13,8 @@ import type { CapacitorConfig } from '@capacitor/cli'
  * geolocation and the camera — all of which this app uses.
  */
 const config: CapacitorConfig = {
-  appId: 'in.stowza.app',
-  appName: 'Stowza',
+  appId: 'in.waypool.app',
+  appName: 'WayPool',
   webDir: 'dist',
   server: {
     androidScheme: 'https',

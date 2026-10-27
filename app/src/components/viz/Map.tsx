@@ -80,7 +80,7 @@ function useMapLibre(
     m.once('styledata', markReady)
     // Parent overlays (zoom, recentre) reach the instance through the DOM
     // rather than a prop chain, so every existing call site kept its props.
-    ;(m.getContainer() as HTMLElement & { _dikkiMap?: MapLibreMap })._dikkiMap = m
+    ;(m.getContainer() as HTMLElement & { _waypoolMap?: MapLibreMap })._waypoolMap = m
     /* MapLibre measures its container once at construction and then only
        tracks *window* resizes. Several of these maps mount inside a parent
        that has no height yet (a lazy route, a collapsed card, a sheet that is
@@ -113,7 +113,7 @@ function pinEl(colour: string, size = 14, pulse = false) {
     box-shadow:0 0 0 4px ${colour}33, 0 1px 6px rgba(10,20,50,.35);
     border:2.5px solid #fff;
   `
-  if (pulse) el.style.animation = 'dikkiconnect-ping 2s var(--ease-smooth) infinite'
+  if (pulse) el.style.animation = 'waypool-ping 2s var(--ease-smooth) infinite'
   return el
 }
 
@@ -153,9 +153,9 @@ function drawRoute(
 ): boolean {
   const done = progress == null ? coords.length : Math.round(coords.length * progress)
   const layers: Array<[string, Array<[number, number]>, string, number]> = [
-    ['dikki-route-case', coords, dark ? '#0b1020' : '#ffffff', 11],
-    ['dikki-route-full', coords, dark ? '#3a4a72' : '#c3d2f3', 5.5],
-    ['dikki-route-done', coords.slice(0, Math.max(2, done)), '#1650e0', 5.5],
+    ['waypool-route-case', coords, dark ? '#0b1020' : '#ffffff', 11],
+    ['waypool-route-full', coords, dark ? '#3a4a72' : '#c3d2f3', 5.5],
+    ['waypool-route-done', coords.slice(0, Math.max(2, done)), '#1650e0', 5.5],
   ]
 
   try {
@@ -180,8 +180,8 @@ function drawRoute(
       })
     }
     // The untravelled portion must never paint over the travelled one.
-    if (progress != null && map.getLayer('dikki-route-done')) {
-      map.moveLayer('dikki-route-done')
+    if (progress != null && map.getLayer('waypool-route-done')) {
+      map.moveLayer('waypool-route-done')
     }
     return true
   } catch {
@@ -385,9 +385,9 @@ export function LiveMap({
      passes, which is worth more here than a tidier handle. */
   const withMap = (fn: (m: MapLibreMap) => void) => () => {
     const canvas = wrap.current?.querySelector('.maplibregl-map') as
-      | (HTMLElement & { _dikkiMap?: MapLibreMap })
+      | (HTMLElement & { _waypoolMap?: MapLibreMap })
       | null
-    const m = canvas?._dikkiMap
+    const m = canvas?._waypoolMap
     if (m) fn(m)
   }
 
@@ -431,9 +431,9 @@ export function LiveMap({
             const here = await currentPosition()
             const m = (
               wrap.current?.querySelector('.maplibregl-map') as
-                | (HTMLElement & { _dikkiMap?: MapLibreMap })
+                | (HTMLElement & { _waypoolMap?: MapLibreMap })
                 | null
-            )?._dikkiMap
+            )?._waypoolMap
             if (here && m) m.flyTo({ center: [here.lng, here.lat], zoom: 14, duration: 900 })
           }}
         />

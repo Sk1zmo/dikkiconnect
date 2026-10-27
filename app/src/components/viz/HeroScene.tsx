@@ -358,7 +358,7 @@ export function HeroScene({
           <path d="M0 4.5h4.4L9 10l-4.6 5.5H0L4.4 10Z" fill="#7ba5ff" />
           <path d="M8.6 1.5h5.4L19.8 10l-5.8 8.5H8.6L14.4 10Z" fill="#ffffff" />
           <text x="25" y="14" fill="#ffffff" fontSize="11.5" fontWeight="800" fontFamily="var(--font-sans)">
-            Stowza
+            WayPool
           </text>
         </g>
 

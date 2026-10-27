@@ -24,7 +24,7 @@ export const DEMO = import.meta.env.VITE_DEMO_MODE === '1'
 export const DEMO_ACCOUNT = {
   id: 'usr-demo',
   name: 'Demo User',
-  email: 'demo@dikkiconnect.in',
+  email: 'demo@waypool.in',
   phone: '9800000000',
   roles: ['sender'] as const,
   createdAt: '2026-01-01T00:00:00.000Z',

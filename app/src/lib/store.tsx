@@ -1,16 +1,13 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import {
-  NOTIFICATIONS,
-  PARCELS,
-  TRAVELERS,
-  TRIPS,
-  newTimeline,
-  otpFor,
-  quote,
-  hubShort,
-  resolveHub,
-  type PriceBreakdown,
-} from './data'
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
+import { newTimeline, quote, hubShort, resolveHub, type PriceBreakdown } from './data'
 import type {
   DeliveryMode,
   NotificationItem,
@@ -19,10 +16,11 @@ import type {
   ParcelStatus,
   RideBooking,
   Role,
-  Traveler,
   Trip,
+  WalletTxn,
 } from './types'
 import { useLocalStorage } from './hooks'
+import { parcels as parcelsApi, rides as ridesApi, wallet as walletApi, type ServerParcel } from './api'
 import {
   type RecentPlace,
   type SavedPlace,
@@ -70,7 +68,10 @@ export interface BookingDraft {
   receiverPhone: string
   acceptedProhibited: boolean
   promo: string | null
-  paymentMethod: 'upi' | 'card' | 'wallet'
+  /* 'link' is a real gateway payment: the server issues a URL, the payer
+     settles in their own bank app, and a signed webhook is what marks the
+     parcel paid. The other three are pre-gateway and say so on screen. */
+  paymentMethod: 'upi' | 'card' | 'wallet' | 'link'
 }
 
 export const EMPTY_DRAFT: BookingDraft = {
@@ -130,7 +131,8 @@ interface AppState {
   /* parcels — one shared ledger across all four portals */
   parcels: Parcel[]
   lastBookedId: string | null
-  commitBooking: () => string
+  /** Books on the server. Throws ApiError — the caller must show it. */
+  commitBooking: () => Promise<string>
   /**
    * Advance a parcel along the custody chain. Every portal calls this, which is
    * what makes the roles a single system: a hub intake is immediately visible
@@ -139,28 +141,59 @@ interface AppState {
   advanceParcel: (
     id: string,
     to: ParcelStatus,
-    detail?: { actor?: string; location?: string; photos?: number; travelerId?: string },
+    detail?: {
+      actor?: string
+      location?: string
+      photos?: number
+      travelerId?: string
+      travelerName?: string
+    },
   ) => void
+  /**
+   * Takes the server's word for where a parcel is, after a custody checkpoint
+   * has been passed. The server decides whether it moved — this projects that
+   * verdict onto the local view every portal reads.
+   */
+  adoptParcel: (parcel: ServerParcel) => void
+  /** True while the first load from the server is in flight. */
+  parcelsLoading: boolean
 
-  /* trips — the driver's published rides, shared with the passenger portal */
+  /* trips — on the server: a trip published by one account is immediately
+     visible to every other account's search, not just this device's cache */
   trips: Trip[]
-  /** Publish a ride, optionally dated days ahead. Returns the new trip id. */
-  publishTrip: (t: Omit<Trip, 'id' | 'status' | 'parcelIds'>) => string
-  /** Driver taps "Start trip" on the day — moves published → running. */
-  startTrip: (id: string) => void
-  cancelTrip: (id: string) => void
-  /** A passenger takes seats on a trip. Returns the booking id. */
-  bookSeats: (tripId: string, seats: number, fare: number, boardingPoint?: string) => string
+  tripsLoading: boolean
+  /** Publishes on the server. Throws ApiError — the caller must show it. */
+  publishTrip: (
+    t: Pick<
+      Trip,
+      'fromCityId' | 'toCityId' | 'departAt' | 'arriveAt' | 'seatsTotal' | 'farePerSeat' | 'vehicle'
+    > & { bootSlots?: Trip['bootSlots']; viaStops?: string[] },
+  ) => Promise<Trip>
+  /** Driver sets off: published → running, verified on the server. */
+  startTrip: (id: string) => Promise<void>
+  cancelTrip: (id: string) => Promise<void>
+  /** A passenger takes seats on a trip. The server decides who got there first. */
+  bookSeats: (
+    tripId: string,
+    seats: number,
+    opts?: { boardingPoint?: string; payWithWallet?: boolean },
+  ) => Promise<RideBooking>
+  /** Caches a trip this device has not seen before — the search/detail path. */
+  adoptTrip: (trip: Trip) => void
 
   /* ride bookings — the passenger side of the same trips */
   rideBookings: RideBooking[]
-  advanceRide: (id: string, to: RideBooking['status']) => void
-  cancelRide: (id: string) => void
+  cancelRide: (id: string) => Promise<void>
 
-  /* wallet */
+  /* wallet — a real per-account server balance, not a per-device guess. Still
+     not a payment system: nothing here moves real money (see Wallet.tsx). */
   balance: number
-  addMoney: (amount: number) => void
-  spend: (amount: number) => void
+  walletTxns: WalletTxn[]
+  addMoney: (amount: number) => Promise<void>
+  /** Debits the wallet for something paid by wallet — a ride or a parcel. */
+  spend: (amount: number, label: string, sub?: string) => Promise<void>
+  /** A parcel-side payout landing — hub handling fees, delivery payouts.
+   *  Not yet wired to the server ledger; still a local number that goes up. */
   earn: (amount: number, label: string, sub?: string) => void
 
   /* notifications */
@@ -184,13 +217,9 @@ interface AppState {
 
 const AppContext = createContext<AppState | null>(null)
 
-let bookingCounter = 4870
-let tripCounter = 9060
-let rideCounter = 3120
-
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useLocalStorage<Role>('dikkiconnect.role', 'sender')
-  const [onboarded, setOnboarded] = useLocalStorage('dikkiconnect.onboarded', false)
+  const [role, setRole] = useLocalStorage<Role>('waypool.role', 'sender')
+  const [onboarded, setOnboarded] = useLocalStorage('waypool.onboarded', false)
 
   // The session lives in <AuthProvider> — real per-number accounts, so the
   // name on a booking is the name of whoever is actually signed in.
@@ -198,22 +227,41 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [draft, setDraft] = useState<BookingDraft>(EMPTY_DRAFT)
 
-  // Persisted, so the app behaves like an app: book a parcel, close the tab,
-  // reopen as the hub manager, and it is still sitting in the intake queue.
-  const [parcels, setParcels] = useLocalStorage<Parcel[]>('dikkiconnect.parcels', PARCELS)
+  /* ── Nothing is seeded any more ──────────────────────────────────────────
+     These used to start from the demo fixtures in data.ts: five parcels, a
+     couple of trips, a page of notifications and a ₹1,240 wallet. That was
+     right when the app was a front end with nobody behind it — it gave every
+     screen something to draw.
+
+     It is wrong the moment a real person signs in. A tester's first screen
+     showed parcels addressed to strangers, a traveller called Arjun Menon
+     carrying something to Mysore, and money they had never added. It reads as
+     somebody else's account, and worse, once they book a real parcel it sits
+     in the same list with the same styling as the invented ones, so there is
+     no way to tell which of them is true.
+
+     Empty is the honest first screen, and every one of these lists already has
+     a designed empty state. The server fills them in. */
+  const [parcels, setParcels] = useLocalStorage<Parcel[]>('waypool.parcels', [])
   const [lastBookedId, setLastBookedId] = useState<string | null>(null)
-  const [trips, setTrips] = useLocalStorage<Trip[]>('dikkiconnect.trips', TRIPS)
+  /* Trips, bookings and the wallet balance are all server truth now — these
+     are a cache of the last server answer, not the record itself. Starting
+     empty/zero is still right: it is what a reinstall should show until the
+     sync effect below has had its first round trip. */
+  const [trips, setTrips] = useLocalStorage<Trip[]>('waypool.trips', [])
+  const [tripsLoading, setTripsLoading] = useState(false)
   const [rideBookings, setRideBookings] = useLocalStorage<RideBooking[]>(
-    'dikkiconnect.rides',
+    'waypool.rides',
     [],
   )
-  const [balance, setBalance] = useLocalStorage('dikkiconnect.balance', 1240)
+  const [balance, setBalance] = useLocalStorage('waypool.balance', 0)
+  const [walletTxns, setWalletTxns] = useLocalStorage<WalletTxn[]>('waypool.wallettxns', [])
   const [notifications, setNotifications] = useLocalStorage<NotificationItem[]>(
-    'dikkiconnect.notifications',
-    NOTIFICATIONS,
+    'waypool.notifications',
+    [],
   )
-  const [places, setPlaces] = useLocalStorage<SavedPlace[]>('dikkiconnect.places', [])
-  const [recents, setRecents] = useLocalStorage<RecentPlace[]>('dikkiconnect.recents', [])
+  const [places, setPlaces] = useLocalStorage<SavedPlace[]>('waypool.places', [])
+  const [recents, setRecents] = useLocalStorage<RecentPlace[]>('waypool.recents', [])
 
   /* ── Address book ──────────────────────────────────────────────────────── */
 
@@ -289,19 +337,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [draft],
   )
 
-  const commitBooking = useCallback(() => {
-    const id = `DKC-${++bookingCounter}`
-    const now = new Date().toISOString()
+  /* The booking is made on the server, not here.
+     
+     This used to mint an id locally and push a parcel into localStorage, which
+     is why a sender and a traveller could never see the same thing. The server
+     now owns the id, the price and the status: it is the only party that can
+     tell a hub a parcel is coming. A failure is thrown rather than swallowed —
+     a booking that "worked" offline is somebody standing at a hub holding a
+     parcel the network has never heard of. */
+  const commitBooking = useCallback(async () => {
+    const originHubId = resolveHub(draft.originHubId, draft.fromCityId).id
+    const destinationHubId = resolveHub(draft.destinationHubId, draft.toCityId).id
+
+    const created = await parcelsApi.create({
+      mode: draft.mode,
+      receiverName: draft.receiverName.trim(),
+      /* No invented fallback. The form will not let a booking through without
+         a name, and a blank number is better on a parcel than a made-up one. */
+      receiverPhone: draft.receiverPhone.replace(/\D/g, ''),
+      fromCityId: draft.fromCityId,
+      toCityId: draft.toCityId,
+      originHubId,
+      destinationHubId,
+      pickupAddress: draft.mode === 'p2p' ? draft.pickupAddress : undefined,
+      dropAddress: draft.mode === 'p2p' ? draft.dropAddress : undefined,
+      category: draft.category,
+      size: draft.size,
+      weightKg: draft.weightKg,
+      declaredValue: draft.declaredValue,
+      fragile: draft.fragile,
+      insured: draft.insured,
+      notes: draft.notes,
+      promo: draft.promo,
+    })
+
+    const id = created.parcel.id
+    const now = created.parcel.bookedAt as string
     const parcel: Parcel = {
       id,
       mode: draft.mode,
       senderName: account?.name ?? 'You',
-      receiverName: draft.receiverName || 'Receiver',
-      receiverPhone: draft.receiverPhone || '9000000000',
+      receiverName: draft.receiverName.trim(),
+      /* No invented fallback. The form will not let a booking through without
+         a name, and a blank number is better on a parcel than a made-up one. */
+      receiverPhone: draft.receiverPhone.replace(/\D/g, ''),
       fromCityId: draft.fromCityId,
       toCityId: draft.toCityId,
-      originHubId: resolveHub(draft.originHubId, draft.fromCityId).id,
-      destinationHubId: resolveHub(draft.destinationHubId, draft.toCityId).id,
+      originHubId,
+      destinationHubId,
       pickupAddress: draft.mode === 'p2p' ? draft.pickupAddress : undefined,
       dropAddress: draft.mode === 'p2p' ? draft.dropAddress : undefined,
       category: draft.category,
@@ -312,14 +395,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
       notes: draft.notes,
       status: 'booked',
       bookedAt: now,
-      etaAt: new Date(Date.now() + 20 * 3_600_000).toISOString(),
-      price: price.total,
+      etaAt: created.parcel.etaAt as string,
+      /* The server's price, not the form's estimate. If they disagree the
+         server is right, and the user is charged what it says. */
+      price: created.parcel.price,
       timeline: newTimeline(draft.mode, now),
     }
 
     setParcels((p) => [parcel, ...p])
     setLastBookedId(id)
-    if (draft.paymentMethod === 'wallet') setBalance((b) => Math.max(0, b - price.total))
+    if (draft.paymentMethod === 'wallet') {
+      try {
+        await walletApi.spend(created.parcel.price, 'Parcel booked', id)
+        const w = await walletApi.get()
+        setBalance(w.balance)
+        setWalletTxns(w.txns)
+      } catch {
+        /* Parcel payment is not gated on this yet — the booking already
+           succeeded above, and a wallet debit failing here must not undo it. */
+      }
+    }
 
     const booked = parcelNotification('booked', id, hubShort(parcel.originHubId))
     if (booked) {
@@ -350,7 +445,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     return id
-  }, [account, draft, price.total, setParcels, setBalance, setNotifications])
+  }, [account, draft, setParcels, setBalance, setWalletTxns, setNotifications])
 
   /* ── Custody chain ─────────────────────────────────────────────────────
      Marks every timeline node up to `to` as done, stamping the one that just
@@ -371,6 +466,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             ...p,
             status: to,
             travelerId: detail.travelerId ?? p.travelerId,
+            travelerName: detail.travelerName ?? p.travelerName,
             timeline: p.timeline.map((e, i) =>
               i > target
                 ? e
@@ -403,19 +499,117 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [setParcels, setNotifications],
   )
 
+  /* The server has just said a checkpoint was passed. Its status is the fact;
+     the local timeline is only how that fact is drawn, so the same projection
+     the portals already read is reused rather than a second shape. */
+  const adoptParcel = useCallback<AppState['adoptParcel']>(
+    (server) => {
+      const last = server.timeline.at(-1) as
+        | { actor?: string; location?: string; photos?: number }
+        | undefined
+
+      /* Insert first if this device has never seen the parcel.
+
+         A hub worker is neither the sender nor the carrier, so a parcel
+         arriving at their counter is not in any list they hold. Before this,
+         adopting one was a no-op — the update mapped over a list the parcel
+         was not in — and the hub portal could not act on anything a tester
+         had booked on another phone. The timeline is rebuilt locally from the
+         mode and then advanced to wherever the server says it is. */
+      setParcels((list) => {
+        if (list.some((p) => p.id === server.id)) return list
+        const fresh = {
+          ...(server as unknown as Parcel),
+          timeline: newTimeline(
+            (server.mode as DeliveryMode) ?? 'hub',
+            String(server.bookedAt ?? new Date().toISOString()),
+          ),
+        }
+        return [fresh, ...list]
+      })
+
+      advanceParcel(server.id, server.status as ParcelStatus, {
+        actor: last?.actor,
+        location: last?.location,
+        photos: last?.photos,
+        travelerId: typeof server.travelerId === 'string' ? server.travelerId : undefined,
+        travelerName: typeof server.travelerName === 'string' ? server.travelerName : undefined,
+      })
+    },
+    [advanceParcel, setParcels],
+  )
+
+  /* ── What this account actually has ──────────────────────────────────────
+     The list starts empty and is filled from the server, which is what makes
+     a reinstall — or a second phone — show the same parcels rather than a
+     fresh empty world.
+
+     A failure here is deliberately quiet: the person keeps whatever the app
+     already had, and the screens that act on a parcel fail loudly at the
+     point of acting. Shouting on launch about a list that could not refresh
+     teaches people to dismiss the one message that matters. */
+  const [parcelsLoading, setParcelsLoading] = useState(false)
+  useEffect(() => {
+    if (!authed) return
+    let cancelled = false
+    setParcelsLoading(true)
+    parcelsApi
+      .mine()
+      .then(({ sent, carrying }) => {
+        if (cancelled) return
+        const fromServer = [...sent, ...carrying]
+        if (!fromServer.length) return
+        setParcels((local) => {
+          const byId = new Map(local.map((p) => [p.id, p]))
+          for (const s of fromServer) {
+            const existing = byId.get(s.id)
+            byId.set(s.id, {
+              ...(existing ?? (s as unknown as Parcel)),
+              status: s.status as ParcelStatus,
+              price: s.price,
+              travelerId: typeof s.travelerId === 'string' ? s.travelerId : existing?.travelerId,
+              travelerName:
+                typeof s.travelerName === 'string' ? s.travelerName : existing?.travelerName,
+            })
+          }
+          return [...byId.values()].sort((a, b) => +new Date(b.bookedAt) - +new Date(a.bookedAt))
+        })
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setParcelsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [authed, setParcels])
+
   /* ── Trips ─────────────────────────────────────────────────────────────
-     A ride published here is immediately searchable in the passenger portal —
-     the two roles read the same list, which is what makes "post in advance"
-     mean something rather than just showing a toast.                        */
+     A ride published on the server is immediately searchable from any other
+     device's passenger portal — the two roles read the same record, which is
+     what makes "post in advance" mean something rather than just a toast that
+     this phone remembers and nobody else's does. */
+  const adoptTrip = useCallback<AppState['adoptTrip']>(
+    (trip) =>
+      setTrips((list) => {
+        const i = list.findIndex((t) => t.id === trip.id)
+        if (i === -1) return [trip, ...list]
+        const next = [...list]
+        next[i] = trip
+        return next
+      }),
+    [setTrips],
+  )
+
   const publishTrip = useCallback<AppState['publishTrip']>(
-    (t) => {
-      const id = `TRP-${++tripCounter}`
-      setTrips((list) => [{ ...t, id, status: 'published', parcelIds: [] }, ...list])
+    async (t) => {
+      const { trip } = await ridesApi.publish(t)
+      adoptTrip(trip)
       setNotifications((n) => [
         {
-          id: `n-${id}`,
+          id: `n-${trip.id}`,
           title: 'Ride published',
-          body: `Your ${new Date(t.departAt).toLocaleDateString('en-IN', {
+          body: `Your ${new Date(trip.departAt).toLocaleDateString('en-IN', {
             day: 'numeric',
             month: 'short',
           })} ride is live. We'll notify you as seats and parcels come in.`,
@@ -426,75 +620,115 @@ export function AppProvider({ children }: { children: ReactNode }) {
         },
         ...n,
       ])
-      return id
+      return trip
     },
-    [setTrips, setNotifications],
+    [adoptTrip, setNotifications],
   )
 
   const startTrip = useCallback(
-    (id: string) =>
-      setTrips((list) => list.map((t) => (t.id === id ? { ...t, status: 'running' } : t))),
-    [setTrips],
+    async (id: string) => {
+      const { trip } = await ridesApi.start(id)
+      adoptTrip(trip)
+    },
+    [adoptTrip],
   )
 
+  const refreshWallet = useCallback(async () => {
+    try {
+      const w = await walletApi.get()
+      setBalance(w.balance)
+      setWalletTxns(w.txns)
+    } catch {
+      /* Best-effort — the action that triggered this already succeeded. */
+    }
+  }, [setBalance, setWalletTxns])
+
   const cancelTrip = useCallback(
-    (id: string) => setTrips((list) => list.filter((t) => t.id !== id)),
-    [setTrips],
+    async (id: string) => {
+      await ridesApi.cancelTrip(id)
+      setTrips((list) => list.map((t) => (t.id === id ? { ...t, status: 'cancelled' } : t)))
+      void refreshWallet() // any wallet-paid seats on this trip were just refunded
+    },
+    [setTrips, refreshWallet],
   )
 
   const bookSeats = useCallback<AppState['bookSeats']>(
-    (tripId, seats, fare, boardingPoint = 'Silk Board junction') => {
-      const id = `RDE-${++rideCounter}`
-      setTrips((list) =>
-        list.map((t) =>
-          t.id === tripId ? { ...t, seatsLeft: Math.max(0, t.seatsLeft - seats) } : t,
-        ),
-      )
-      setRideBookings((list) => [
-        {
-          id,
-          tripId,
-          seats,
-          fare,
-          boardingPoint,
-          // The code the driver checks at the kerb, derived from the booking so
-          // it is stable across reloads.
-          boardingOtp: otpFor(id + 'board'),
-          status: 'upcoming',
-        },
-        ...list,
-      ])
+    async (tripId, seats, opts = {}) => {
+      const { booking, trip } = await ridesApi.book({
+        tripId,
+        seats,
+        boardingPoint: opts.boardingPoint,
+        payWithWallet: opts.payWithWallet,
+      })
+      adoptTrip(trip)
+      setRideBookings((list) => [booking, ...list])
+      if (opts.payWithWallet) void refreshWallet()
       const confirmed = rideNotification('upcoming', tripId)
       if (confirmed) {
-        const item = stamp(confirmed, `n-${id}`)
+        const item = stamp(confirmed, `n-${booking.id}`)
         setNotifications((n) => [item, ...n])
         deliver(item)
       }
-      return id
+      return booking
     },
-    [setTrips, setRideBookings, setNotifications],
-  )
-
-  const advanceRide = useCallback<AppState['advanceRide']>(
-    (id, to) => {
-      setRideBookings((list) => list.map((r) => (r.id === id ? { ...r, status: to } : r)))
-      const draft = rideNotification(to, id)
-      if (draft) {
-        const item = stamp(draft, `n-${id}-${to}`)
-        setNotifications((n) => [item, ...n])
-        deliver(item)
-      }
-    },
-    [setRideBookings, setNotifications],
+    [adoptTrip, setRideBookings, setNotifications, refreshWallet],
   )
 
   const cancelRide = useCallback<AppState['cancelRide']>(
-    (id) =>
+    async (id) => {
+      await ridesApi.cancelBooking(id)
       setRideBookings((list) =>
         list.map((r) => (r.id === id ? { ...r, status: 'cancelled' } : r)),
-      ),
-    [setRideBookings],
+      )
+      void refreshWallet() // a wallet-paid seat is refunded on cancellation
+    },
+    [setRideBookings, refreshWallet],
   )
+
+  /* What this account has actually published or booked. Same shape as the
+     parcels sync above: starts from whatever this device cached, refreshed
+     from the server, quiet on failure because the screens that act on a
+     trip or booking fail loudly at the point of acting. */
+  useEffect(() => {
+    if (!authed) return
+    let cancelled = false
+    setTripsLoading(true)
+    ridesApi
+      .mine()
+      .then(({ published, bookings }) => {
+        if (cancelled) return
+        setTrips((local) => {
+          const byId = new Map(local.map((t) => [t.id, t]))
+          for (const t of published) byId.set(t.id, t)
+          for (const { trip } of bookings) byId.set(trip.id, trip)
+          return [...byId.values()].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+        })
+        setRideBookings(bookings.map((b) => b.booking))
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setTripsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [authed, setTrips, setRideBookings])
+
+  useEffect(() => {
+    if (!authed) return
+    let cancelled = false
+    walletApi
+      .get()
+      .then((w) => {
+        if (cancelled) return
+        setBalance(w.balance)
+        setWalletTxns(w.txns)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [authed, setBalance, setWalletTxns])
 
   const value = useMemo<AppState>(
     () => ({
@@ -522,20 +756,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
       lastBookedId,
       commitBooking,
       advanceParcel,
+      adoptParcel,
+      parcelsLoading,
 
       trips,
+      tripsLoading,
       publishTrip,
       startTrip,
       cancelTrip,
       bookSeats,
+      adoptTrip,
 
       rideBookings,
-      advanceRide,
       cancelRide,
 
       balance,
-      addMoney: (a: number) => setBalance((b) => b + a),
-      spend: (a: number) => setBalance((b) => Math.max(0, b - a)),
+      walletTxns,
+      addMoney: async (a: number) => {
+        await walletApi.topup(a)
+        const w = await walletApi.get()
+        setBalance(w.balance)
+        setWalletTxns(w.txns)
+      },
+      spend: async (a: number, label: string, sub?: string) => {
+        await walletApi.spend(a, label, sub)
+        const w = await walletApi.get()
+        setBalance(w.balance)
+        setWalletTxns(w.txns)
+      },
       earn: (a: number, label: string, sub?: string) => {
         setBalance((b) => b + a)
         setNotifications((n) => [
@@ -581,18 +829,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       lastBookedId,
       commitBooking,
       advanceParcel,
+      adoptParcel,
+      parcelsLoading,
       trips,
+      tripsLoading,
       publishTrip,
       startTrip,
       cancelTrip,
       bookSeats,
+      adoptTrip,
       rideBookings,
-      advanceRide,
       cancelRide,
       balance,
+      walletTxns,
       setBalance,
-      notifications,
+      setWalletTxns,
       setNotifications,
+      notifications,
       places,
       savePlace,
       removePlace,
@@ -689,10 +942,60 @@ export function useTrips() {
   )
 }
 
-/** One trip by id, live from the ledger. */
-export function useTrip(id?: string) {
-  const { trips } = useApp()
-  return useMemo(() => trips.find((t) => t.id === id), [trips, id])
+/**
+ * One trip by id. Returns `undefined` while it is still loading and `null`
+ * once the server has genuinely said there is no such trip — the two read
+ * the same from this device's cache (both falsy), so callers that only
+ * cared about "do I have it yet" never had to change, and the ones that do
+ * care can tell a brief fetch apart from a dead link.
+ *
+ * Reused across the passenger screens for the same reason adoptParcel exists
+ * for parcels: a trip reached by a direct link or a reinstall is not
+ * necessarily one this device has ever fetched before.
+ */
+export function useTrip(id?: string): Trip | undefined | null {
+  const { trips, adoptTrip } = useApp()
+  const [notFound, setNotFound] = useState(false)
+  const local = useMemo(() => trips.find((t) => t.id === id), [trips, id])
+
+  useEffect(() => {
+    if (!id || local) return
+    let cancelled = false
+    ridesApi
+      .one(id)
+      .then(({ trip }) => {
+        if (!cancelled) adoptTrip(trip)
+      })
+      .catch(() => {
+        if (!cancelled) setNotFound(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [id, local, adoptTrip])
+
+  if (local) return local
+  return notFound ? null : undefined
+}
+
+/**
+ * The signed-in person, as the identity a driver or traveler screen reads.
+ * Name, phone and KYC tier come from the real account — nothing here is a
+ * fixture standing in for them. A screen that needs a vehicle, a rating or a
+ * trip count reads those from the real record that actually has them (a
+ * published trip, `useMyTrips`), not from here.
+ */
+export function useMe() {
+  const { account } = useAuth()
+  return useMemo(
+    () => ({
+      id: account?.id ?? '',
+      name: account?.name ?? 'You',
+      phone: account?.phone ?? '',
+      kycTier: account?.kycTier ?? ('none' as const),
+    }),
+    [account],
+  )
 }
 
 /**
@@ -704,32 +1007,12 @@ export function useMyTrips(travelerId: string) {
   return useMemo(() => {
     const mine = trips.filter((t) => t.travelerId === travelerId)
     return {
-      scheduled: mine.filter((t) => t.status === 'published' || t.status === 'draft'),
+      scheduled: mine.filter((t) => t.status === 'published'),
       running: mine.filter((t) => t.status === 'running'),
       completed: mine.filter((t) => t.status === 'completed'),
       all: mine,
     }
   }, [trips, travelerId])
-}
-
-/**
- * The signed-in person as a driver. Identity (name, phone) comes from their
- * account; vehicle, rating and trip history come from the driver record, which
- * is what a real KYC + RC verification would populate.
- */
-export function useMe(): Traveler {
-  const { account } = useAuth()
-  return useMemo(
-    () => ({
-      ...TRAVELERS[0],
-      // The id stays the fixture's: it is the key the seeded trips, manifests
-      // and payout history hang off, so a new sign-in inherits a populated
-      // portal rather than an empty one. Everything the user sees is theirs.
-      name: account?.name ?? TRAVELERS[0].name,
-      phone: account?.phone ?? TRAVELERS[0].phone,
-    }),
-    [account],
-  )
 }
 
 /**

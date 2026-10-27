@@ -4,12 +4,13 @@ import { Clock, MapPin, Sun } from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import { Card, Note, OtpDisplay, Skeleton } from '@/components/ui'
 import { QrTicket } from '@/components/viz/Scanner'
-import { hubById, otpFor } from '@/lib/data'
+import { hubById } from '@/lib/data'
+import { useCustodyCode } from '@/lib/custody'
 import { kg } from '@/lib/format'
 import { useApp } from '@/lib/store'
 import { BRAND } from '@/lib/brand'
 import { categoryById } from '@/lib/data'
-import { CategoryIcon } from '@/components/domain/CategoryIcon'
+import { CategoryMark } from '@/components/domain/CategoryIcon'
 
 /** The screen you hold up at the hub counter. Brightness hint included. */
 export default function DropOffQr() {
@@ -23,14 +24,19 @@ export default function DropOffQr() {
   }, [])
 
   const parcel = parcels.find((p) => p.id === id)
+  const isP2P = parcel?.mode === 'p2p'
+  /* The code the other party will type in. It is issued by the server and
+     held there: this screen asks for it, it is not computed here. The previous
+     version derived it from the parcel id, which meant anyone who knew the id
+     could produce the code that releases the parcel.
+
+     Asked for above the early return, because a hook cannot sit behind one. */
+  const otp = useCustodyCode(parcel?.id, isP2P ? 'handoff' : 'intake')
+
   if (!parcel) return <Navigate to="/sender" replace />
 
-  const isP2P = parcel.mode === 'p2p'
   const hub = hubById(parcel.originHubId)
   const cat = categoryById(parcel.category)
-  // Hub mode: the hub manager types this at intake. P2P: the traveler types it
-  // at your door. Different checkpoints, so different codes.
-  const otp = isP2P ? otpFor(parcel.id + 'pick') : otpFor(parcel.id)
 
   return (
     <Screen tone="white">
@@ -59,14 +65,20 @@ export default function DropOffQr() {
         </div>
 
         <Card className="mt-6 border-brand-100 bg-brand-50/60">
-          <OtpDisplay code={otp} label={isP2P ? 'Show this to the traveler' : 'Drop-off OTP'} />
+          <OtpDisplay
+            code={otp.code ?? '——————'}
+            label={isP2P ? 'Show this to the traveler' : 'Drop-off OTP'}
+          />
+          {otp.error && (
+            <p className="mt-2 text-center text-[12.5px] font-semibold text-danger-600">
+              {otp.error}
+            </p>
+          )}
         </Card>
 
         <Card className="mt-3">
           <div className="flex items-center gap-3">
-            <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-[20px]">
-              <CategoryIcon id={cat.id} />
-            </span>
+            <CategoryMark id={cat.id} size={44} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[14px] font-bold text-ink-900">
                 {cat.label} · {parcel.size} · {kg(parcel.weightKg)}

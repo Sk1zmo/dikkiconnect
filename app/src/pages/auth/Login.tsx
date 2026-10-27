@@ -100,7 +100,7 @@ export default function Login() {
             'This build has no sign-in server attached. Open the app at its current address, or reinstall the latest build.',
           )
         } else if (result.reason === 'offline') {
-          setError('Could not reach Stowza. Check your connection and try again.')
+          setError('Could not reach WayPool. Check your connection and try again.')
         } else {
           setError('That wasn’t accepted. Check it and try again.')
         }
@@ -222,7 +222,7 @@ export default function Login() {
         </div>
 
         <p className="mx-auto mt-8 max-w-[300px] text-center text-[11.5px] leading-relaxed text-ink-400">
-          By continuing you agree to Stowza&apos;s{' '}
+          By continuing you agree to WayPool&apos;s{' '}
           <button
             onClick={() => setPolicyOpen(true)}
             className="pressable-sm font-semibold text-ink-600 underline underline-offset-2"
@@ -264,7 +264,7 @@ export default function Login() {
           <div className="rounded-(--radius-md) bg-ink-50 p-3.5">
             <p className="text-[12px] leading-relaxed text-ink-500">
               This is a summary for the pilot. The binding Terms of Service and Privacy Policy are
-              issued by the registered entity operating Stowza and will be linked here before
+              issued by the registered entity operating WayPool and will be linked here before
               public launch.
             </p>
           </div>

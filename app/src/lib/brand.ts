@@ -1,17 +1,20 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    The brand, in one place.
 
-   The product was DikkiConnect until September 2026 and is Stowza now. The
-   wordmark, the launch screen, the page title, the manifest and the native
-   app labels read the name from here; the prose that mentions it in passing
-   ("Stowza is built for intercity moves") was swept by search and should be
-   again on the next rename. Storage keys, the API hosts and the demo
-   account's address still carry the old name on purpose: they are identifiers,
-   not copy, and changing them would sign every user out and break every link.
+   The product was DikkiConnect, then Stowza, and is WayPool from October 2026.
+   The wordmark, the launch screen, the page title, the manifest and the native
+   app labels all read the name from here.
+
+   This rename went further than the last one. The previous note said storage
+   keys and identifiers were deliberately left on the old name because changing
+   them would sign every user out and break every link — true while people were
+   using it. Nothing is published yet, so this was the last moment the package
+   id, the deep-link scheme and the storage keys could be changed for free.
+   They were. There is no cheaper time to do it than before the first install.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export const BRAND = {
-  name: 'Stowza',
+  name: 'WayPool',
   tagline: 'Move more. Together.',
   /** Under the wordmark on the landing screen. */
   promise: 'Store. Travel. Freely.',
@@ -19,10 +22,21 @@ export const BRAND = {
   description:
     'Intercity parcel delivery in the empty boot space of cars already making your route, plus cost-shared carpooling.',
   /** The deep-link scheme the QR codes use. Mirrored in strings.xml on Android. */
-  scheme: 'stowza',
+  scheme: 'waypool',
   /** A hub's display name is "<name> Hub · <area>". */
-  hubPrefix: 'Stowza Hub',
+  hubPrefix: 'WayPool Hub',
 } as const
 
+/**
+ * The field the app opens on.
+ *
+ * Three things have to agree on this exact value or the first moment of the
+ * app is a flash of the wrong colour: the Android splash theme
+ * (`android/app/src/main/res/values/styles.xml`), the Capacitor splash config
+ * (`capacitor.config.ts`), and the in-app opening that takes over from them.
+ * The hand-over is only invisible when all three are the same navy.
+ */
+export const LAUNCH_BG = '#071231'
+
 /** Marketing version, shown on the download page and in Settings. */
-export const APP_VERSION = '1.2.0'
+export const APP_VERSION = '2.6.0'

@@ -7,7 +7,8 @@ import { ScannerViewfinder } from '@/components/viz/Scanner'
 import { categoryById, jobFromParcel } from '@/lib/data'
 import { kg } from '@/lib/format'
 import { useApp, useManifest, useMe, useOpenJobs } from '@/lib/store'
-import { CategoryIcon } from '@/components/domain/CategoryIcon'
+import { CategoryMark } from '@/components/domain/CategoryIcon'
+import { parcelIdFromScan } from '@/lib/qr'
 
 type Mode = 'pickup' | 'dropoff'
 
@@ -35,9 +36,21 @@ export default function TravelerScan() {
   const job = parcel ? jobFromParcel(parcel) : null
   const cat = categoryById(job?.category ?? 'documents')
 
-  const onDetect = () => {
+  /* The scan has to agree with the job in hand. A driver carrying one parcel
+     and scanning another is exactly the mix-up worth catching at the kerb
+     rather than at the destination hub. */
+  const onDetect = (raw: string) => {
+    const id = parcelIdFromScan(raw)
+    if (!id) {
+      toast.error('Not a WayPool pass', 'That code belongs to something else.')
+      return
+    }
     if (!job) {
       toast.error('Nothing to scan', 'Accept a job first, then scan it at pickup.')
+      return
+    }
+    if (id !== job.parcelId) {
+      toast.error('Different parcel', `You scanned ${id}, but you are here for ${job.parcelId}.`)
       return
     }
     setDetected(true)
@@ -86,7 +99,6 @@ export default function TravelerScan() {
             : 'Scan the parcel QR to hand it over at the destination hub'
         }
         onDetect={onDetect}
-        autoDetectMs={3000}
       />
 
       {/* Detected sheet */}
@@ -106,10 +118,12 @@ export default function TravelerScan() {
           </Button>
         }
       >
-        <div className="flex items-center gap-3.5 rounded-(--radius-lg) border border-ink-100 bg-ink-50 p-4">
-          <span className="grid size-12 shrink-0 place-items-center rounded-(--radius-md) bg-white text-[22px] shadow-(--shadow-e1)">
-            <CategoryIcon id={cat.id} />
-          </span>
+        {/* The confirmation a driver reads in a hub doorway, one-handed. The
+            drawn object carries the category tint, so "is this the right
+            parcel" is answerable from colour before the ID is read — which a
+            grey square with a line glyph in it never managed. */}
+        <div className="flex min-h-12 items-center gap-3.5 rounded-(--radius-lg) border border-ink-200 bg-ink-50 p-4">
+          <CategoryMark id={cat.id} size={48} />
           <div className="min-w-0 flex-1">
             <p className="tabular truncate text-[15px] font-extrabold text-ink-900">
               {job?.parcelId ?? '—'}
@@ -151,7 +165,9 @@ export default function TravelerScan() {
             disabled={manualId.trim().length < 4}
             onClick={() => {
               setManualOpen(false)
-              setDetected(true)
+              /* Typed by hand or read by the camera, it goes through the same
+                 check — otherwise the keyboard is a way around it. */
+              onDetect(manualId)
             }}
           >
             Find parcel
@@ -159,7 +175,7 @@ export default function TravelerScan() {
         }
       >
         <Field
-          placeholder="e.g. DKC-4844"
+          placeholder="e.g. WYP-4844"
           value={manualId}
           autoFocus
           onChange={(e) => setManualId(e.target.value.toUpperCase())}

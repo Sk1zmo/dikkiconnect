@@ -21,7 +21,7 @@ import { APP_VERSION, BRAND } from '@/lib/brand'
        denied and a feature that then looks broken.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const APK = '/Stowza.apk'
+const APK = '/WayPool.apk'
 
 const PERMISSIONS = [
   {
@@ -50,7 +50,7 @@ const ANDROID_STEPS = [
   'Download the APK using the button above.',
   'Open it. Android will warn that it is from an unknown source — that is expected for a pilot build, and is the same prompt every pre-release app produces.',
   'Tap Settings, allow installs from your browser, then go back and tap Install.',
-  'Open Stowza and sign in with your email.',
+  'Open WayPool and sign in with your email.',
 ]
 
 export default function Download() {
@@ -61,7 +61,7 @@ export default function Download() {
         <header className="flex items-center gap-3">
           <LogoMark size={34} tone="brand" />
           <span className="text-display text-[22px] font-extrabold tracking-[-0.035em]">
-            Stowza
+            WayPool
           </span>
         </header>
 
@@ -97,7 +97,7 @@ export default function Download() {
               will add you to the build.
             </p>
             <a
-              href="mailto:info.quantumbay@gmail.com?subject=Stowza%20TestFlight"
+              href="mailto:info.quantumbay@gmail.com?subject=WayPool%20TestFlight"
               className="springy focus-ring mt-5 flex h-[52px] w-full items-center justify-center rounded-(--radius-md) border border-ink-300 px-5 text-[15px] font-semibold text-ink-900 hover:bg-ink-50"
             >
               Request a TestFlight invite

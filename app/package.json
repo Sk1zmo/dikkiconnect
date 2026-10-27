@@ -1,7 +1,7 @@
 {
-  "name": "stowza",
+  "name": "waypool",
   "private": true,
-  "version": "1.2.0",
+  "version": "2.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -12,12 +12,23 @@
     "preview": "vite preview",
     "android:sync": "npm run build && node scripts/strip-apk.mjs && cap sync android",
     "android:apk": "npm run android:sync && cd android && gradlew assembleDebug",
-    "android:release": "npm run android:sync && cd android && gradlew assembleRelease",
+    "android:release": "npm run android:sync && cd android && gradlew assembleRelease bundleRelease && cd .. && node scripts/publish-apk.mjs",
     "android:open": "cap open android",
     "ios:sync": "npm run build && node scripts/strip-apk.mjs && cap sync ios",
     "ios:open": "cap open ios",
     "check:api": "tsc -p api/tsconfig.json --noEmit",
-    "build:demo": "cross-env VITE_DEMO_MODE=1 vite build --outDir dist-demo"
+    "build:demo": "cross-env VITE_DEMO_MODE=1 vite build --outDir dist-demo",
+    "test:api": "tsx api/_lib/domain.test.ts",
+    "test:rides": "tsx api/_lib/rides.test.ts",
+    "dev:api": "node --import tsx scripts/dev-api.mjs",
+    "test:qr": "tsx src/lib/qr.test.ts",
+    "test:types": "tsx src/lib/types.test.ts",
+    "test": "npm run test:api && npm run test:rides && npm run test:qr && npm run test:types",
+    "verify:mail": "node scripts/verify-mail.mjs",
+    "brand:icons": "node scripts/brand-icons.mjs",
+    "setup:live": "powershell -ExecutionPolicy Bypass -File scripts/setup-live.ps1",
+    "publish:apk": "node scripts/publish-apk.mjs",
+    "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
@@ -26,6 +37,7 @@
     "@capacitor/core": "^8.5.0",
     "@capacitor/ios": "^8.5.0",
     "@capacitor/local-notifications": "^8.3.1",
+    "@capacitor/push-notifications": "^8.1.3",
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.3",
     "@phosphor-icons/react": "^2.1.10",

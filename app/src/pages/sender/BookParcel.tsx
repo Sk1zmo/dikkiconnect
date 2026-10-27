@@ -20,7 +20,8 @@ import { inr, kg } from '@/lib/format'
 import { useApp } from '@/lib/store'
 import { cn } from '@/lib/cn'
 import { bookSteps } from './BookRoute'
-import { CategoryIcon, SizeIcon } from '@/components/domain/CategoryIcon'
+import { ArtTile } from '@/components/domain/ParcelArt'
+import { SizeMark } from '@/components/domain/CategoryIcon'
 
 /** Step 2 — what is in the box. Enforces the PRD's declared-value cap. */
 export default function BookParcel() {
@@ -31,7 +32,18 @@ export default function BookParcel() {
   const size = PARCEL_SIZES.find((s) => s.id === draft.size)!
   const overCap = draft.declaredValue > DECLARED_VALUE_CAP
   const overWeight = draft.weightKg > size.maxKg
-  const canContinue = draft.acceptedProhibited && !overCap && !overWeight
+  /* A receiver's name is required now. Without it the booking used to be
+     created for a person literally called "Receiver", with the invented
+     number 9000000000 attached — on a real parcel, which a hub would then be
+     asked to hand to a stranger they could not identify or ring. */
+  const receiverDigits = draft.receiverPhone.replace(/\D/g, '')
+  const receiverPhoneOk = !receiverDigits || /^[6-9]\d{9}$/.test(receiverDigits)
+  const canContinue =
+    draft.acceptedProhibited &&
+    !overCap &&
+    !overWeight &&
+    draft.receiverName.trim().length >= 2 &&
+    receiverPhoneOk
 
   return (
     <Screen>
@@ -46,32 +58,18 @@ export default function BookParcel() {
         <p className="mb-3 text-[12px] font-bold tracking-wide text-ink-400 uppercase">
           What are you sending?
         </p>
+        {/* Four across, so every category is reachable without scrolling and
+            each tile is still wide enough for the object to read. */}
         <div className="grid grid-cols-4 gap-2.5">
-          {PARCEL_CATEGORIES.map((c) => {
-            const active = draft.category === c.id
-            return (
-              <button
-                key={c.id}
-                onClick={() => patchDraft({ category: c.id })}
-                className={cn(
-                  'pressable flex flex-col items-center gap-1.5 rounded-(--radius-md) border-2 bg-white px-1.5 py-3 transition-all duration-200',
-                  active
-                    ? 'border-brand-600 bg-brand-50/60 shadow-(--shadow-brand-sm)'
-                    : 'border-ink-200 hover:border-ink-300',
-                )}
-              >
-                <CategoryIcon id={c.id} className="size-[20px] text-ink-700" />
-                <span
-                  className={cn(
-                    'text-center text-[10px] leading-tight font-bold',
-                    active ? 'text-brand-700' : 'text-ink-600',
-                  )}
-                >
-                  {c.label}
-                </span>
-              </button>
-            )
-          })}
+          {PARCEL_CATEGORIES.map((c) => (
+            <ArtTile
+              key={c.id}
+              id={c.id}
+              label={c.label}
+              selected={draft.category === c.id}
+              onClick={() => patchDraft({ category: c.id })}
+            />
+          ))}
         </div>
         <p className="mt-2 text-[11.5px] text-ink-400">
           {PARCEL_CATEGORIES.find((c) => c.id === draft.category)?.hint}
@@ -97,7 +95,7 @@ export default function BookParcel() {
                     : 'border-ink-200 hover:border-ink-300',
                 )}
               >
-                <SizeIcon id={s.id} className="size-[22px] text-ink-700" />
+                <SizeMark id={s.id} size={46} />
                 <span className="min-w-0 flex-1">
                   <span className="block text-[14.5px] font-bold text-ink-900">
                     {s.label} · up to {s.maxKg} kg
@@ -177,7 +175,7 @@ export default function BookParcel() {
           <Switch
             checked={draft.insured}
             onChange={(v) => patchDraft({ insured: v })}
-            label="Stowza Protect"
+            label="WayPool Protect"
             description={`₹25 · covers up to ${inr(DECLARED_VALUE_CAP)} against loss or damage in transit.`}
           />
         </Card>
@@ -190,10 +188,12 @@ export default function BookParcel() {
           label="Receiver name"
           placeholder="e.g. Rohit Sharma"
           value={draft.receiverName}
+          hint="The hub will ask for this name before releasing the parcel."
           onChange={(e) => patchDraft({ receiverName: e.target.value })}
         />
         <Field
           label="Receiver mobile"
+          optional
           type="tel"
           inputMode="numeric"
           placeholder="98450 12345"
@@ -201,7 +201,11 @@ export default function BookParcel() {
           value={draft.receiverPhone}
           onChange={(e) => patchDraft({ receiverPhone: e.target.value.replace(/[^\d ]/g, '') })}
           prefix={<span className="text-[15px] font-bold text-ink-600">+91</span>}
-          hint="Their pickup OTP goes to this number once the parcel reaches the destination hub."
+          error={receiverPhoneOk ? undefined : 'That does not look like a mobile number'}
+          /* The old hint said their OTP is texted to this number. There is no
+             SMS gateway yet, and the collection code is shown to you to pass
+             on — so that is what it now says. */
+          hint="So the hub can reach them. You will be shown their collection code to pass on."
         />
 
         <TextArea

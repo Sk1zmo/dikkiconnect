@@ -24,16 +24,16 @@ import {
 import { RouteMap } from '@/components/viz/Map'
 import { categoryById, hubById, jobFromParcel } from '@/lib/data'
 import { inr, kg, relative } from '@/lib/format'
-import { useApp, useMe, useOpenJobs } from '@/lib/store'
-import { CategoryIcon } from '@/components/domain/CategoryIcon'
+import { parcels as parcelsApi, explain } from '@/lib/api'
+import { useApp, useOpenJobs } from '@/lib/store'
+import { CategoryMark } from '@/components/domain/CategoryIcon'
 
 
 export default function JobDetail() {
-  const ME = useMe()
   const { id } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
-  const { advanceParcel } = useApp()
+  const { adoptParcel } = useApp()
   const [accepting, setAccepting] = useState(false)
 
   // Live feed — jobs are derived from parcels, so one claimed by another
@@ -50,16 +50,23 @@ export default function JobDetail() {
 
   const accept = () => {
     setAccepting(true)
-    setTimeout(() => {
-      advanceParcel(job.parcelId, 'assigned', { actor: ME.name, travelerId: ME.id })
-      toast.success(
-        'Job accepted',
-        isP2P
-          ? 'Head to the pickup address and enter the sender’s OTP.'
-          : 'Head to the pickup hub and scan the parcel QR.',
-      )
-      navigate('/traveler/scan')
-    }, 1100)
+    void (async () => {
+      try {
+        const { parcel } = await parcelsApi.claim(job.parcelId)
+        adoptParcel(parcel)
+        toast.success(
+          'Job accepted',
+          isP2P
+            ? 'Head to the pickup address and enter the sender’s OTP.'
+            : 'Head to the pickup hub and scan the parcel QR.',
+        )
+        navigate('/traveler/scan')
+      } catch (e) {
+        toast.error('Not yours', explain(e))
+      } finally {
+        setAccepting(false)
+      }
+    })()
   }
 
   return (
@@ -80,20 +87,22 @@ export default function JobDetail() {
       <ScreenBody className="-mt-6 pt-0">
         <Card elevation={3}>
           <div className="flex items-start gap-3.5">
-            <span className="grid size-12 shrink-0 place-items-center rounded-(--radius-md) bg-brand-50 text-[22px]">
-              <CategoryIcon id={cat.id} />
-            </span>
+            <CategoryMark id={cat.id} size={48} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[16px] font-extrabold text-ink-900">{cat.label}</p>
               <p className="mt-0.5 truncate text-[12.5px] text-ink-500">
                 {job.parcelId} · size {job.size} · {kg(job.weightKg)}
               </p>
             </div>
+            {/* The payout is the whole reason this screen is open, so it is set
+                louder than the category it sits beside and its label is pushed
+                down to a caption. Reversing the two — a bold "YOUR PAYOUT" over
+                a quieter figure — read as a receipt rather than an offer. */}
             <div className="shrink-0 text-right">
               <p className="tabular text-display text-[26px] leading-none font-extrabold text-success-600">
                 +{inr(job.payout)}
               </p>
-              <p className="mt-1 text-[10.5px] font-bold text-ink-400">your payout</p>
+              <p className="mt-1 text-[11px] font-semibold text-ink-500">your payout</p>
             </div>
           </div>
 
@@ -107,7 +116,12 @@ export default function JobDetail() {
             <Badge tone="neutral" icon={<GasPump size={11} />}>
               {job.detourKm} km detour
             </Badge>
-            <Badge tone={urgent ? 'danger' : 'brand'} icon={<Timer size={11} />}>
+            {/* An offer with a clock on it is exactly what the rationed yellow
+                is for. It was brand blue, which made the expiry look like one
+                more attribute of the job rather than the reason to decide now.
+                Danger red is held back for the last twenty minutes, when it is
+                no longer a nudge. */}
+            <Badge tone={urgent ? 'danger' : 'signal'} icon={<Timer size={11} />}>
               Expires {relative(job.expiresAt)}
             </Badge>
             {job.fragile && (

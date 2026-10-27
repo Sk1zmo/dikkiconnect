@@ -6,7 +6,8 @@ import { Screen, ScreenBody } from '@/components/layout/Screen'
 import { ActionBar, Button, Card, KeyValue, Note, OtpDisplay } from '@/components/ui'
 import { Confetti } from '@/components/viz/Illustrations'
 import { LottieMark } from '@/components/brand/LottieMark'
-import { hubById, otpFor } from '@/lib/data'
+import { hubById } from '@/lib/data'
+import { useCustodyCode } from '@/lib/custody'
 import { inr, shortDate } from '@/lib/format'
 import { useApp } from '@/lib/store'
 import { DropOffCountdown, NotifyAsk } from '@/components/domain/Confirm'
@@ -24,13 +25,18 @@ export default function BookConfirmed() {
     return () => clearTimeout(t)
   }, [])
 
+  const isP2P = parcel?.mode === 'p2p'
+  /* The code the other party will type in. It is issued by the server and
+     held there: this screen asks for it, it is not computed here. The previous
+     version derived it from the parcel id, which meant anyone who knew the id
+     could produce the code that releases the parcel.
+
+     Asked for above the early return, because a hook cannot sit behind one. */
+  const otp = useCustodyCode(parcel?.id, isP2P ? 'handoff' : 'intake')
+
   if (!parcel) return <Navigate to="/sender" replace />
 
-  const isP2P = parcel.mode === 'p2p'
   const hub = hubById(parcel.originHubId)
-  // Hub mode: the hub manager keys this in at intake. P2P: the traveler keys
-  // it in at your door. Different checkpoint, different code.
-  const otp = isP2P ? otpFor(parcel.id + 'pick') : otpFor(parcel.id)
 
   const done = (to: string) => {
     resetDraft()
@@ -70,7 +76,7 @@ export default function BookConfirmed() {
         {/* Drop-off OTP */}
         <Card className="border-brand-100 bg-brand-50/60">
           <OtpDisplay
-            code={otp}
+            code={otp.code ?? '——————'}
             label={isP2P ? 'Show this to the traveler' : 'Show this at the counter'}
           />
           <Note tone="brand" className="mt-4">

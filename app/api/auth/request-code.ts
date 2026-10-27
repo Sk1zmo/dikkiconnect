@@ -49,6 +49,16 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   const { subject, html, text } = otpEmail(issued.code, minutes)
   const mail = await sendMail(email, subject, html, text)
 
+  /* With no mail provider configured there is no way to receive a code, and so
+     no way to sign in — which makes the whole app untestable on a machine
+     without SMTP credentials. Printing it to the server's own console is the
+     narrowest fix: it never enters a response, and it only happens when asked
+     for explicitly, because a code in a log file is a credential in a log
+     file. Never set this on a deployment people other than you can reach. */
+  if (!mail.sent && process.env.DEV_PRINT_CODES === '1') {
+    console.log(`[DEV_PRINT_CODES] ${mask(email)} → ${issued.code}`)
+  }
+
   await record({
     kind: mail.sent ? 'otp.sent' : mail.reason === 'unconfigured' ? 'otp.mail-unconfigured' : 'otp.send-failed',
     identifier: mask(email),

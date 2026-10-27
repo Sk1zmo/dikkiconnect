@@ -19,14 +19,14 @@ import { JobCard } from '@/components/domain/Cards'
 import { jobFromParcel } from '@/lib/data'
 import { inr } from '@/lib/format'
 import { useLoaded } from '@/lib/hooks'
-import { useApp, useMe, useOpenJobs } from '@/lib/store'
+import { parcels as parcelsApi, explain } from '@/lib/api'
+import { useApp, useOpenJobs } from '@/lib/store'
 
 
 type SortKey = 'payout' | 'detour' | 'expiry'
 type ModeFilter = 'all' | 'hub' | 'p2p'
 
 export default function TravelerJobs() {
-  const ME = useMe()
   const navigate = useNavigate()
   const toast = useToast()
 
@@ -40,7 +40,7 @@ export default function TravelerJobs() {
 
   // Live feed: every parcel a hub has taken in that no driver has claimed yet.
   const openParcels = useOpenJobs()
-  const { advanceParcel } = useApp()
+  const { adoptParcel } = useApp()
   const { loading } = useLoaded(openParcels, 800)
 
   const jobs = useMemo(() => openParcels.map(jobFromParcel), [openParcels])
@@ -63,14 +63,20 @@ export default function TravelerJobs() {
     const job = visible.find((j) => j.id === jobId)
     if (!job) return
     setAccepting(jobId)
-    setTimeout(() => {
-      setAccepting(null)
-      // Claims the parcel for this driver — it leaves every other driver's feed
-      // and shows as "assigned" on the hub's shelf immediately.
-      advanceParcel(job.parcelId, 'assigned', { actor: ME.name, travelerId: ME.id })
-      toast.success('Added to manifest', 'Scan the QR at the hub to take custody.')
-      navigate('/traveler/scan')
-    }, 900)
+    void (async () => {
+      try {
+        /* Claims the parcel on the server, which is the only party that can
+           say whether this driver or another one got it. */
+        const { parcel } = await parcelsApi.claim(job.parcelId)
+        adoptParcel(parcel)
+        toast.success('Added to manifest', 'Scan the QR at the hub to take custody.')
+        navigate('/traveler/scan')
+      } catch (e) {
+        toast.error('Not yours', explain(e))
+      } finally {
+        setAccepting(null)
+      }
+    })()
   }
 
   return (
@@ -117,9 +123,16 @@ export default function TravelerJobs() {
             <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-success-500/15 text-success-600">
               <Briefcase size={18} />
             </span>
+            {/* The figure carries the line; the words around it step back to
+                semibold so it is the thing the eye lands on. Pulling the total
+                out into its own right-hand block was tried first and read as a
+                price tag on the card rather than as what the feed is worth. */}
             <div className="min-w-0">
-              <p className="text-[13.5px] font-bold text-success-800">
-                Take all {visible.length} and earn {inr(totalPayout)}
+              <p className="text-[13.5px] font-semibold text-success-800">
+                Take all {visible.length} and earn{' '}
+                <span className="tabular text-[18px] font-extrabold tracking-title">
+                  {inr(totalPayout)}
+                </span>
               </p>
               <p className="mt-0.5 text-[12px] text-success-700/85">
                 Your boot has room for {Math.min(3, visible.length)} of these

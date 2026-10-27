@@ -59,8 +59,19 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(finalEmail)) {
     return res.status(400).json({ error: 'bad-email' })
   }
-  if (!finalPhone) {
-    return res.status(400).json({ error: 'bad-phone', detail: 'A 10-digit mobile number is required.' })
+  /* The number is optional for the beta.
+     
+     It used to be required, which put a second field in front of every tester
+     before they had seen a single screen — and bought nothing, because the
+     sign-in code goes to the email either way. It stays supported: an account
+     that has one can sign in with it, and a hub can ring a sender about a
+     parcel. It is just no longer a gate.
+     
+     A number that is supplied still has to be a real one. Accepting "123" and
+     storing it would be worse than not asking: it would put a number that
+     cannot be dialled on a parcel. */
+  if (phone != null && String(phone).trim() !== '' && !finalPhone) {
+    return res.status(400).json({ error: 'bad-phone', detail: 'That is not a 10-digit mobile number.' })
   }
 
   const id = parseIdentifier(verified.value)
@@ -75,14 +86,16 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   /* The number doubles as a sign-in alias, so it can only point at one
      account. Letting a second signup claim a number already in use would
      quietly take sign-in-by-number away from whoever registered it first. */
-  const numberInUse = await findAccountByPhone(finalPhone)
-  if (numberInUse) return res.status(409).json({ error: 'phone-taken' })
+  if (finalPhone) {
+    const numberInUse = await findAccountByPhone(finalPhone)
+    if (numberInUse) return res.status(409).json({ error: 'phone-taken' })
+  }
 
   const account = await createAccount({
     id,
     name: String(name),
     email: finalEmail,
-    phone: finalPhone,
+    phone: finalPhone ?? '',
     role: String(role ?? 'sender'),
   })
   const token = await createSession(account)

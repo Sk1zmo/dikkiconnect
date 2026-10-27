@@ -1,6 +1,6 @@
 {
-  "name": "Stowza",
-  "short_name": "Stowza",
+  "name": "WayPool",
+  "short_name": "WayPool",
   "description": "Intercity parcel delivery in the empty boot space of cars already making your route, plus cost-shared carpooling.",
   "start_url": "/",
   "scope": "/",

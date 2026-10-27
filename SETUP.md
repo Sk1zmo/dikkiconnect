@@ -1,4 +1,4 @@
-# Stowza — setup
+# WayPool — setup
 
 Everything in the app is built and tested. What is left is credentials, and
 credentials can only be created by the person who owns the company: they are
@@ -18,7 +18,7 @@ rather than pretending.
 If you only do one thing, do this — it makes sign-in work end to end today.
 
 1. Google Account → Security → **2-Step Verification** (turn it on if it is off)
-2. Same page → **App passwords** → generate one, name it "Stowza"
+2. Same page → **App passwords** → generate one, name it "WayPool"
 3. Vercel → your project → **Settings → Environment Variables**, add:
 
    | Name | Value |
@@ -51,7 +51,7 @@ testers; wrong for a launch.
 | Name | Value |
 | --- | --- |
 | `RESEND_API_KEY` | resend.com → API Keys |
-| `MAIL_FROM` | `Stowza <noreply@yourdomain.com>` |
+| `MAIL_FROM` | `WayPool <noreply@yourdomain.com>` |
 
 Free tier is 3,000 emails/month. Verify your domain in Resend and add the DKIM
 records it gives you — without that, mail from your domain lands in spam.

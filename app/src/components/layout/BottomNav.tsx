@@ -65,9 +65,21 @@ export const ROLE_TABS: Record<Role, NavTab[]> = {
  * (it is what Instagram, Airbnb and Uber all do) and no amount of colour on a
  * stroked icon substitutes for it.
  *
- * That contrast is also the whole indicator. A tonal pill used to slide along
- * behind the icons; with fill and weight already saying which tab is live, it
- * was a third signal doing the job twice and moving while it did it.
+ * That contrast is also most of the indicator. A tonal pill used to slide
+ * along behind the icons; with fill and weight already saying which tab is
+ * live, it was a third signal doing the job twice and moving while it did it.
+ *
+ * The active tab is brand blue rather than near-black. Fill-versus-outline
+ * carries which tab you are on; colour carries whose app you are in, and a
+ * tab bar is the one chrome element visible on nearly every screen — it is
+ * the cheapest place in the product to say the brand out loud.
+ *
+ * The inactive tabs were ink-400, which is 2.53:1 on white — a 10px bold
+ * label and a 22px glyph, both under the floor, and under it since before
+ * this rework. The label is now ink-600 (6.89:1) and the glyph ink-500
+ * (4.42:1, past the 3:1 a graphical object owes). The active tab has not
+ * lost its edge: it still carries the only saturated colour on the bar and
+ * the only filled glyph.
  */
 export function BottomNav({ role }: { role: Role }) {
   const tabs = ROLE_TABS[role]
@@ -94,7 +106,7 @@ export function BottomNav({ role }: { role: Role }) {
                     weight={isActive ? 'fill' : 'regular'}
                     className={cn(
                       'transition-colors duration-150',
-                      isActive ? 'text-ink-900' : 'text-ink-400',
+                      isActive ? 'text-brand-600' : 'text-ink-500',
                     )}
                   />
                   {badge === 'unread' && unread > 0 && (
@@ -105,8 +117,8 @@ export function BottomNav({ role }: { role: Role }) {
                 </span>
                 <span
                   className={cn(
-                    'text-[10px] leading-none font-semibold tracking-[0.01em] transition-colors duration-150',
-                    isActive ? 'text-ink-900' : 'text-ink-400',
+                    'text-[10px] leading-none font-bold tracking-[0.01em] transition-colors duration-150',
+                    isActive ? 'text-brand-700' : 'text-ink-600',
                   )}
                 >
                   {label}

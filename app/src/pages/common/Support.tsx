@@ -61,7 +61,7 @@ export default function Support() {
       <TopBar
         back
         bordered
-        title="Stowza Support"
+        title="WayPool Support"
         subtitle="Typically replies in 2 minutes"
         action={<IconButton icon={<Phone size={17} />} label="Call support" tone="solid" size={38} />}
       />
@@ -74,14 +74,14 @@ export default function Support() {
         </div>
 
         <Note tone="neutral" icon={<ShieldCheck size={14} />} className="mb-4">
-          Never share OTPs, card numbers or your Aadhaar in chat. Stowza agents will never ask.
+          Never share OTPs, card numbers or your Aadhaar in chat. WayPool agents will never ask.
         </Note>
 
         {loading ? (
           <div className="flex flex-col gap-3">
             {[0, 1, 2].map((i) => (
               <div key={i} className={cn('flex', i % 2 ? 'justify-end' : 'justify-start')}>
-                <Skeleton w={i % 2 ? 180 : 240} h={i % 2 ? 42 : 60} radius={16} />
+                <Skeleton w={i % 2 ? 180 : 240} h={i % 2 ? 42 : 60} radius={28} />
               </div>
             ))}
           </div>
@@ -110,10 +110,10 @@ export default function Support() {
                   )}
                   <div
                     className={cn(
-                      'max-w-[78%] rounded-2xl px-3.5 py-2.5 shadow-(--shadow-e1)',
+                      'max-w-[78%] rounded-(--radius-2xl) px-3.5 py-2.5 shadow-(--shadow-e1)',
                       mine
-                        ? 'rounded-br-md bg-brand-600 text-white'
-                        : 'rounded-bl-md bg-white text-ink-800',
+                        ? 'rounded-br-(--radius-xs) bg-brand-600 text-white'
+                        : 'rounded-bl-(--radius-xs) bg-white text-ink-800',
                     )}
                   >
                     <p className="text-[13.5px] leading-[1.5]">{m.text}</p>
@@ -130,7 +130,7 @@ export default function Support() {
                 <span className="grid size-7 shrink-0 place-items-center rounded-full bg-brand-600 text-white">
                   <Headphones size={13} />
                 </span>
-                <div className="rounded-2xl rounded-bl-md bg-white px-4 py-3 shadow-(--shadow-e1)">
+                <div className="rounded-(--radius-2xl) rounded-bl-(--radius-xs) bg-white px-4 py-3 shadow-(--shadow-e1)">
                   <DotLoader />
                 </div>
               </div>
@@ -148,7 +148,7 @@ export default function Support() {
                 <button
                   key={t}
                   onClick={() => send(t)}
-                  className="pressable-sm rounded-full border border-ink-200 bg-white px-3.5 py-2 text-[12px] font-semibold text-ink-600"
+                  className="pressable-sm inline-flex min-h-10 items-center rounded-full border border-ink-200 bg-white px-3.5 py-2 text-[12px] font-semibold text-ink-600"
                 >
                   {t}
                 </button>
@@ -162,8 +162,8 @@ export default function Support() {
 
       <div className="pb-safe shrink-0 border-t border-ink-200 bg-white">
         <div className="flex items-center gap-2.5 px-4 py-3">
-          <IconButton icon={<Paperclip size={17} />} label="Attach a file" size={40} />
-          <div className="flex h-11 flex-1 items-center rounded-full border border-ink-200 bg-ink-50 px-4">
+          <IconButton icon={<Paperclip size={17} />} label="Attach a file" size={44} />
+          <div className="flex h-12 flex-1 items-center rounded-full border border-ink-200 bg-ink-50 px-4">
             <input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
@@ -176,7 +176,7 @@ export default function Support() {
             onClick={() => send(draft)}
             disabled={!draft.trim()}
             aria-label="Send message"
-            className="pressable-sm grid size-11 shrink-0 place-items-center rounded-full bg-brand-600 text-white shadow-(--shadow-brand-sm) disabled:opacity-40"
+            className="pressable-sm grid size-12 shrink-0 place-items-center rounded-full bg-brand-600 text-white shadow-(--shadow-brand-sm) disabled:opacity-40"
           >
             <PaperPlaneTilt size={17} />
           </button>

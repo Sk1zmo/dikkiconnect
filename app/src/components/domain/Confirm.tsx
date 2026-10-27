@@ -29,9 +29,18 @@ export function DropOffCountdown({ bookedAt }: { bookedAt?: string }) {
   const urgent = left < 4 * 3_600_000
 
   return (
+    /* Three states, three colours, and the middle one is the new part. The
+       clock used to sit in brand blue until the last four hours, which made a
+       deadline look like a fact about the booking. Signal yellow is the
+       app's one colour for "this expires", so the window wears it for its
+       whole life and only escalates to warn amber at the end. */
     <p
       className={`tabular mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-bold ${
-        urgent ? 'bg-warn-50 text-warn-600' : 'bg-brand-50 text-brand-700'
+        left === 0
+          ? 'bg-ink-100 text-ink-500'
+          : urgent
+            ? 'bg-warn-50 text-warn-700'
+            : 'bg-signal-100 text-signal-700'
       }`}
       role="timer"
     >
@@ -41,7 +50,7 @@ export function DropOffCountdown({ bookedAt }: { bookedAt?: string }) {
   )
 }
 
-const ASKED_KEY = 'dikkiconnect.notify.asked'
+const ASKED_KEY = 'waypool.notify.asked'
 
 export function NotifyAsk() {
   const permission = useNotificationPermission()

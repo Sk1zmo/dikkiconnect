@@ -29,6 +29,7 @@ import { HUBS } from '@/lib/data'
 import { useAwaitingIntake, useHubInventory } from '@/lib/store'
 import { compactInr, inr, isStale } from '@/lib/format'
 import { useCountUp, useLoaded } from '@/lib/hooks'
+import { shelfBusy } from '@/lib/scarcity'
 
 const HUB = HUBS[0]
 
@@ -82,13 +83,34 @@ export default function HubHome() {
           </button>
         </div>
 
-        {/* Capacity */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            Capacity.
+
+            "38 / 60" used to sit at 13px opposite its own label, which made the
+            two read as equals. They are not: the count is the thing a manager
+            checks on the way past, the words are just what it means. So the
+            number takes the line, the denominator drops back to a supporting
+            weight, and the label goes underneath it.
+
+            The slots-left chip is the one yellow on this screen, and only when
+            the shelves are genuinely running out. Shelf space is scarce in the
+            literal sense the signal tone exists for; the load bar below still
+            carries the ordinary reading.
+            ═══════════════════════════════════════════════════════════════════ */}
         <div className="mt-5 rounded-(--radius-lg) bg-white/12 p-4 ring-1 ring-white/20 backdrop-blur-md">
-          <div className="mb-2 flex items-baseline justify-between">
-            <p className="text-[12.5px] font-semibold text-white/75">Shelf capacity</p>
-            <p className="tabular text-[13px] font-extrabold">
-              {HUB.held} / {HUB.capacity}
-            </p>
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="tabular text-display text-[28px] leading-none font-extrabold tracking-title">
+                {HUB.held}
+                <span className="text-[16px] font-bold text-white/55"> / {HUB.capacity}</span>
+              </p>
+              <p className="mt-1.5 text-[11.5px] font-semibold text-white/65">Shelf capacity</p>
+            </div>
+            {shelfBusy(loadPct) && (
+              <Badge tone="signal" size="sm">
+                {HUB.capacity - HUB.held} slots left
+              </Badge>
+            )}
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-white/20">
             <div
@@ -97,7 +119,7 @@ export default function HubHome() {
             />
           </div>
           <p className="mt-2 text-[11px] text-white/60">
-            {loadPct > 70 ? 'Running hot — prioritise outbound handoffs' : 'Comfortable load'}
+            {shelfBusy(loadPct) ? 'Running hot — prioritise outbound handoffs' : 'Comfortable load'}
           </p>
         </div>
 
@@ -107,14 +129,14 @@ export default function HubHome() {
             <button
               key={label}
               onClick={() => navigate(to)}
-              className={`pressable flex flex-col items-center gap-2 rounded-(--radius-md) py-3 ${
+              className={`pressable flex min-h-[68px] flex-col items-center justify-center gap-2 rounded-(--radius-md) py-3.5 ${
                 tone === 'primary'
                   ? 'bg-white text-brand-700 shadow-(--shadow-e3)'
                   : 'bg-white/12 text-white ring-1 ring-white/15 backdrop-blur-md'
               }`}
             >
-              <Icon size={19} />
-              <span className="text-[10.5px] leading-none font-bold">{label}</span>
+              <Icon size={21} />
+              <span className="text-[11px] leading-none font-bold">{label}</span>
             </button>
           ))}
         </div>
@@ -127,12 +149,15 @@ export default function HubHome() {
             to="/hub/inventory"
             className="mb-5 flex items-center gap-3.5 border-warn-100 bg-warn-50"
           >
-            <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-warn-500/15 text-warn-600">
-              <Warning size={19} />
+            <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-warn-500/15 text-warn-600">
+              <Warning size={20} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-[13.5px] font-bold text-warn-800">
-                {aging.length} parcels held over 24 hours
+              <p className="text-[13px] font-semibold text-warn-800">
+                <span className="tabular text-[17px] font-extrabold tracking-title">
+                  {aging.length}
+                </span>{' '}
+                parcels held over 24 hours
               </p>
               <p className="mt-0.5 text-[12px] text-warn-700/85">
                 Flag them for the next traveler or escalate to ops
@@ -148,12 +173,15 @@ export default function HubHome() {
             to="/hub/scan"
             className="mb-5 flex items-center gap-3.5 border-brand-100 bg-brand-50"
           >
-            <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-500/15 text-brand-600">
-              <ArrowLineDown size={19} />
+            <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-500/15 text-brand-600">
+              <ArrowLineDown size={20} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-[13.5px] font-bold text-brand-800">
-                {awaiting.length} parcel{awaiting.length > 1 ? 's' : ''} expected today
+              <p className="text-[13px] font-semibold text-brand-800">
+                <span className="tabular text-[17px] font-extrabold tracking-title">
+                  {awaiting.length}
+                </span>{' '}
+                parcel{awaiting.length > 1 ? 's' : ''} expected today
               </p>
               <p className="mt-0.5 text-[12px] text-brand-700/85">
                 Booked by senders · scan to weigh, photograph and take custody
@@ -209,7 +237,9 @@ export default function HubHome() {
               <Timer size={15} className="text-ink-400" />
               <p className="text-[13px] font-bold text-ink-900">Drop-to-dispatch</p>
             </div>
-            <p className="tabular text-[13px] font-extrabold text-success-600">2h 40m avg</p>
+            <p className="tabular text-[17px] leading-none font-extrabold tracking-title text-success-600">
+              2h 40m <span className="text-[11px] font-semibold text-ink-500">avg</span>
+            </p>
           </div>
           <ProgressBar value={67} tone="success" />
           <p className="mt-2 text-[11.5px] text-ink-500">
@@ -252,17 +282,19 @@ export default function HubHome() {
               <button
                 key={t.name}
                 onClick={() => navigate('/hub/handoff')}
-                className={`pressable flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-ink-50 ${
+                className={`pressable flex min-h-[64px] w-full items-center gap-3.5 px-4 py-3.5 text-left hover:bg-ink-50 ${
                   i > 0 ? 'border-t border-ink-100' : ''
                 }`}
               >
-                <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-50 text-brand-600">
-                  <QrCode size={18} />
+                <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-50 text-brand-600">
+                  <QrCode size={20} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[14px] font-bold text-ink-900">{t.name}</p>
-                  <p className="tabular mt-0.5 truncate text-[11.5px] text-ink-500">
-                    {t.plate} · {t.parcels} parcels to release
+                  <p className="truncate text-[14.5px] font-bold text-ink-900">{t.name}</p>
+                  <p className="tabular mt-0.5 truncate text-[11.5px] font-semibold text-ink-500">
+                    {t.plate} ·{' '}
+                    <span className="text-[13px] font-extrabold text-ink-900">{t.parcels}</span>{' '}
+                    parcels to release
                   </p>
                 </div>
                 <Badge tone="brand" size="sm">

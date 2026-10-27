@@ -314,7 +314,7 @@ export default function BookRoute() {
 
         {sameCity && (
           <Note tone="warn" className="mt-3">
-            Origin and destination are the same city. Stowza is built for intercity moves — pick a
+            Origin and destination are the same city. WayPool is built for intercity moves — pick a
             different destination.
           </Note>
         )}
@@ -331,9 +331,16 @@ export default function BookRoute() {
         {both && !sameCity && (
           <Card className="mt-3 flex items-center gap-3 border-brand-100 bg-brand-50">
             <Lightning size={17} className="shrink-0 text-brand-600" />
-            <p className="text-[12.5px] font-semibold text-brand-800">
-              {km} km corridor · typically{' '}
-              {km < 200 ? 'same-day delivery' : 'next-day delivery'}
+            {/* The corridor length is the fact being reported and the delivery
+                promise hangs off it, so the distance leads and the promise
+                reads as its label rather than as the other half of a sentence. */}
+            <p className="flex items-baseline gap-1.5">
+              <span className="tabular text-[20px] leading-none font-extrabold tracking-title text-brand-800">
+                {km}
+              </span>
+              <span className="text-[11.5px] font-semibold text-brand-800/85">
+                km corridor · typically {km < 200 ? 'same-day delivery' : 'next-day delivery'}
+              </span>
             </p>
           </Card>
         )}
@@ -363,9 +370,12 @@ export default function BookRoute() {
                     })
                   }
                   className={cn(
-                    'pressable flex items-center gap-3 rounded-(--radius-md) border bg-white px-4 py-3 text-left transition-colors',
+                    /* Two pixels of border in both states, so picking a corridor
+                       changes the colour and never the layout — and so these read
+                       as the same class of object as the mode cards above. */
+                    'pressable flex min-h-12 items-center gap-3 rounded-(--radius-md) border-2 bg-white px-4 py-3 text-left transition-colors',
                     draft.fromCityId === r.from && draft.toCityId === r.to
-                      ? 'border-brand-500 bg-brand-50/60'
+                      ? 'border-brand-600 bg-brand-50/60'
                       : 'border-ink-200 hover:border-ink-300',
                   )}
                 >
@@ -373,8 +383,11 @@ export default function BookRoute() {
                   <span className="flex-1 text-[13.5px] font-semibold text-ink-800">
                     {f.name} → {t.name}
                   </span>
-                  <span className="tabular text-[12px] font-bold text-ink-400">
-                    {corridorKm(r.from, r.to)} km
+                  <span className="flex shrink-0 items-baseline gap-1">
+                    <span className="tabular text-[15px] font-extrabold tracking-title text-ink-800">
+                      {corridorKm(r.from, r.to)}
+                    </span>
+                    <span className="text-[11px] font-semibold text-ink-400">km</span>
                   </span>
                 </button>
               )

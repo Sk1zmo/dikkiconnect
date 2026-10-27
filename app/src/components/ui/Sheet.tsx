@@ -49,7 +49,10 @@ export function Sheet({
             aria-modal="true"
             aria-label={title}
             className={cn(
-              'relative flex w-full max-w-[430px] flex-col overflow-hidden rounded-t-(--radius-xl) bg-white shadow-(--shadow-e4)',
+              /* The sheet's top corners get their own token rather than the ramp's: a
+                 sheet rising over the app is the largest curved edge in the product
+                 and it should be able to move without dragging every card with it. */
+              'relative flex w-full max-w-[430px] flex-col overflow-hidden rounded-t-(--radius-sheet) bg-white shadow-(--shadow-e4)',
               fullHeight ? 'h-[92%]' : 'max-h-[88%]',
             )}
             initial={{ y: '100%' }}

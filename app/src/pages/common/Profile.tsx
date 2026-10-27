@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  ArrowRight,
   Bell,
   Buildings,
+  CalendarBlank,
   Car,
   Check,
   CaretRight,
@@ -21,51 +23,66 @@ import {
 import { Screen, ScreenBody } from '@/components/layout/Screen'
 import { ConfirmDialog, Sheet, useToast } from '@/components/ui'
 import { useApp } from '@/lib/store'
+import { APP_VERSION, BRAND } from '@/lib/brand'
 import { maskPhone } from '@/lib/format'
 import type { Role } from '@/lib/types'
 import { cn } from '@/lib/cn'
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Profile — minimal.
+   Profile.
 
-   The rest of the app is built on tinted cards, elevation and a blue gradient
-   hero. This screen deliberately is not, because a settings list is the one
-   place where decoration has nothing to decorate: it is forty words and
-   fourteen destinations, and every shadow drawn around them is a shadow the
-   eye has to discount before it can read.
+   White background, clean typography, outline icons. Hierarchy is carried in
+   three places and nowhere else:
 
-   Three colours, and each one has exactly one job:
+     · the statistics row — an icon above each figure, so the three numbers
+       can be scanned without reading their labels;
+     · the Current Mode card — the one tinted surface on the screen, because
+       switching mode is the one thing here that changes what the app is;
+     · Refer & earn — a supporting line and a green figure, so the reward is
+       legible without looking like an advert.
 
-     · white   — every surface, without exception. No cards, no tints, no
-                 second grey to signal grouping; whitespace groups instead.
-     · black   — anything you are meant to read.
-     · blue    — anything you are meant to act on, plus identity. Used at most
-                 twice per viewport; the moment a third blue thing appears the
-                 colour stops meaning "here" and starts meaning nothing.
+   Tokens (from the profile spec). Blue is the brand token; the greys, tint
+   and green are the spec's exact values.
 
-   Structure is carried by hairlines and space, not containers. Rules run
-   full-bleed rather than inset, because an inset rule is a card outline that
-   lost its nerve — either the row is a discrete object or the list is one
-   surface, and this list is one surface.
+     primary text   #111827      secondary text  #6B7280
+     divider        #F3F4F6      row icon bg     #F9FAFB on #F3F4F6
+     chevron        #B0B4BA      success green   #16A34A
+     mode tint      brand-50     mode label      brand-700
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const ROLE_META: Record<Role, { icon: typeof Package; label: string; home: string; blurb: string }> =
-  {
-    sender: {
-      icon: Package,
-      label: 'Send parcels',
-      home: '/sender',
-      blurb: 'Book intercity delivery',
-    },
-    traveler: {
-      icon: Car,
-      label: 'Drive & earn',
-      home: '/traveler',
-      blurb: 'Carry parcels and riders',
-    },
-    passenger: { icon: Users, label: 'Book rides', home: '/passenger', blurb: 'Share a car seat' },
-    hub: { icon: Buildings, label: 'Manage a hub', home: '/hub', blurb: 'Intake and handoffs' },
-  }
+const ROLE_META: Record<
+  Role,
+  { icon: typeof Package; label: string; mode: string; home: string; blurb: string }
+> = {
+  sender: {
+    icon: Package,
+    label: 'Send a parcel',
+    mode: 'Parcel Sender',
+    home: '/sender',
+    blurb: 'Book intercity delivery',
+  },
+  traveler: {
+    icon: Users,
+    label: 'Share a ride',
+    mode: 'Driver',
+    home: '/traveler',
+    blurb: 'Carry parcels and riders',
+  },
+  passenger: {
+    icon: Car,
+    label: 'Book a ride',
+    mode: 'Passenger',
+    home: '/passenger',
+    blurb: 'Book an affordable seat',
+  },
+  hub: {
+    icon: Buildings,
+    label: 'Run a hub',
+    mode: 'Hub Partner',
+    home: '/hub',
+    blurb: 'Intake and handoffs',
+  },
+}
 
 /** Initials, capped at two — three reads as an acronym rather than a person. */
 const initials = (name: string) =>
@@ -78,21 +95,31 @@ const initials = (name: string) =>
     .toUpperCase()
 
 /* ── Row ───────────────────────────────────────────────────────────────────
-   One row type for the whole screen. The icon is a 17px line glyph in mid
-   grey and never gets a tile behind it: a tinted square around an icon exists
-   to separate it from a busy background, and there is no busy background
-   left to separate it from.                                                  */
+   One row type for the whole screen: a leading icon in a soft grey rounded
+   square, a title, an optional supporting line, an optional value on the right
+   and a chevron. Rows are full-width buttons at least 48px tall.
+
+   The square replaced a circle. A circle is what an avatar is, and on a screen
+   that opens with a real avatar the repeated circles below it read as a column
+   of tiny faces. It also puts these rows in the same shape as every list row
+   elsewhere in the app, which all use the rounded square.                    */
 function Row({
   icon: Icon,
   title,
+  subtitle,
   meta,
+  metaTone = 'muted',
+  chevron = true,
   to,
   onClick,
   tone = 'default',
 }: {
   icon: typeof Package
   title: string
+  subtitle?: string
   meta?: string
+  metaTone?: 'muted' | 'success'
+  chevron?: boolean
   to?: string
   onClick?: () => void
   tone?: 'default' | 'accent'
@@ -101,37 +128,54 @@ function Row({
   return (
     <button
       onClick={() => (to ? navigate(to) : onClick?.())}
-      className="group flex w-full items-center gap-4 py-[15px] text-left transition-opacity active:opacity-55"
+      className="group flex min-h-12 w-full items-center gap-3.5 py-3 text-left transition-opacity active:opacity-55"
     >
-      <Icon
-        size={17}
-        className={cn('shrink-0', tone === 'accent' ? 'text-brand-600' : 'text-black/40')}
-      />
-      <span
-        className={cn(
-          'min-w-0 flex-1 truncate text-[15px] font-medium',
-          tone === 'accent' ? 'text-brand-600' : 'text-black',
-        )}
-      >
-        {title}
+      <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) border border-[#F3F4F6] bg-[#F9FAFB]">
+        <Icon size={17} className={tone === 'accent' ? 'text-brand-600' : 'text-[#6B7280]'} />
       </span>
-      {meta && <span className="shrink-0 text-[13.5px] text-black/40">{meta}</span>}
-      <CaretRight size={16} className="shrink-0 text-black/25" />
+      <span className="min-w-0 flex-1">
+        <span
+          className={cn(
+            'block truncate text-[15px] font-medium',
+            tone === 'accent' ? 'text-brand-600' : 'text-[#111827]',
+          )}
+        >
+          {title}
+        </span>
+        {subtitle && (
+          <span className="mt-0.5 block text-[12.5px] leading-snug text-[#6B7280]">
+            {subtitle}
+          </span>
+        )}
+      </span>
+      {meta && (
+        <span
+          className={cn(
+            'tabular shrink-0',
+            metaTone === 'success'
+              ? 'text-[15px] font-extrabold text-[#16A34A]'
+              : 'text-[13.5px] text-[#6B7280]',
+          )}
+        >
+          {meta}
+        </span>
+      )}
+      {chevron && <CaretRight size={16} className="shrink-0 text-[#B0B4BA]" />}
     </button>
   )
 }
 
-/** Section label. Sentence case, not uppercase — caps are a second voice. */
+/** Section label: 11px, medium, muted, uppercase. */
 function SectionLabel({ children }: { children: string }) {
   return (
-    <p className="pt-7 pb-1 text-[12.5px] font-semibold tracking-[-0.005em] text-black/40">
+    <p className="pt-6 pb-1.5 text-[11px] font-medium tracking-[0.06em] text-[#6B7280] uppercase">
       {children}
     </p>
   )
 }
 
 /** Full-bleed hairline. Pulled out to the shell edges by negative margin. */
-const Rule = () => <span className="-mx-5 block h-px bg-black/[0.07]" />
+const Rule = () => <span className="-mx-5 block h-px bg-[#F3F4F6]" />
 
 export default function Profile() {
   const navigate = useNavigate()
@@ -149,29 +193,29 @@ export default function Profile() {
   }
 
   const STATS = [
-    { value: '18', label: 'Parcels sent' },
-    { value: '7', label: 'Rides taken' },
-    { value: '2025', label: 'Member since' },
+    { icon: Package, value: '18', label: 'Parcels sent' },
+    { icon: Car, value: '7', label: 'Rides taken' },
+    // Year only, per the content spec.
+    { icon: CalendarBlank, value: '2025', label: 'Member since' },
   ]
+
+  const current = ROLE_META[role]
 
   return (
     <Screen tone="white">
       <ScreenBody className="px-5 pb-8" padded={false}>
-        {/* ── Identity ──────────────────────────────────────────────────────
-            The avatar is the screen's one saturated element. It is a square
-            with a soft radius rather than a circle, because a circle here
-            competes with the tab bar's circular glyphs for the same meaning. */}
-        <div className="flex items-center gap-4 pt-8 pb-7">
-          <span className="grid size-[62px] shrink-0 place-items-center rounded-[19px] bg-brand-600 text-[21px] font-bold tracking-[-0.02em] text-white">
+        {/* ── Identity ──────────────────────────────────────────────────── */}
+        <div className="flex items-center gap-4 pt-7 pb-6">
+          <span className="grid size-[60px] shrink-0 place-items-center rounded-full bg-brand-600 text-[20px] font-bold tracking-[-0.02em] text-white">
             {initials(user.name)}
           </span>
 
           <div className="min-w-0 flex-1">
-            <h1 className="text-display truncate text-[25px] leading-tight font-bold text-black">
+            <h1 className="truncate text-[19px] leading-tight font-semibold text-[#111827]">
               {user.name}
             </h1>
             <div className="mt-1 flex items-center gap-2">
-              <p className="tabular truncate text-[14px] text-black/50">{maskPhone(user.phone)}</p>
+              <p className="tabular truncate text-[14px] text-[#6B7280]">{maskPhone(user.phone)}</p>
               <span className="inline-flex shrink-0 items-center gap-1 text-[12.5px] font-semibold text-brand-600">
                 <ShieldCheck size={13} />
                 Verified
@@ -182,48 +226,69 @@ export default function Profile() {
           <button
             onClick={() => navigate('/profile/edit')}
             aria-label="Edit profile"
-            className="grid size-9 shrink-0 place-items-center rounded-full transition-opacity active:opacity-55"
+            className="grid size-10 shrink-0 place-items-center rounded-full border border-[#F3F4F6] bg-[#F9FAFB] transition-opacity active:opacity-55"
           >
-            <Pencil size={17} className="text-black/40" />
+            <Pencil size={17} className="text-[#6B7280]" />
           </button>
         </div>
 
         {/* ── Stats ─────────────────────────────────────────────────────────
-            Numbers get the weight, labels get the grey. Divided by hairlines
-            rather than boxed, so three figures read as one row of facts. */}
-        <Rule />
-        <div className="grid grid-cols-3 py-5">
-          {STATS.map((s, i) => (
-            <div key={s.label} className={cn(i > 0 && 'border-l border-black/[0.07] pl-4')}>
-              <p className="tabular text-[22px] leading-none font-bold tracking-[-0.03em] text-black">
-                {s.value}
-              </p>
-              <p className="mt-1.5 text-[12.5px] text-black/40">{s.label}</p>
-            </div>
-          ))}
-        </div>
-        <Rule />
+            Icon, then the figure, then the label — the icon says what the
+            number is before the label has been read.
 
-        {/* ── Mode ──────────────────────────────────────────────────────────
-            The only row that carries a real action word, so it is the only
-            row allowed to be blue. */}
+            The figure carries the row on its own now: display face, extrabold,
+            tabular, and four points larger, with the label dropped to a quiet
+            semibold caption underneath. Set at the same weight as its label the
+            strip read as three captions; the numbers are the reason anybody
+            looks at it. */}
+        <div className="grid grid-cols-3 rounded-2xl border border-[#F3F4F6] py-4">
+          {STATS.map((s, i) => {
+            const Icon = s.icon
+            return (
+              <div
+                key={s.label}
+                className={cn(
+                  'flex flex-col items-center text-center',
+                  i > 0 && 'border-l border-[#F3F4F6]',
+                )}
+              >
+                <Icon size={18} className="text-[#6B7280]" />
+                <p className="tabular text-display tracking-title mt-2 text-[22px] leading-none font-extrabold text-[#111827]">
+                  {s.value}
+                </p>
+                <p className="mt-1.5 text-[11.5px] font-semibold text-[#6B7280]">{s.label}</p>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* ── Current mode ──────────────────────────────────────────────────
+            The one tinted surface on the screen. Tapping anywhere on the card
+            opens the switcher; "Switch" is a label, not a separate target. */}
         <button
           onClick={() => setSwitcherOpen(true)}
-          className="flex w-full items-center gap-4 py-[18px] text-left transition-opacity active:opacity-55"
+          className="mt-4 flex w-full items-center gap-4 rounded-2xl bg-brand-50 p-4 text-left transition-opacity active:opacity-70"
         >
           <span className="min-w-0 flex-1">
-            <span className="block text-[12.5px] text-black/40">Current mode</span>
-            <span className="mt-1 block truncate text-[16px] font-semibold text-black">
-              {ROLE_META[role].label}
+            <span className="block text-[11px] font-medium tracking-[0.06em] text-brand-700 uppercase">
+              Current mode
+            </span>
+            <span className="mt-1 block truncate text-[16px] font-semibold text-[#111827]">
+              {current.label}
+            </span>
+            <span className="mt-0.5 block text-[13px] text-[#6B7280]">
+              You are currently in {current.mode} mode.
             </span>
           </span>
-          <span className="shrink-0 text-[14px] font-semibold text-brand-600">Switch</span>
+          <span className="inline-flex shrink-0 items-center gap-1 text-[14px] font-semibold text-brand-600">
+            Switch
+            <ArrowRight size={15} />
+          </span>
         </button>
-        <Rule />
 
         {/* Drivers only: the one piece of state that can block earning. */}
         {role === 'traveler' && (
-          <>
+          <div className="mt-2">
             <Row
               icon={ShieldCheck}
               title="Finish verification"
@@ -232,7 +297,7 @@ export default function Profile() {
               tone="accent"
             />
             <Rule />
-          </>
+          </div>
         )}
 
         <SectionLabel>Account</SectionLabel>
@@ -264,7 +329,10 @@ export default function Profile() {
         <Row
           icon={Gift}
           title="Refer & earn"
+          subtitle="Invite friends and earn rewards"
           meta="₹100"
+          metaTone="success"
+          chevron={false}
           onClick={() => toast.success('Invite link copied', 'Share it anywhere.')}
         />
         <Rule />
@@ -273,23 +341,23 @@ export default function Profile() {
         <Rule />
         <Row icon={Question} title="Help centre" to="/help" />
         <Rule />
-        <Row icon={Phone} title="Contact support" to="/support" />
-        <Rule />
 
-        {/* Sign out stays black. Red would be a fourth colour spent on the
-            least likely tap on the screen, and the dialog already carries the
-            warning. */}
+        {/* Sign out sits below the specified sections; it is the only way out
+            of the account, so it stays. Black, not red — the dialog carries
+            the warning. */}
         <button
           onClick={() => setSignOutOpen(true)}
-          className="flex w-full items-center gap-4 py-[15px] text-left transition-opacity active:opacity-55"
+          className="mt-6 flex min-h-12 w-full items-center gap-3.5 py-3 text-left transition-opacity active:opacity-55"
         >
-          <SignOut size={17} className="shrink-0 text-black/40" />
-          <span className="flex-1 text-[15px] font-medium text-black">Sign out</span>
+          <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) border border-[#F3F4F6] bg-[#F9FAFB]">
+            <SignOut size={17} className="text-[#6B7280]" />
+          </span>
+          <span className="flex-1 text-[15px] font-medium text-[#111827]">Sign out</span>
         </button>
         <Rule />
 
-        <p className="pt-6 pb-2 text-[12px] text-black/25">
-          Stowza 1.0.0 · Bangalore ↔ Mysore
+        <p className="pt-6 pb-2 text-[12px] text-[#B0B4BA]">
+          {BRAND.name} {APP_VERSION} · Bangalore ↔ Mysore
         </p>
       </ScreenBody>
 
@@ -309,26 +377,30 @@ export default function Profile() {
               <button
                 key={r}
                 onClick={() => switchTo(r)}
-                className="flex w-full items-center gap-4 border-t border-black/[0.07] px-5 py-4 text-left transition-opacity last:border-b active:opacity-55"
+                className="flex w-full items-center gap-4 border-t border-[#F3F4F6] px-5 py-4 text-left transition-opacity last:border-b active:opacity-55"
               >
-                <Icon
-                  size={19}
-                  className={cn('shrink-0', active ? 'text-brand-600' : 'text-black/40')}
-                />
+                <span
+                  className={cn(
+                    'grid size-10 shrink-0 place-items-center rounded-(--radius-sm) border',
+                    active
+                      ? 'border-brand-100 bg-brand-50 text-brand-600'
+                      : 'border-[#F3F4F6] bg-[#F9FAFB] text-[#6B7280]',
+                  )}
+                >
+                  <Icon size={18} />
+                </span>
                 <span className="min-w-0 flex-1">
                   <span
                     className={cn(
                       'block text-[15px] font-semibold',
-                      active ? 'text-brand-600' : 'text-black',
+                      active ? 'text-brand-600' : 'text-[#111827]',
                     )}
                   >
                     {meta.label}
                   </span>
-                  <span className="mt-0.5 block text-[12.5px] text-black/40">{meta.blurb}</span>
+                  <span className="mt-0.5 block text-[12.5px] text-[#6B7280]">{meta.blurb}</span>
                 </span>
-                {active && (
-                  <Check size={18} className="shrink-0 text-brand-600" />
-                )}
+                {active && <Check size={18} className="shrink-0 text-brand-600" />}
               </button>
             )
           })}
@@ -344,7 +416,7 @@ export default function Profile() {
         }}
         tone="danger"
         icon={<SignOut size={26} />}
-        title="Sign out of Stowza?"
+        title={`Sign out of ${BRAND.name}?`}
         body="Your bookings and wallet stay on your account. Signing back in takes an email or mobile number and a code — no password."
         confirmLabel="Sign out"
       />

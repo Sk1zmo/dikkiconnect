@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { SlidersHorizontal, Users } from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
@@ -15,13 +15,13 @@ import {
   Switch,
 } from '@/components/ui'
 import { TripCard } from '@/components/domain/Cards'
-import { cityName, travelerById } from '@/lib/data'
+import { cityName } from '@/lib/data'
 import { dayDate, inr } from '@/lib/format'
-import { useLoaded } from '@/lib/hooks'
+import { rides } from '@/lib/api'
 import { LOADING } from '@/lib/copy'
-import { useTrips } from '@/lib/store'
+import type { Trip } from '@/lib/types'
 
-type SortKey = 'earliest' | 'cheapest' | 'rating'
+type SortKey = 'earliest' | 'cheapest'
 
 export default function RideResults() {
   const navigate = useNavigate()
@@ -35,42 +35,43 @@ export default function RideResults() {
   const [sort, setSort] = useState<SortKey>('earliest')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [maxFare, setMaxFare] = useState(1000)
-  const [minRating, setMinRating] = useState(4)
   const [instantOnly, setInstantOnly] = useState(false)
 
-  // Reads the shared ledger, so a ride a driver posted in advance shows up
-  // here the moment they publish it.
-  const trips = useTrips()
-  const matches = useMemo(
-    () =>
-      trips.filter(
-        (t) =>
-          t.fromCityId === from &&
-          t.toCityId === to &&
-          t.status !== 'completed' &&
-          new Date(t.departAt).getTime() > Date.now() - 3_600_000,
-      ),
-    [trips, from, to],
-  )
-  const { loading } = useLoaded(matches, 1150)
+  // The server's own board for this corridor — a ride a driver posted in
+  // advance shows up here the moment they publish it, from any device.
+  const [matches, setMatches] = useState<Trip[] | null>(null)
+  const loading = matches === null
+
+  useEffect(() => {
+    let cancelled = false
+    setMatches(null)
+    rides
+      .search(from, to)
+      .then(({ trips }) => {
+        if (!cancelled) setMatches(trips)
+      })
+      .catch(() => {
+        if (!cancelled) setMatches([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [from, to])
 
   const visible = useMemo(() => {
-    const list = matches.filter((t) => {
-      const driver = travelerById(t.travelerId)
+    const list = (matches ?? []).filter((t) => {
       if (t.seatsLeft < seatsWanted) return false
       if (t.farePerSeat > maxFare) return false
-      if ((driver?.rating ?? 0) < minRating) return false
       if (instantOnly && t.seatsLeft < 2) return false
       return true
     })
 
-    return [...list].sort((a, b) => {
-      if (sort === 'cheapest') return a.farePerSeat - b.farePerSeat
-      if (sort === 'rating')
-        return (travelerById(b.travelerId)?.rating ?? 0) - (travelerById(a.travelerId)?.rating ?? 0)
-      return new Date(a.departAt).getTime() - new Date(b.departAt).getTime()
-    })
-  }, [matches, seatsWanted, maxFare, minRating, instantOnly, sort])
+    return [...list].sort((a, b) =>
+      sort === 'cheapest'
+        ? a.farePerSeat - b.farePerSeat
+        : new Date(a.departAt).getTime() - new Date(b.departAt).getTime(),
+    )
+  }, [matches, seatsWanted, maxFare, instantOnly, sort])
 
   const cheapest = visible.length ? Math.min(...visible.map((t) => t.farePerSeat)) : 0
 
@@ -96,18 +97,34 @@ export default function RideResults() {
           options={[
             { value: 'earliest', label: 'Earliest' },
             { value: 'cheapest', label: 'Lowest cost' },
-            { value: 'rating', label: 'Top rated' },
           ]}
         />
       </div>
 
       <ScreenBody>
+        {/* ═══════════════════════════════════════════════════════════════════
+            Two facts set in the same 12.5px semibold before, which made the
+            strip read as a sentence and cost it its job: you had to actually
+            read it to learn the count and the floor price. Both numbers now
+            carry the weight and their words shrink under them, so a glance
+            lands on "4" and "₹399" and the strip answers before it is read.
+            ═══════════════════════════════════════════════════════════════ */}
         {!loading && visible.length > 0 && (
-          <div className="mb-4 flex items-center justify-between rounded-(--radius-md) bg-white px-4 py-3 ring-1 ring-ink-100">
-            <p className="text-[12.5px] font-semibold text-ink-600">
-              {visible.length} ride{visible.length === 1 ? '' : 's'} available
+          <div className="mb-4 flex min-h-12 items-center justify-between gap-3 rounded-(--radius-md) border border-ink-200 bg-white px-4 py-2.5">
+            <p className="flex items-baseline gap-1.5">
+              <span className="tabular text-[18px] font-extrabold tracking-title text-ink-900">
+                {visible.length}
+              </span>
+              <span className="text-[11.5px] font-semibold text-ink-500">
+                ride{visible.length === 1 ? '' : 's'} available
+              </span>
             </p>
-            <p className="tabular text-[12.5px] font-bold text-brand-700">from {inr(cheapest)}</p>
+            <p className="flex shrink-0 items-baseline gap-1.5">
+              <span className="text-[11.5px] font-semibold text-ink-500">from</span>
+              <span className="tabular text-[18px] font-extrabold tracking-title text-brand-700">
+                {inr(cheapest)}
+              </span>
+            </p>
           </div>
         )}
 
@@ -156,7 +173,6 @@ export default function RideResults() {
             <button
               onClick={() => {
                 setMaxFare(1000)
-                setMinRating(4)
                 setInstantOnly(false)
               }}
               className="pressable h-12 flex-1 rounded-(--radius-md) bg-ink-100 text-[14.5px] font-semibold text-ink-700"
@@ -176,10 +192,6 @@ export default function RideResults() {
           <div>
             <p className="mb-2 text-[12.5px] font-semibold text-ink-700">Maximum cost share</p>
             <Counter value={maxFare} onChange={setMaxFare} min={100} max={2000} step={50} suffix="₹" />
-          </div>
-          <div>
-            <p className="mb-2 text-[12.5px] font-semibold text-ink-700">Minimum driver rating</p>
-            <Counter value={minRating} onChange={setMinRating} min={1} max={5} step={0.5} decimals={1} suffix="★" />
           </div>
           <div className="h-px bg-ink-100" />
           <Switch

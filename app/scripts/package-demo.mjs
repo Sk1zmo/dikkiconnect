@@ -1,7 +1,7 @@
 /**
  * Bundles the two demo artifacts into ./demo-out:
- *   Stowza-demo-site.zip  → drag onto a static host (Netlify drop etc.)
- *   Stowza-demo.html      → one file, opens offline by double-clicking
+ *   WayPool-demo-site.zip  → drag onto a static host (Netlify drop etc.)
+ *   WayPool-demo.html      → one file, opens offline by double-clicking
  *
  * Uses the zip support built into Windows/PowerShell or `zip` on unix, so there
  * is no extra dependency to install.
@@ -29,11 +29,11 @@ fs.rmSync(OUT, { recursive: true, force: true })
 fs.mkdirSync(OUT, { recursive: true })
 
 // 1. Single self-contained page
-const singleDest = path.join(OUT, 'Stowza-demo.html')
+const singleDest = path.join(OUT, 'WayPool-demo.html')
 fs.copyFileSync(SINGLE, singleDest)
 
 // 2. Zip of the static site
-const zipDest = path.join(OUT, 'Stowza-demo-site.zip')
+const zipDest = path.join(OUT, 'WayPool-demo-site.zip')
 if (process.platform === 'win32') {
   execFileSync(
     'powershell.exe',
@@ -51,16 +51,16 @@ if (process.platform === 'win32') {
 // 3. A short note for whoever receives it
 fs.writeFileSync(
   path.join(OUT, 'HOW-TO-VIEW.txt'),
-  `Stowza — demo build
+  `WayPool — demo build
 =========================
 
 Two ways to view it. Both are the same app.
 
-1) Stowza-demo.html
+1) WayPool-demo.html
    Double-click it. Opens in any browser, works offline, nothing to install.
    Best for emailing or WhatsApp-ing to one person.
 
-2) Stowza-demo-site.zip
+2) WayPool-demo-site.zip
    The hosted version. Unzip and drop the folder on https://app.netlify.com/drop
    to get a public link that works on phones. (Do not open index.html from the
    unzipped folder directly — use file 1 for that.)
@@ -83,6 +83,6 @@ All data is sample data. Nothing is sent anywhere and there is no backend.
 
 const kb = (p) => `${(fs.statSync(p).size / 1024).toFixed(0)} KB`
 console.log(`\nWrote ${path.relative(ROOT, OUT)}/`)
-console.log(`  Stowza-demo.html       ${kb(singleDest)}`)
-console.log(`  Stowza-demo-site.zip   ${kb(zipDest)}`)
+console.log(`  WayPool-demo.html       ${kb(singleDest)}`)
+console.log(`  WayPool-demo-site.zip   ${kb(zipDest)}`)
 console.log(`  HOW-TO-VIEW.txt`)

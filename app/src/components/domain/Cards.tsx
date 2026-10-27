@@ -13,12 +13,13 @@ import {
   Lightning,
 } from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
-import { Avatar, Badge, Card, StatusBadge, Stars } from '@/components/ui'
+import { seatsScarce, shelfBusy } from '@/lib/scarcity'
+import { Avatar, Badge, Card, StatusBadge } from '@/components/ui'
 import { MiniTimeline } from '@/components/viz/Timeline'
-import { categoryById, cityName, travelerById } from '@/lib/data'
+import { categoryById, cityName } from '@/lib/data'
 import { ageInHub, inr, kg, relative, shortDate, time } from '@/lib/format'
 import type { Hub, Parcel, ParcelJob, Trip } from '@/lib/types'
-import { CategoryIcon } from '@/components/domain/CategoryIcon'
+import { CategoryMark } from '@/components/domain/CategoryIcon'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Domain cards — the repeated content units across the whole app.
@@ -36,15 +37,12 @@ export function ParcelCard({
   showTimeline?: boolean
 }) {
   const cat = categoryById(parcel.category)
-  const traveler = travelerById(parcel.travelerId)
   const live = parcel.status === 'in_transit'
 
   return (
     <Card to={to} onClick={onClick} className="overflow-hidden">
       <div className="mb-3 flex items-start gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-ink-700">
-          <CategoryIcon id={cat.id} />
-        </span>
+        <CategoryMark id={cat.id} size={44} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <p className="tabular truncate text-[14.5px] font-extrabold text-ink-900">{parcel.id}</p>
@@ -67,11 +65,11 @@ export function ParcelCard({
 
       <div className="flex items-center justify-between gap-3 border-t border-ink-100 pt-3">
         <div className="flex min-w-0 items-center gap-2">
-          {traveler ? (
+          {parcel.travelerName ? (
             <>
-              <Avatar name={traveler.name} size={22} tone={traveler.avatarTone} />
+              <Avatar name={parcel.travelerName} size={22} />
               <span className="truncate text-[12px] font-semibold text-ink-600">
-                {traveler.name}
+                {parcel.travelerName}
               </span>
             </>
           ) : (
@@ -108,7 +106,6 @@ export function TripCard({
   showSeats?: boolean
   compact?: boolean
 }) {
-  const traveler = travelerById(trip.travelerId)
   const soldOut = trip.seatsLeft === 0
 
   return (
@@ -116,7 +113,7 @@ export function TripCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-baseline gap-2">
-            <span className="tabular text-display text-[19px] font-extrabold text-ink-900">
+            <span className="tabular tracking-title text-display text-[19px] font-extrabold text-ink-900">
               {time(trip.departAt)}
             </span>
             <ArrowRight size={13} className="text-ink-300" />
@@ -131,28 +128,34 @@ export function TripCard({
           </p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="tabular text-display text-[19px] font-extrabold text-brand-700">
+          <p className="tabular tracking-title text-display text-[20px] font-extrabold text-brand-700">
             {inr(trip.farePerSeat)}
           </p>
-          <p className="text-[10.5px] font-semibold text-ink-400">per seat</p>
+          <p className="text-[11px] font-semibold text-ink-500">per seat</p>
         </div>
       </div>
 
-      {!compact && traveler && (
+      {!compact && (
         <div className="mt-3.5 flex items-center gap-2.5 border-t border-ink-100 pt-3.5">
-          <Avatar name={traveler.name} size={34} tone={traveler.avatarTone} />
+          <Avatar name={trip.travelerName} size={34} />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-bold text-ink-900">{traveler.name}</p>
-            <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-ink-500">
-              <Stars value={traveler.rating} size={10} />
-              <span className="font-semibold text-ink-700">{traveler.rating.toFixed(1)}</span>
-              <span className="text-ink-300">·</span>
-              <span className="truncate">{traveler.vehicle.model}</span>
-            </div>
+            <p className="truncate text-[13px] font-bold text-ink-900">{trip.travelerName}</p>
+            {trip.vehicle && (
+              <p className="mt-0.5 truncate text-[11.5px] text-ink-500">{trip.vehicle.model}</p>
+            )}
           </div>
           {showSeats && (
-            <Badge tone={soldOut ? 'neutral' : trip.seatsLeft <= 1 ? 'warn' : 'success'} size="sm">
-              {soldOut ? 'Full' : `${trip.seatsLeft} seat${trip.seatsLeft > 1 ? 's' : ''}`}
+            /* Scarcity, not alarm. A car down to its last seat used to wear
+               warn amber, which is the colour this app uses for something
+               going wrong — a delayed parcel, a failed payment. Two seats
+               left is not a problem, it is a reason to hurry, and signal is
+               the one colour that means exactly that. Sold out drops to
+               neutral because by then there is nothing to hurry for. */
+            <Badge
+              tone={soldOut ? 'neutral' : seatsScarce(trip.seatsLeft) ? 'signal' : 'success'}
+              size="sm"
+            >
+              {soldOut ? 'Full' : `${trip.seatsLeft} seat${trip.seatsLeft > 1 ? 's' : ''} left`}
             </Badge>
           )}
         </div>
@@ -187,9 +190,7 @@ export function JobCard({
     <Card padded={false} className="overflow-hidden">
       <button onClick={onView} className="w-full px-4 pt-4 text-left">
         <div className="flex items-start gap-3">
-          <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-ink-700">
-            <CategoryIcon id={cat.id} />
-          </span>
+          <CategoryMark id={cat.id} size={44} />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <p className="truncate text-[14px] font-bold text-ink-900">{cat.label}</p>
@@ -292,7 +293,7 @@ export function HubCard({
   nearest?: boolean
 }) {
   const loadPct = Math.round((hub.held / hub.capacity) * 100)
-  const busy = loadPct > 70
+  const busy = shelfBusy(loadPct)
   const shownKm = km ?? hub.distanceKm
 
   return (
@@ -385,17 +386,28 @@ export function InventoryRow({
   const tone = { waiting: 'brand', assigned: 'accent', delayed: 'warn', lost: 'danger' } as const
   const label = { waiting: 'Waiting', assigned: 'Assigned', delayed: 'Delayed', lost: 'Lost' }
 
+  /* This row deliberately keeps its shelf chip rather than taking the drawn
+     category mark the rest of the app moved to. The mark is right where the
+     parcel is the subject of the row; here the subject is WHERE THE BOX IS,
+     and a worker walking the aisle needs "B-12" in the leading square, not a
+     picture of a t-shirt. It also has no category to draw — the prop does not
+     exist on this row and inventing a lookup to get one would be adding work
+     to make the screen less useful. */
   return (
     <button
       onClick={onClick}
-      className="pressable flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-ink-50"
+      className="pressable flex min-h-16 w-full items-center gap-3.5 px-4 py-3.5 text-left transition-colors hover:bg-ink-50"
     >
-      <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-[11px] font-extrabold text-ink-600">
+      <span className="tabular grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-[11.5px] font-extrabold text-ink-700">
         {shelf}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="tabular truncate text-[14px] font-bold text-ink-900">{parcelId}</p>
-        <p className="mt-0.5 text-[11.5px] text-ink-500">In hub {ageInHub(intakeAt)}</p>
+        <p className="tabular tracking-title truncate text-[14.5px] font-extrabold text-ink-900">
+          {parcelId}
+        </p>
+        <p className="mt-0.5 text-[11.5px] font-semibold text-ink-500">
+          In hub {ageInHub(intakeAt)}
+        </p>
       </div>
       <Badge tone={tone[state]} size="sm" dot>
         {label[state]}

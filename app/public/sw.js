@@ -3,7 +3,9 @@
  * Strategy: network-first for navigations (so a redeploy is picked up), and
  * cache-first for hashed build assets (which never change under a given name).
  */
-const CACHE = 'dikkiconnect-v1'
+/* Bumped with every release that changes a cached asset. The new mark
+   would otherwise keep being served from an old cache. */
+const CACHE = 'waypool-v9'
 
 self.addEventListener('install', (event) => {
   self.skipWaiting()

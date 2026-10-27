@@ -58,3 +58,6 @@ app/dist-demo/
 
 # Font-comparison screenshots — generated output, like app/demo-out/
 app/font-demo/
+
+# Release signing material — the app's identity, never source.
+app/android/keystore.properties

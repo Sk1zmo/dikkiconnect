@@ -1,9 +1,11 @@
+import { useEffect, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Car, MapPin, ChatCircle, Phone, ShieldCheck } from '@phosphor-icons/react'
 import { Screen, ScreenBody } from '@/components/layout/Screen'
 import {
   ActionBar,
   Avatar,
+  Badge,
   Button,
   Card,
   IconButton,
@@ -13,9 +15,10 @@ import {
 } from '@/components/ui'
 import { Confetti } from '@/components/viz/Illustrations'
 import { LottieMark } from '@/components/brand/LottieMark'
-import { cityName, otpFor, travelerById } from '@/lib/data'
+import { cityName } from '@/lib/data'
 import { useRideForTrip } from '@/lib/store'
 import { useTrip } from '@/lib/store'
+import { rides } from '@/lib/api'
 import { dayDate, inr, phone as fmtPhone, time } from '@/lib/format'
 
 /** Booking confirmed + the single boarding OTP (PRD §6 — one OTP, no drop-off OTP). */
@@ -25,12 +28,26 @@ export default function BoardingOtp() {
 
   const trip = useTrip(id)
   const ride = useRideForTrip(id)
-  if (!trip) return <Navigate to="/passenger" replace />
+  // The server issues this — never derived on-device, which is the entire
+  // point: a code the phone showing it could also compute is not a check.
+  const [otp, setOtp] = useState<string | null>(null)
 
-  const driver = travelerById(trip.travelerId)!
-  // The code issued when this passenger paid — not one derived from the trip,
-  // so two passengers on the same car get two different codes.
-  const otp = ride?.boardingOtp ?? otpFor(trip.id + 'board')
+  useEffect(() => {
+    if (!ride) return
+    let cancelled = false
+    rides
+      .otp(ride.id)
+      .then(({ code }) => {
+        if (!cancelled) setOtp(code)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [ride])
+
+  if (trip === null) return <Navigate to="/passenger" replace />
+  if (!trip) return null
 
   return (
     <Screen>
@@ -43,27 +60,30 @@ export default function BoardingOtp() {
             Seat confirmed
           </h1>
           <p className="mt-2 text-[14px] text-ink-500">
-            {dayDate(trip.departAt)} · departing {time(trip.departAt)}
+            {dayDate(trip.departAt)} · departing{' '}
+            <span className="tabular font-extrabold tracking-title text-ink-800">
+              {time(trip.departAt)}
+            </span>
           </p>
         </div>
 
         {/* Boarding OTP */}
         <Card className="border-brand-100 bg-brand-50/60">
-          <OtpDisplay code={otp} label="Show this when you board" />
+          <OtpDisplay code={otp ?? '······'} label="Show this when you board" />
           <Note tone="brand" className="mt-4">
-            {driver.name.split(' ')[0]} enters this in the app at pickup. It is the only OTP for
-            your ride — nothing to do at drop-off.
+            {trip.travelerName.split(' ')[0]} enters this in the app at pickup. It is the only OTP
+            for your ride — nothing to do at drop-off.
           </Note>
         </Card>
 
         {/* Driver contact — revealed only now */}
         <Card className="mt-3">
           <div className="flex items-center gap-3.5">
-            <Avatar name={driver.name} size={48} tone={driver.avatarTone} />
+            <Avatar name={trip.travelerName} size={48} />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[15px] font-bold text-ink-900">{driver.name}</p>
+              <p className="truncate text-[15px] font-bold text-ink-900">{trip.travelerName}</p>
               <p className="tabular mt-0.5 truncate text-[12.5px] font-semibold text-ink-600">
-                {fmtPhone(driver.phone)}
+                {fmtPhone(trip.travelerPhone)}
               </p>
             </div>
             <div className="flex shrink-0 gap-2">
@@ -76,17 +96,19 @@ export default function BoardingOtp() {
             </div>
           </div>
 
-          <div className="mt-4 flex items-center gap-3 rounded-(--radius-md) bg-ink-50 p-3.5">
-            <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-white text-ink-700 shadow-(--shadow-e1)">
-              <Car size={18} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[13.5px] font-bold text-ink-900">{driver.vehicle.model}</p>
-              <p className="tabular mt-0.5 truncate text-[11.5px] text-ink-500">
-                {driver.vehicle.colour} · {driver.vehicle.plate}
-              </p>
+          {trip.vehicle && (
+            <div className="mt-4 flex items-center gap-3 rounded-(--radius-md) bg-ink-50 p-3.5">
+              <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-white text-ink-700 shadow-(--shadow-e1)">
+                <Car size={18} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13.5px] font-bold text-ink-900">{trip.vehicle.model}</p>
+                <p className="tabular mt-0.5 truncate text-[11.5px] text-ink-500">
+                  {trip.vehicle.colour} · {trip.vehicle.plate}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </Card>
 
         {/* Pickup */}
@@ -105,9 +127,12 @@ export default function BoardingOtp() {
               <p className="mt-0.5 text-[12px] text-ink-500">
                 Outer Ring Road, opposite the bus bay · {cityName(trip.fromCityId)}
               </p>
-              <p className="mt-2 inline-block rounded-full bg-warn-50 px-2.5 py-1 text-[11.5px] font-bold text-warn-700">
+              {/* This one stays warn, not signal. Nothing here is running out —
+                  it is an instruction about when to stand there, and the yellow
+                  has to keep meaning "this will be gone" to be worth anything. */}
+              <Badge tone="warn" size="sm" className="mt-2">
                 Be there 10 minutes early
-              </p>
+              </Badge>
             </div>
           </div>
         </Card>

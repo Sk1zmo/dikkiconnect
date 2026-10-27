@@ -5,14 +5,17 @@ import { Screen } from '@/components/layout/Screen'
 import { Button, Field, IconButton, Segmented, Sheet, useToast } from '@/components/ui'
 import { ScannerViewfinder } from '@/components/viz/Scanner'
 import { categoryById } from '@/lib/data'
-import { useAwaitingIntake, useHubInventory } from '@/lib/store'
-import { CategoryIcon } from '@/components/domain/CategoryIcon'
+import { useApp } from '@/lib/store'
+import { parcelIdFromScan } from '@/lib/qr'
+import { parcels as parcelsApi, explain } from '@/lib/api'
+import type { Parcel } from '@/lib/types'
+import { CategoryMark } from '@/components/domain/CategoryIcon'
 
 type Mode = 'intake' | 'release' | 'receiver'
 
 const MODE_COPY: Record<Mode, { hint: string; next: (id: string) => string }> = {
   intake: {
-    hint: 'Scan the sender’s drop-off QR to log the parcel in',
+    hint: 'Scan the drop-off QR — from a sender, or from a traveller arriving',
     next: (id) => `/hub/intake/${id}`,
   },
   release: {
@@ -29,17 +32,75 @@ export default function HubScan() {
   const navigate = useNavigate()
   const toast = useToast()
   const [mode, setMode] = useState<Mode>('intake')
-  const [detected, setDetected] = useState(false)
+  /* The parcel the camera actually read, not the one the app expected next.
+     Holding the id here is the whole difference: the sheet below now describes
+     what is in the worker's hands. */
+  const [found, setFound] = useState<string | null>(null)
   const [manualOpen, setManualOpen] = useState(false)
   const [manualId, setManualId] = useState('')
+  const [looking, setLooking] = useState(false)
 
-  // Scan the next parcel this hub is actually expecting; fall back to whatever
-  // is on the shelves so the scanner is never a dead end.
-  const awaiting = useAwaitingIntake()
-  const held = useHubInventory()
-  const target = (mode === 'intake' ? awaiting[0] : held[0]) ?? awaiting[0] ?? held[0]
-  const item = { parcelId: target?.id ?? 'DKC-4796', shelf: 'A-04' }
+  const { parcels, adoptParcel } = useApp()
+
+  const target = found ? parcels.find((p) => p.id === found) : undefined
+  const item = { parcelId: found ?? '', shelf: 'A-04' }
   const cat = categoryById(target?.category ?? 'documents')
+  const detected = found !== null
+
+  /**
+   * A scan, or a hand-typed id, resolved against the server.
+   *
+   * It used to look only in this device's own list, which worked while every
+   * parcel in the world was seeded into every device. A hub worker is neither
+   * the sender nor the carrier, so the parcel in their hands is one they have
+   * never seen — the honest place to ask is the server.
+   */
+  const resolve = (raw: string) => {
+    const id = parcelIdFromScan(raw)
+    if (!id) {
+      toast.error('Not a WayPool pass', 'That code belongs to something else. Try again.')
+      return
+    }
+
+    void (async () => {
+      setLooking(true)
+      try {
+        let parcel = parcels.find((p) => p.id === id)
+        if (!parcel) {
+          const { parcel: fromServer } = await parcelsApi.one(id)
+          adoptParcel(fromServer)
+          parcel = fromServer as unknown as Parcel
+        }
+
+        /* Intake covers both directions of a hub counter: a parcel arriving
+           from its sender, and one arriving in a traveller's boot. Release is
+           for what is on the shelves, receiver for what is waiting to be
+           collected. Checking here stops a worker walking into an
+           out-of-order rejection three screens later, with the parcel already
+           out of the box. */
+        const ok =
+          mode === 'intake'
+            ? parcel.status === 'booked' || parcel.status === 'in_transit'
+            : mode === 'receiver'
+              ? parcel.status === 'at_destination_hub'
+              : parcel.status === 'at_origin_hub' || parcel.status === 'assigned'
+        if (!ok) {
+          toast.error(
+            'Wrong queue',
+            `${id} is "${parcel.status.replace(/_/g, ' ')}" — pick another mode.`,
+          )
+          return
+        }
+
+        setFound(id)
+        toast.success('Parcel found', id)
+      } catch (e) {
+        toast.error('Not found', explain(e))
+      } finally {
+        setLooking(false)
+      }
+    })()
+  }
 
   return (
     <Screen tone="dark">
@@ -64,7 +125,7 @@ export default function HubScan() {
             value={mode}
             onChange={(v) => {
               setMode(v)
-              setDetected(false)
+              setFound(null)
             }}
             size="sm"
             options={[
@@ -78,17 +139,13 @@ export default function HubScan() {
 
       <ScannerViewfinder
         key={mode}
-        hint={MODE_COPY[mode].hint}
-        autoDetectMs={2900}
-        onDetect={() => {
-          setDetected(true)
-          toast.success('Parcel found', item.parcelId)
-        }}
+        hint={looking ? 'Looking it up…' : MODE_COPY[mode].hint}
+        onDetect={resolve}
       />
 
       <Sheet
         open={detected}
-        onClose={() => setDetected(false)}
+        onClose={() => setFound(null)}
         title="Parcel found"
         subtitle={
           mode === 'intake'
@@ -116,12 +173,15 @@ export default function HubScan() {
           </Button>
         }
       >
+        {/* The confirmation the scanner shows is the one moment where the worker
+            still has the physical box in hand. A grey outline glyph on a white
+            square told them nothing they could check against it; the drawn
+            object in its category colour is something they can match at arm's
+            length without reading the label. */}
         <div className="flex items-center gap-3.5 rounded-(--radius-lg) border border-ink-100 bg-ink-50 p-4">
-          <span className="grid size-12 shrink-0 place-items-center rounded-(--radius-md) bg-white text-[22px] shadow-(--shadow-e1)">
-            <CategoryIcon id={cat.id} />
-          </span>
+          <CategoryMark id={cat.id} size={52} />
           <div className="min-w-0 flex-1">
-            <p className="tabular truncate text-[15px] font-extrabold text-ink-900">
+            <p className="tabular truncate text-[16px] font-extrabold tracking-title text-ink-900">
               {item.parcelId}
             </p>
             <p className="mt-0.5 truncate text-[12.5px] text-ink-500">
@@ -143,10 +203,10 @@ export default function HubScan() {
           <Button
             block
             size="lg"
-            disabled={manualId.trim().length < 4}
+            disabled={manualId.trim().length < 4 || looking}
             onClick={() => {
               setManualOpen(false)
-              setDetected(true)
+              resolve(manualId)
             }}
           >
             Find parcel
@@ -154,7 +214,7 @@ export default function HubScan() {
         }
       >
         <Field
-          placeholder="e.g. DKC-4796"
+          placeholder="e.g. WYP-4796"
           value={manualId}
           autoFocus
           onChange={(e) => setManualId(e.target.value.toUpperCase())}

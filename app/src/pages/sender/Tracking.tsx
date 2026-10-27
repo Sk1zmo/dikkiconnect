@@ -14,7 +14,6 @@ import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   ActionBar,
   Avatar,
-  Badge,
   Button,
   Card,
   ConfirmDialog,
@@ -24,16 +23,16 @@ import {
   Note,
   Sheet,
   StatusBadge,
-  Stars,
   useToast,
 } from '@/components/ui'
 import { Timeline, TimelineSkeleton } from '@/components/viz/Timeline'
 import { LiveMap } from '@/components/viz/Map'
-import { categoryById, cityName, hubById, otpFor, travelerById } from '@/lib/data'
+import { categoryById, cityName, hubById } from '@/lib/data'
+import { useCustodyCode } from '@/lib/custody'
 import { inr, kg, time } from '@/lib/format'
 import { useApp } from '@/lib/store'
 import { useLoaded } from '@/lib/hooks'
-import { CategoryIcon } from '@/components/domain/CategoryIcon'
+import { CategoryMark } from '@/components/domain/CategoryIcon'
 
 export default function Tracking() {
   const { id } = useParams()
@@ -47,10 +46,15 @@ export default function Tracking() {
 
   const parcel = parcels.find((p) => p.id === id)
   const { loading } = useLoaded(parcel, 900)
+  /* Above the early return, as every hook must be. */
+  const collectionCode = useCustodyCode(
+    parcel?.id,
+    'deliver',
+    parcel?.status === 'at_destination_hub',
+  )
 
   if (!parcel) return <Navigate to="/sender/track" replace />
 
-  const traveler = travelerById(parcel.travelerId)
   const cat = categoryById(parcel.category)
   const isP2P = parcel.mode === 'p2p'
   const originHub = hubById(parcel.originHubId)
@@ -145,13 +149,13 @@ export default function Tracking() {
               <p className="text-[11px] font-bold tracking-wide text-ink-400 uppercase">
                 {parcel.status === 'delivered' ? 'Delivered at' : 'Estimated arrival'}
               </p>
-              <p className="text-display mt-0.5 text-[20px] font-extrabold text-ink-900">
+              <p className="tabular text-display mt-0.5 text-[20px] font-extrabold text-ink-900">
                 {time(parcel.etaAt)}
               </p>
             </div>
             <div className="text-right">
               <p className="text-[11px] font-bold tracking-wide text-ink-400 uppercase">Progress</p>
-              <p className="text-display mt-0.5 text-[20px] font-extrabold text-brand-700">
+              <p className="tabular text-display mt-0.5 text-[20px] font-extrabold text-brand-700">
                 {Math.round(progress * 100)}%
               </p>
             </div>
@@ -159,25 +163,13 @@ export default function Tracking() {
         </Card>
 
         {/* Traveler */}
-        {traveler && (
+        {parcel.travelerName && (
           <Card className="mt-3">
             <div className="flex items-center gap-3">
-              <Avatar name={traveler.name} size={46} tone={traveler.avatarTone} />
+              <Avatar name={parcel.travelerName} size={46} />
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="truncate text-[15px] font-bold text-ink-900">{traveler.name}</p>
-                  <Badge tone="success" size="sm" icon={<ShieldCheck size={10} />}>
-                    KYC
-                  </Badge>
-                </div>
-                <div className="mt-0.5 flex items-center gap-1.5 text-[12px] text-ink-500">
-                  <Stars value={traveler.rating} size={11} />
-                  <span className="font-semibold text-ink-700">{traveler.rating.toFixed(1)}</span>
-                  <span className="text-ink-300">·</span>
-                  <span className="truncate">
-                    {traveler.vehicle.model} · {traveler.vehicle.plate}
-                  </span>
-                </div>
+                <p className="truncate text-[15px] font-bold text-ink-900">{parcel.travelerName}</p>
+                <p className="mt-0.5 text-[12px] text-ink-500">Carrying this parcel</p>
               </div>
               <div className="flex shrink-0 gap-2">
                 <IconButton icon={<ChatCircle size={16} />} label="Message traveler" size={36} />
@@ -193,19 +185,29 @@ export default function Tracking() {
             <p className="text-[12px] font-bold tracking-wide text-ink-400 uppercase">
               Custody chain
             </p>
-            <span className="tabular text-[11.5px] font-bold text-ink-500">
-              {doneCount}/{parcel.timeline.length} checkpoints
+            {/* How many checkpoints are closed is the progress of the whole
+                custody chain, so it is read as a figure, not as a caption. */}
+            <span className="flex items-baseline gap-1.5">
+              <span className="tabular text-[14px] font-extrabold tracking-title text-ink-900">
+                {doneCount}/{parcel.timeline.length}
+              </span>
+              <span className="text-[11px] font-semibold text-ink-500">checkpoints</span>
             </span>
           </div>
           {loading ? <TimelineSkeleton rows={4} /> : <Timeline events={parcel.timeline} />}
         </Card>
 
-        {/* Receiver OTP once it lands */}
+        {/* The collection code, and only once there is something to collect.
+            It is asked for from the server at that moment rather than worked
+            out from the parcel id, so it does not exist before the parcel
+            does — and cannot be read off this screen a day early. */}
         {parcel.status === 'at_destination_hub' && (
           <Note tone="success" icon={<ShieldCheck size={15} />} className="mt-3" title="Ready for pickup">
-            {parcel.receiverName} has been sent OTP{' '}
-            <span className="font-mono font-extrabold">{otpFor(parcel.id + 'recv')}</span> — they
-            show it {isP2P ? 'to the traveler at the door' : `at ${toLabel}`} to collect.
+            {parcel.receiverName} collects with OTP{' '}
+            <span className="font-mono font-extrabold">
+              {collectionCode.code ?? (collectionCode.loading ? '…' : '——————')}
+            </span>{' '}
+            — they show it {isP2P ? 'to the traveler at the door' : `at ${toLabel}`} to collect.
           </Note>
         )}
 
@@ -213,9 +215,7 @@ export default function Tracking() {
           onClick={() => setDetailsOpen(true)}
           className="pressable mt-3 flex w-full items-center gap-3 rounded-(--radius-lg) border border-ink-200 bg-white p-4 text-left"
         >
-          <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-[19px]">
-            <CategoryIcon id={cat.id} />
-          </span>
+          <CategoryMark id={cat.id} size={40} />
           <span className="min-w-0 flex-1">
             <span className="block text-[13.5px] font-bold text-ink-900">Parcel details</span>
             <span className="block truncate text-[12px] text-ink-500">
@@ -298,7 +298,7 @@ export default function Tracking() {
         title="Cancel this booking?"
         body={
           <>
-            {inr(parcel.price)} will be refunded to your Stowza wallet immediately. Your slot is
+            {inr(parcel.price)} will be refunded to your WayPool wallet immediately. Your slot is
             released.
           </>
         }

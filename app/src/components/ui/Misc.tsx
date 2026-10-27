@@ -140,11 +140,11 @@ export function Stat({
           {icon}
         </span>
       )}
-      <p className="tabular text-display text-[21px] leading-none font-extrabold text-ink-900">
+      <p className="tabular text-display tracking-title text-[21px] leading-none font-extrabold text-ink-900">
         {value}
       </p>
       <div className="mt-1.5 flex items-center gap-1.5">
-        <p className="truncate text-[11.5px] font-medium text-ink-500">{label}</p>
+        <p className="truncate text-[11.5px] font-semibold text-ink-500">{label}</p>
         {delta && (
           <span
             className={cn(

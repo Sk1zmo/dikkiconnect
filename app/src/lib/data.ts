@@ -3,18 +3,13 @@ import type {
   City,
   DeliveryMode,
   Hub,
-  HubInventoryItem,
   KycStep,
-  NotificationItem,
   Parcel,
   ParcelJob,
   ParcelStatus,
   TrackingEvent,
-  Traveler,
-  Trip,
-  WalletTxn,
 } from './types'
-import { hoursFromNow, minutesFromNow } from './format'
+import { hoursFromNow } from './format'
 import { HUB_COORDS, cityCoord, haversineKm, hubCoord } from './geo'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -50,7 +45,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   /* ── Bangalore ─────────────────────────────────────────────────────────── */
   {
     id: 'hub-blr-kor',
-    name: 'Stowza Hub · Koramangala',
+    name: 'WayPool Hub · Koramangala',
     cityId: 'blr',
     address: '80 Feet Rd, 4th Block, Koramangala',
     landmark: 'Next to Sony World Signal',
@@ -63,7 +58,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-blr-ind',
-    name: 'Stowza Hub · Indiranagar',
+    name: 'WayPool Hub · Indiranagar',
     cityId: 'blr',
     address: '100 Feet Rd, Indiranagar',
     landmark: 'Opposite CMH Road Junction',
@@ -76,7 +71,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-blr-whf',
-    name: 'Stowza Hub · Whitefield',
+    name: 'WayPool Hub · Whitefield',
     cityId: 'blr',
     address: 'ITPL Main Rd, Whitefield',
     landmark: 'Beside Forum Value Mall',
@@ -89,7 +84,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-blr-jay',
-    name: 'Stowza Hub · Jayanagar',
+    name: 'WayPool Hub · Jayanagar',
     cityId: 'blr',
     address: '11th Main, 4th Block, Jayanagar',
     landmark: 'Above Sri Krishna Stores',
@@ -102,7 +97,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-blr-hbr',
-    name: 'Stowza Hub · Hebbal',
+    name: 'WayPool Hub · Hebbal',
     cityId: 'blr',
     address: 'Bellary Rd, Hebbal',
     landmark: 'Under the Hebbal Flyover',
@@ -115,7 +110,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-blr-ele',
-    name: 'Stowza Hub · Electronic City',
+    name: 'WayPool Hub · Electronic City',
     cityId: 'blr',
     address: 'Phase 1, Hosur Rd, Electronic City',
     landmark: 'Inside HP Petrol Pump',
@@ -130,7 +125,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   /* ── Mysore ────────────────────────────────────────────────────────────── */
   {
     id: 'hub-mys-sar',
-    name: 'Stowza Hub · Saraswathipuram',
+    name: 'WayPool Hub · Saraswathipuram',
     cityId: 'mys',
     address: '5th Main, Saraswathipuram, Mysore',
     landmark: 'Opposite Ayyappa Temple',
@@ -143,7 +138,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-mys-vij',
-    name: 'Stowza Hub · Vijayanagar',
+    name: 'WayPool Hub · Vijayanagar',
     cityId: 'mys',
     address: '2nd Stage, Vijayanagar, Mysore',
     landmark: 'Beside Ring Road Junction',
@@ -156,7 +151,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-mys-nan',
-    name: 'Stowza Hub · Nanjangud Road',
+    name: 'WayPool Hub · Nanjangud Road',
     cityId: 'mys',
     address: 'Nanjangud Rd, Bannimantap, Mysore',
     landmark: 'Near the APMC Yard gate',
@@ -171,7 +166,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   /* ── Mangalore ─────────────────────────────────────────────────────────── */
   {
     id: 'hub-mng-hmp',
-    name: 'Stowza Hub · Hampankatta',
+    name: 'WayPool Hub · Hampankatta',
     cityId: 'mng',
     address: 'Kadri Rd, Hampankatta, Mangalore',
     landmark: 'Next to Hampankatta Circle',
@@ -184,7 +179,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-mng-kad',
-    name: 'Stowza Hub · Kadri',
+    name: 'WayPool Hub · Kadri',
     cityId: 'mng',
     address: 'Kadri Temple Rd, Kadri, Mangalore',
     landmark: 'Opposite the Kadri Park gate',
@@ -199,7 +194,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   /* ── Hubballi ──────────────────────────────────────────────────────────── */
   {
     id: 'hub-hbl-vid',
-    name: 'Stowza Hub · Vidyanagar',
+    name: 'WayPool Hub · Vidyanagar',
     cityId: 'hbl',
     address: 'Gokul Rd, Vidyanagar, Hubballi',
     landmark: 'Near Vidyanagar Circle',
@@ -214,7 +209,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   /* ── Coimbatore ────────────────────────────────────────────────────────── */
   {
     id: 'hub-cbe-gan',
-    name: 'Stowza Hub · Gandhipuram',
+    name: 'WayPool Hub · Gandhipuram',
     cityId: 'cbe',
     address: 'Cross Cut Rd, Gandhipuram, Coimbatore',
     landmark: 'Beside the Central Bus Stand',
@@ -227,7 +222,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-cbe-pee',
-    name: 'Stowza Hub · Peelamedu',
+    name: 'WayPool Hub · Peelamedu',
     cityId: 'cbe',
     address: 'Avinashi Rd, Peelamedu, Coimbatore',
     landmark: 'Opposite the PSG Tech gate',
@@ -242,7 +237,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   /* ── Chennai ───────────────────────────────────────────────────────────── */
   {
     id: 'hub-che-tnr',
-    name: 'Stowza Hub · T. Nagar',
+    name: 'WayPool Hub · T. Nagar',
     cityId: 'che',
     address: 'Usman Rd, T. Nagar, Chennai',
     landmark: 'Near Panagal Park',
@@ -255,7 +250,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-che-vel',
-    name: 'Stowza Hub · Velachery',
+    name: 'WayPool Hub · Velachery',
     cityId: 'che',
     address: '100 Feet Rd, Velachery, Chennai',
     landmark: 'Beside Phoenix MarketCity',
@@ -268,7 +263,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-che-anv',
-    name: 'Stowza Hub · Anna Nagar',
+    name: 'WayPool Hub · Anna Nagar',
     cityId: 'che',
     address: '2nd Avenue, Anna Nagar, Chennai',
     landmark: 'Near Anna Nagar Tower Park',
@@ -281,7 +276,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-che-omr',
-    name: 'Stowza Hub · OMR Perungudi',
+    name: 'WayPool Hub · OMR Perungudi',
     cityId: 'che',
     address: 'Rajiv Gandhi Salai, Perungudi, Chennai',
     landmark: 'Opposite the Thoraipakkam toll',
@@ -296,7 +291,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   /* ── Hyderabad ─────────────────────────────────────────────────────────── */
   {
     id: 'hub-hyd-gac',
-    name: 'Stowza Hub · Gachibowli',
+    name: 'WayPool Hub · Gachibowli',
     cityId: 'hyd',
     address: 'Gachibowli–Miyapur Rd, Hyderabad',
     landmark: 'Near DLF Cyber City',
@@ -309,7 +304,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-hyd-sec',
-    name: 'Stowza Hub · Secunderabad',
+    name: 'WayPool Hub · Secunderabad',
     cityId: 'hyd',
     address: 'SD Rd, Secunderabad',
     landmark: 'Near the Clock Tower',
@@ -322,7 +317,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   },
   {
     id: 'hub-hyd-ban',
-    name: 'Stowza Hub · Banjara Hills',
+    name: 'WayPool Hub · Banjara Hills',
     cityId: 'hyd',
     address: 'Road No. 12, Banjara Hills, Hyderabad',
     landmark: 'Above Karachi Bakery',
@@ -337,7 +332,7 @@ const HUB_SEED: Array<Omit<Hub, 'distanceKm'>> = [
   /* ── Goa ───────────────────────────────────────────────────────────────── */
   {
     id: 'hub-goa-pan',
-    name: 'Stowza Hub · Panjim',
+    name: 'WayPool Hub · Panjim',
     cityId: 'goa',
     address: '18th June Rd, Panjim, Goa',
     landmark: 'Near the Municipal Garden',
@@ -382,89 +377,6 @@ if (import.meta.env.DEV) {
   }
 }
 
-export const TRAVELERS: Traveler[] = [
-  {
-    id: 'trv-1',
-    name: 'Arjun Menon',
-    phone: '9845012345',
-    rating: 4.9,
-    trips: 214,
-    avatarTone: 0,
-    kycTier: 'passenger_ready',
-    verifiedSince: '2025-03-14',
-    languages: ['English', 'Kannada', 'Malayalam'],
-    vehicle: {
-      id: 'veh-1',
-      model: 'Hyundai Creta',
-      plate: 'KA 05 MJ 4417',
-      colour: 'Titan Grey',
-      type: 'suv',
-      bootCapacityKg: 40,
-      seats: 4,
-    },
-  },
-  {
-    id: 'trv-2',
-    name: 'Divya Nair',
-    phone: '9880123456',
-    rating: 4.8,
-    trips: 132,
-    avatarTone: 1,
-    kycTier: 'passenger_ready',
-    verifiedSince: '2025-06-02',
-    languages: ['English', 'Hindi', 'Tamil'],
-    vehicle: {
-      id: 'veh-2',
-      model: 'Maruti Swift',
-      plate: 'KA 03 NB 8821',
-      colour: 'Pearl White',
-      type: 'hatchback',
-      bootCapacityKg: 22,
-      seats: 3,
-    },
-  },
-  {
-    id: 'trv-3',
-    name: 'Karthik Reddy',
-    phone: '9900234567',
-    rating: 4.7,
-    trips: 88,
-    avatarTone: 2,
-    kycTier: 'parcel_only',
-    verifiedSince: '2025-09-21',
-    languages: ['Telugu', 'English'],
-    vehicle: {
-      id: 'veh-3',
-      model: 'Honda City',
-      plate: 'KA 51 AC 2093',
-      colour: 'Radiant Red',
-      type: 'sedan',
-      bootCapacityKg: 32,
-      seats: 4,
-    },
-  },
-  {
-    id: 'trv-4',
-    name: 'Sneha Bhat',
-    phone: '9741045678',
-    rating: 5.0,
-    trips: 41,
-    avatarTone: 3,
-    kycTier: 'passenger_ready',
-    verifiedSince: '2026-01-08',
-    languages: ['Kannada', 'English'],
-    vehicle: {
-      id: 'veh-4',
-      model: 'Tata Nexon EV',
-      plate: 'KA 04 ME 7710',
-      colour: 'Midnight Blue',
-      type: 'suv',
-      bootCapacityKg: 36,
-      seats: 4,
-    },
-  },
-]
-
 /* ── Parcel categories & pricing inputs ───────────────────────────────────── */
 
 export const PARCEL_CATEGORIES = [
@@ -500,362 +412,6 @@ export const DECLARED_VALUE_CAP = 5000
 
 /** Flat per-parcel handling fee paid to hub partners (PRD §8.3 suggests ₹10–20). */
 export const HUB_HANDLING_FEE = 15
-
-/* ── Tracking chain factory ───────────────────────────────────────────────── */
-
-function chain(stageIndex: number, opts: { traveler?: string; originHub: string; destHub: string }) {
-  const steps: Array<{
-    status: Parcel['status']
-    title: string
-    detail: string
-    actor?: string
-    location?: string
-    otpVerified?: boolean
-    photos?: number
-    offsetH: number
-  }> = [
-    {
-      status: 'booked',
-      title: 'Booking confirmed',
-      detail: 'Payment received. Drop-off OTP sent to your phone.',
-      offsetH: -26,
-    },
-    {
-      status: 'at_origin_hub',
-      title: 'Dropped at origin hub',
-      detail: 'Weighed, photographed and logged by the hub manager.',
-      location: opts.originHub,
-      otpVerified: true,
-      photos: 3,
-      offsetH: -22,
-    },
-    {
-      status: 'assigned',
-      title: 'Matched with a traveler',
-      detail: 'A verified traveler heading your way accepted this parcel.',
-      actor: opts.traveler,
-      offsetH: -8,
-    },
-    {
-      status: 'in_transit',
-      title: 'Picked up · in transit',
-      detail: 'Custody moved from hub to traveler. OTP verified at handoff.',
-      actor: opts.traveler,
-      location: opts.originHub,
-      otpVerified: true,
-      photos: 2,
-      offsetH: -3,
-    },
-    {
-      status: 'at_destination_hub',
-      title: 'Arrived at destination hub',
-      detail: 'Traveler handed the parcel over. Receiver OTP dispatched.',
-      location: opts.destHub,
-      otpVerified: true,
-      photos: 2,
-      offsetH: 1,
-    },
-    {
-      status: 'delivered',
-      title: 'Collected by receiver',
-      detail: 'Receiver OTP verified. Delivery loop closed.',
-      location: opts.destHub,
-      otpVerified: true,
-      photos: 1,
-      offsetH: 3,
-    },
-  ]
-
-  return steps.map((s, i): Parcel['timeline'][number] => ({
-    id: `ev-${i}`,
-    status: s.status,
-    title: s.title,
-    detail: s.detail,
-    at: i <= stageIndex ? hoursFromNow(s.offsetH) : null,
-    actor: s.actor,
-    location: s.location,
-    otpVerified: i <= stageIndex ? s.otpVerified : undefined,
-    photos: i <= stageIndex ? s.photos : undefined,
-    done: i <= stageIndex,
-  }))
-}
-
-export const PARCELS: Parcel[] = [
-  {
-    id: 'DKC-4821',
-    mode: 'hub',
-    senderName: 'Aditi Sharma',
-    receiverName: 'Rohit Sharma',
-    receiverPhone: '9845567890',
-    fromCityId: 'blr',
-    toCityId: 'mys',
-    originHubId: 'hub-blr-kor',
-    destinationHubId: 'hub-mys-sar',
-    category: 'electronics',
-    size: 'M',
-    weightKg: 2.4,
-    declaredValue: 3200,
-    fragile: true,
-    notes: 'Laptop charger and accessories. Handle with care.',
-    status: 'in_transit',
-    bookedAt: hoursFromNow(-26),
-    etaAt: hoursFromNow(2),
-    price: 189,
-    travelerId: 'trv-1',
-    timeline: chain(3, {
-      traveler: 'Arjun Menon',
-      originHub: 'Koramangala Hub',
-      destHub: 'Saraswathipuram Hub',
-    }),
-  },
-  {
-    id: 'DKC-4796',
-    mode: 'hub',
-    senderName: 'Aditi Sharma',
-    receiverName: 'Meera Iyer',
-    receiverPhone: '9900112233',
-    fromCityId: 'blr',
-    toCityId: 'mys',
-    originHubId: 'hub-blr-jay',
-    destinationHubId: 'hub-mys-vij',
-    category: 'documents',
-    size: 'S',
-    weightKg: 0.4,
-    declaredValue: 500,
-    fragile: false,
-    status: 'at_origin_hub',
-    bookedAt: hoursFromNow(-6),
-    etaAt: hoursFromNow(14),
-    price: 99,
-    timeline: chain(1, {
-      originHub: 'Jayanagar Hub',
-      destHub: 'Vijayanagar Hub',
-    }),
-  },
-  {
-    id: 'DKC-4703',
-    mode: 'hub',
-    senderName: 'Aditi Sharma',
-    receiverName: 'Nikhil Verma',
-    receiverPhone: '9812345678',
-    fromCityId: 'blr',
-    toCityId: 'mys',
-    originHubId: 'hub-blr-kor',
-    destinationHubId: 'hub-mys-sar',
-    category: 'gifts',
-    size: 'M',
-    weightKg: 3.1,
-    declaredValue: 1800,
-    fragile: false,
-    status: 'delivered',
-    bookedAt: hoursFromNow(-98),
-    etaAt: hoursFromNow(-71),
-    price: 169,
-    travelerId: 'trv-2',
-    timeline: chain(5, {
-      traveler: 'Divya Nair',
-      originHub: 'Koramangala Hub',
-      destHub: 'Saraswathipuram Hub',
-    }),
-  },
-  {
-    id: 'DKC-4655',
-    mode: 'hub',
-    senderName: 'Aditi Sharma',
-    receiverName: 'Sanjay Pillai',
-    receiverPhone: '9845009988',
-    fromCityId: 'blr',
-    toCityId: 'che',
-    originHubId: 'hub-blr-elc',
-    destinationHubId: 'hub-che-tnr',
-    category: 'clothing',
-    size: 'L',
-    weightKg: 8.2,
-    declaredValue: 4500,
-    fragile: false,
-    status: 'delivered',
-    bookedAt: hoursFromNow(-170),
-    etaAt: hoursFromNow(-140),
-    price: 349,
-    travelerId: 'trv-3',
-    timeline: chain(5, {
-      traveler: 'Karthik Reddy',
-      originHub: 'Electronic City Hub',
-      destHub: 'T. Nagar Hub',
-    }),
-  },
-  {
-    id: 'DKC-4610',
-    mode: 'hub',
-    senderName: 'Aditi Sharma',
-    receiverName: 'Priya Das',
-    receiverPhone: '9611223344',
-    fromCityId: 'mys',
-    toCityId: 'blr',
-    originHubId: 'hub-mys-vij',
-    destinationHubId: 'hub-blr-kor',
-    category: 'medicine',
-    size: 'S',
-    weightKg: 0.8,
-    declaredValue: 900,
-    fragile: false,
-    status: 'cancelled',
-    bookedAt: hoursFromNow(-240),
-    etaAt: hoursFromNow(-220),
-    price: 89,
-    timeline: chain(0, {
-      originHub: 'Vijayanagar Hub',
-      destHub: 'Koramangala Hub',
-    }),
-  },
-]
-
-/* ── Trips ────────────────────────────────────────────────────────────────── */
-
-export const TRIPS: Trip[] = [
-  {
-    id: 'TRP-9012',
-    travelerId: 'trv-1',
-    fromCityId: 'blr',
-    toCityId: 'mys',
-    departAt: hoursFromNow(2),
-    arriveAt: hoursFromNow(5.5),
-    seatsTotal: 4,
-    seatsLeft: 2,
-    bootSlots: ['M', 'M', 'S'],
-    farePerSeat: 449,
-    parcelIds: ['DKC-4821'],
-    status: 'published',
-    viaStops: ['Ramanagara', 'Channapatna', 'Mandya'],
-  },
-  {
-    id: 'TRP-9008',
-    travelerId: 'trv-2',
-    fromCityId: 'blr',
-    toCityId: 'mys',
-    departAt: hoursFromNow(4),
-    arriveAt: hoursFromNow(7.5),
-    seatsTotal: 3,
-    seatsLeft: 3,
-    bootSlots: ['S', 'S'],
-    farePerSeat: 399,
-    parcelIds: [],
-    status: 'published',
-    viaStops: ['Bidadi', 'Maddur'],
-  },
-  {
-    id: 'TRP-9003',
-    travelerId: 'trv-4',
-    fromCityId: 'blr',
-    toCityId: 'mys',
-    departAt: hoursFromNow(7),
-    arriveAt: hoursFromNow(10.25),
-    seatsTotal: 4,
-    seatsLeft: 1,
-    bootSlots: ['L', 'M'],
-    farePerSeat: 529,
-    parcelIds: [],
-    status: 'published',
-    viaStops: ['Ramanagara', 'Mandya'],
-  },
-  {
-    id: 'TRP-8994',
-    travelerId: 'trv-3',
-    fromCityId: 'mys',
-    toCityId: 'blr',
-    departAt: hoursFromNow(9),
-    arriveAt: hoursFromNow(12.5),
-    seatsTotal: 4,
-    seatsLeft: 4,
-    bootSlots: ['M', 'S', 'S'],
-    farePerSeat: 419,
-    parcelIds: [],
-    status: 'published',
-    viaStops: ['Srirangapatna', 'Maddur', 'Channapatna'],
-  },
-]
-
-/* ── Parcel jobs offered to travelers ─────────────────────────────────────── */
-
-export const PARCEL_JOBS: ParcelJob[] = [
-  {
-    id: 'JOB-311',
-    parcelId: 'DKC-4796',
-    mode: 'hub',
-    fromHubId: 'hub-blr-jay',
-    toHubId: 'hub-mys-vij',
-    fromLabel: 'Jayanagar',
-    toLabel: 'Vijayanagar',
-    size: 'S',
-    weightKg: 0.4,
-    payout: 62,
-    detourKm: 1.8,
-    expiresAt: minutesFromNow(42),
-    category: 'documents',
-    fragile: false,
-  },
-  {
-    id: 'JOB-312',
-    parcelId: 'DKC-4844',
-    mode: 'hub',
-    fromHubId: 'hub-blr-kor',
-    toHubId: 'hub-mys-sar',
-    fromLabel: 'Koramangala',
-    toLabel: 'Saraswathipuram',
-    size: 'M',
-    weightKg: 4.6,
-    payout: 118,
-    detourKm: 0.4,
-    expiresAt: minutesFromNow(18),
-    category: 'clothing',
-    fragile: false,
-  },
-  {
-    id: 'JOB-313',
-    parcelId: 'DKC-4851',
-    mode: 'hub',
-    fromHubId: 'hub-blr-kor',
-    toHubId: 'hub-mys-sar',
-    fromLabel: 'Koramangala',
-    toLabel: 'Saraswathipuram',
-    size: 'L',
-    weightKg: 11.2,
-    payout: 214,
-    detourKm: 0.4,
-    expiresAt: minutesFromNow(64),
-    category: 'spares',
-    fragile: true,
-  },
-  {
-    id: 'JOB-314',
-    parcelId: 'DKC-4858',
-    mode: 'hub',
-    fromHubId: 'hub-blr-elc',
-    toHubId: 'hub-mys-vij',
-    fromLabel: 'Electronic City',
-    toLabel: 'Vijayanagar',
-    size: 'S',
-    weightKg: 1.1,
-    payout: 74,
-    detourKm: 6.2,
-    expiresAt: minutesFromNow(120),
-    category: 'medicine',
-    fragile: false,
-  },
-]
-
-/* ── Hub inventory ────────────────────────────────────────────────────────── */
-
-export const HUB_INVENTORY: HubInventoryItem[] = [
-  { parcelId: 'DKC-4796', shelf: 'A-04', intakeAt: hoursFromNow(-6), state: 'waiting' },
-  { parcelId: 'DKC-4844', shelf: 'A-05', intakeAt: hoursFromNow(-3), state: 'assigned', assignedTravelerId: 'trv-1' },
-  { parcelId: 'DKC-4851', shelf: 'B-01', intakeAt: hoursFromNow(-11), state: 'waiting' },
-  { parcelId: 'DKC-4802', shelf: 'B-02', intakeAt: hoursFromNow(-31), state: 'delayed' },
-  { parcelId: 'DKC-4779', shelf: 'C-07', intakeAt: hoursFromNow(-52), state: 'delayed' },
-  { parcelId: 'DKC-4858', shelf: 'A-09', intakeAt: hoursFromNow(-1), state: 'waiting' },
-  { parcelId: 'DKC-4712', shelf: 'D-03', intakeAt: hoursFromNow(-74), state: 'lost' },
-  { parcelId: 'DKC-4869', shelf: 'A-11', intakeAt: hoursFromNow(-0.5), state: 'assigned', assignedTravelerId: 'trv-4' },
-]
 
 /* ── KYC ladder (PRD §7) ──────────────────────────────────────────────────── */
 
@@ -912,88 +468,15 @@ export const KYC_STEPS: KycStep[] = [
   },
 ]
 
-/* ── Wallet ───────────────────────────────────────────────────────────────── */
-
-export const SENDER_TXNS: WalletTxn[] = [
-  { id: 'w1', label: 'Parcel DKC-4821', sub: 'Bangalore → Mysore', amount: -189, at: hoursFromNow(-26), kind: 'debit', method: 'upi' },
-  { id: 'w2', label: 'Cashback · FIRSTDROP', sub: 'Promo credit', amount: 40, at: hoursFromNow(-26), kind: 'credit', method: 'wallet' },
-  { id: 'w3', label: 'Parcel DKC-4796', sub: 'Bangalore → Mysore', amount: -99, at: hoursFromNow(-6), kind: 'debit', method: 'wallet' },
-  { id: 'w4', label: 'Refund · DKC-4610', sub: 'Cancelled before pickup', amount: 89, at: hoursFromNow(-238), kind: 'credit', method: 'refund' },
-  { id: 'w5', label: 'Added money', sub: 'HDFC •••• 4412', amount: 500, at: hoursFromNow(-250), kind: 'credit', method: 'card' },
-  { id: 'w6', label: 'Parcel DKC-4655', sub: 'Bangalore → Chennai', amount: -349, at: hoursFromNow(-170), kind: 'debit', method: 'upi' },
-]
-
-export const TRAVELER_TXNS: WalletTxn[] = [
-  { id: 't1', label: 'Parcel payout · DKC-4821', sub: 'Koramangala → Saraswathipuram', amount: 132, at: hoursFromNow(-3), kind: 'credit', method: 'payout' },
-  { id: 't2', label: 'Seat fare · Rhea M.', sub: 'TRP-9012 · 1 seat', amount: 449, at: hoursFromNow(-3), kind: 'credit', method: 'upi' },
-  { id: 't3', label: 'Weekly settlement', sub: 'To ICICI •••• 8890', amount: -4820, at: hoursFromNow(-52), kind: 'debit', method: 'payout' },
-  { id: 't4', label: 'Parcel payout · DKC-4703', sub: 'Koramangala → Saraswathipuram', amount: 118, at: hoursFromNow(-74), kind: 'credit', method: 'payout' },
-  { id: 't5', label: 'Referral bonus', sub: 'Sneha B. completed 5 trips', amount: 250, at: hoursFromNow(-96), kind: 'credit', method: 'wallet' },
-]
-
-/* ── Notifications ────────────────────────────────────────────────────────── */
-
-export const NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: 'n1',
-    title: 'Your parcel is on the highway',
-    body: 'DKC-4821 left Koramangala Hub with Arjun M. ETA 2:40 PM.',
-    at: hoursFromNow(-0.4),
-    read: false,
-    kind: 'parcel',
-    href: '/sender/track/DKC-4821',
-  },
-  {
-    id: 'n2',
-    title: 'Drop-off OTP ready',
-    body: 'Show 4-8-2-9-1-7 to the hub manager for DKC-4796.',
-    at: hoursFromNow(-6),
-    read: false,
-    kind: 'parcel',
-    href: '/sender/track/DKC-4796',
-  },
-  {
-    id: 'n3',
-    title: '₹40 cashback credited',
-    body: 'FIRSTDROP promo applied to your Stowza wallet.',
-    at: hoursFromNow(-26),
-    read: true,
-    kind: 'payment',
-    href: '/wallet',
-  },
-  {
-    id: 'n4',
-    title: 'Rate your last delivery',
-    body: 'How did Divya N. do on DKC-4703?',
-    at: hoursFromNow(-70),
-    read: true,
-    kind: 'ride',
-  },
-  {
-    id: 'n5',
-    title: '20% off Mysore drops this week',
-    body: 'Use code MYSORE20 at checkout. Ends Sunday.',
-    at: hoursFromNow(-96),
-    read: true,
-    kind: 'promo',
-  },
-]
-
 /* ── Support chat ─────────────────────────────────────────────────────────── */
 
+/** The one fixture thread left: a generic support opener, not a real person
+ *  or a real exchange — the account it is shown against has no bearing on
+ *  what it says, which is what tells it apart from the fake driver/traveller
+ *  data this file used to carry. */
 export const SUPPORT_THREAD: ChatMessage[] = [
-  { id: 'c0', from: 'system', text: 'Connected to Stowza Support · avg reply 2 min', at: hoursFromNow(-0.5) },
-  { id: 'c1', from: 'them', text: 'Hi Aditi — I can see DKC-4821 is in transit with Arjun. How can I help?', at: hoursFromNow(-0.48) },
-  { id: 'c2', from: 'me', text: 'The receiver wants to collect from a different Mysore hub. Is that possible?', at: hoursFromNow(-0.4) },
-  { id: 'c3', from: 'them', text: 'Yes — while the parcel is still in transit we can re-route it to Vijayanagar Hub at no extra cost. Want me to do that?', at: hoursFromNow(-0.36) },
-  { id: 'c4', from: 'me', text: 'Please do. Thanks!', at: hoursFromNow(-0.3) },
-  { id: 'c5', from: 'them', text: 'Done. Destination updated to Stowza Hub · Vijayanagar. A fresh receiver OTP will be sent once it lands.', at: hoursFromNow(-0.26) },
-]
-
-export const RIDE_CHAT: ChatMessage[] = [
-  { id: 'r1', from: 'them', text: 'Hi! I\'m starting from Silk Board in about 20 minutes.', at: hoursFromNow(-1.2) },
-  { id: 'r2', from: 'me', text: 'Perfect. I\'ll be at the Central Silk Board bus stop.', at: hoursFromNow(-1.1) },
-  { id: 'r3', from: 'them', text: 'Great — white Swift, KA 03 NB 8821. See you shortly.', at: hoursFromNow(-1.05) },
+  { id: 'c0', from: 'system', text: 'Connected to WayPool Support · avg reply 2 min', at: hoursFromNow(-0.5) },
+  { id: 'c1', from: 'them', text: 'Hi — how can I help?', at: hoursFromNow(-0.48) },
 ]
 
 /* ── Lookups ──────────────────────────────────────────────────────────────── */
@@ -1002,7 +485,7 @@ export const cityById = (id: string) => CITIES.find((c) => c.id === id)
 export const cityName = (id: string) => cityById(id)?.name ?? id
 export const hubById = (id: string) => HUBS.find((h) => h.id === id)
 export const hubName = (id: string) => hubById(id)?.name ?? id
-/** "Koramangala" from "Stowza Hub · Koramangala" */
+/** "Koramangala" from "WayPool Hub · Koramangala" */
 export const hubShort = (id: string) => hubById(id)?.name.split('·').pop()?.trim() ?? id
 export const hubsInCity = (cityId: string) => HUBS.filter((h) => h.cityId === cityId)
 /**
@@ -1011,9 +494,6 @@ export const hubsInCity = (cityId: string) => HUBS.filter((h) => h.cityId === ci
  */
 export const resolveHub = (hubId: string | null | undefined, cityId: string) =>
   (hubId ? hubById(hubId) : undefined) ?? hubsInCity(cityId)[0] ?? HUBS[0]
-export const travelerById = (id?: string) => TRAVELERS.find((t) => t.id === id)
-export const parcelById = (id: string) => PARCELS.find((p) => p.id === id)
-export const tripById = (id: string) => TRIPS.find((t) => t.id === id)
 export const categoryById = (id: string) =>
   PARCEL_CATEGORIES.find((c) => c.id === id) ?? PARCEL_CATEGORIES[7]
 
@@ -1168,7 +648,21 @@ export function newTimeline(mode: DeliveryMode, bookedAt: string): TrackingEvent
   ]
 }
 
-/** Deterministic 6-digit OTP so demo flows are reproducible. */
+/**
+ * Deterministic 6-digit code, computed on the device.
+ *
+ * ── Do not use this for a parcel ──────────────────────────────────────────
+ * It used to generate every custody OTP, which meant the code releasing a
+ * parcel was computable by anyone holding the parcel id, and the device
+ * deciding whether a code was right was the device that wanted it to be.
+ * Those codes are now issued and checked by the server; see `lib/custody.ts`.
+ *
+ * What is left is the carpool boarding code, where the whole ride side of the
+ * app is still local — a driver and a passenger in the same car, with no
+ * server between them and nothing of value gated on it. When rides move to
+ * the server this goes with them, and then this function should be deleted
+ * rather than found and reused.
+ */
 export function otpFor(seed: string) {
   let h = 7
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) % 1_000_000

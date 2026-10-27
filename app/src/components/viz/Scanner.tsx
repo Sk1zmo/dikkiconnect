@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { Camera, Image, Keyboard, Lightning } from '@phosphor-icons/react'
+import { Camera } from '@phosphor-icons/react'
 import { cn } from '@/lib/cn'
 import { Spinner } from '@/components/ui'
+import { capturePhoto } from '@/lib/photo'
+import { explain, photos, type Checkpoint } from '@/lib/api'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Camera-adjacent surfaces: QR ticket, QR scanner, photo capture.
-   The "camera" is a simulated viewfinder — no getUserMedia prompt in a demo.
+   The scanner and the capture both use the device's real camera. See the
+   notes above each one for what that costs and where it is not available.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /** The scannable ticket a sender shows at the hub counter. */
@@ -51,53 +54,172 @@ export function QrTicket({
   )
 }
 
-/** Live scanner viewfinder with reticle + sweeping scan line. */
+/* ═══════════════════════════════════════════════════════════════════════════
+   The scanner, now pointed at the world.
+
+   What was here before drew a cardboard box in SVG and fired `onDetect` on a
+   2.8-second timer, whatever the phone was pointed at. It read nothing. In a
+   hub doorway that is worse than no scanner at all: it reports a match for
+   the parcel the app already had in mind, which is precisely the mistake the
+   scan exists to catch.
+
+   This opens the real camera and reads real QR codes:
+
+   • `BarcodeDetector` does the decoding. It ships in Android's WebView and
+     Chrome, which is where the hub and traveller portals are actually used,
+     and it needs no library — a bundled decoder would add more weight than
+     the rest of the screen.
+   • Where it is missing (iOS Safari to this day), the camera still shows, and
+     the screen says plainly that this device cannot scan and the ID has to be
+     typed. Every caller already has a manual-entry sheet behind the keyboard
+     button, so that path is complete rather than a dead end.
+   • A refused camera permission is reported as what it is, with the same way
+     out. It is not treated as a failure to recover from silently.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** The slice of the BarcodeDetector API this uses. Not in lib.dom yet. */
+interface DetectedBarcode {
+  rawValue: string
+}
+interface BarcodeDetectorLike {
+  detect: (source: CanvasImageSource) => Promise<DetectedBarcode[]>
+}
+type BarcodeDetectorCtor = new (opts?: { formats?: string[] }) => BarcodeDetectorLike
+
+const detectorCtor = (): BarcodeDetectorCtor | null =>
+  (globalThis as { BarcodeDetector?: BarcodeDetectorCtor }).BarcodeDetector ?? null
+
+/** How often to look at the frame. 180ms reads instantly and stays cool. */
+const SCAN_INTERVAL_MS = 180
+
+type CameraState = 'starting' | 'live' | 'denied' | 'unavailable' | 'no-decoder'
+
+/** Live scanner viewfinder — real camera, real QR decoding. */
 export function ScannerViewfinder({
   onDetect,
   hint = 'Point at the parcel QR code',
-  autoDetectMs = 2800,
   children,
 }: {
-  onDetect?: () => void
+  /** Receives the decoded text. Called once; the loop stops on the first read. */
+  onDetect?: (value: string) => void
   hint?: string
-  autoDetectMs?: number | null
   children?: React.ReactNode
 }) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [state, setState] = useState<CameraState>('starting')
   const [locked, setLocked] = useState(false)
 
+  /* Held in a ref so the effect does not restart the camera every time a
+     parent re-renders with a fresh closure. A restarting camera flashes black
+     and loses a second, which reads as the app struggling. */
+  const detectRef = useRef(onDetect)
+  detectRef.current = onDetect
+
   useEffect(() => {
-    if (!autoDetectMs || !onDetect) return
-    const t = setTimeout(() => {
-      setLocked(true)
-      setTimeout(onDetect, 620)
-    }, autoDetectMs)
-    return () => clearTimeout(t)
-  }, [autoDetectMs, onDetect])
+    let stream: MediaStream | null = null
+    let timer: number | undefined
+    let done = false
+
+    const stop = () => {
+      done = true
+      window.clearInterval(timer)
+      stream?.getTracks().forEach((t) => t.stop())
+      stream = null
+    }
+
+    const start = async () => {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setState('unavailable')
+        return
+      }
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+          audio: false,
+        })
+      } catch (e) {
+        /* NotAllowedError is a refusal; anything else is a device that cannot
+           give us a camera. They need different words on screen. */
+        setState((e as DOMException)?.name === 'NotAllowedError' ? 'denied' : 'unavailable')
+        return
+      }
+      if (done) {
+        stream.getTracks().forEach((t) => t.stop())
+        return
+      }
+
+      const video = videoRef.current
+      if (!video) return
+      video.srcObject = stream
+      /* `muted` and `playsInline` are what stop iOS opening the system
+         full-screen player over the top of the whole screen. */
+      video.muted = true
+      video.playsInline = true
+      await video.play().catch(() => {})
+
+      const Ctor = detectorCtor()
+      if (!Ctor) {
+        setState('no-decoder')
+        return
+      }
+      setState('live')
+
+      const detector = new Ctor({ formats: ['qr_code'] })
+      timer = window.setInterval(() => {
+        if (done || video.readyState < 2) return
+        void detector
+          .detect(video)
+          .then((found) => {
+            const value = found[0]?.rawValue
+            if (!value || done) return
+
+            /* One read, then stop looking. Letting the loop run would fire
+               the callback a dozen times for one code sitting in frame. */
+            done = true
+            window.clearInterval(timer)
+            setLocked(true)
+            window.setTimeout(() => detectRef.current?.(value), 420)
+          })
+          .catch(() => {
+            /* A frame that cannot be decoded is the normal case between
+               reads, not something to report. */
+          })
+      }, SCAN_INTERVAL_MS)
+    }
+
+    void start()
+    return stop
+  }, [])
+
+  const problem =
+    state === 'denied'
+      ? {
+          title: 'Camera access is off',
+          body: 'Allow the camera in your device settings, or enter the parcel ID by hand using the keyboard button above.',
+        }
+      : state === 'unavailable'
+        ? {
+            title: 'No camera on this device',
+            body: 'Enter the parcel ID by hand using the keyboard button above.',
+          }
+        : state === 'no-decoder'
+          ? {
+              title: 'This device cannot read QR codes',
+              body: 'Its browser has no barcode support. Enter the parcel ID by hand using the keyboard button above.',
+            }
+          : null
 
   return (
     <div className="relative flex-1 overflow-hidden bg-ink-950">
-      {/* simulated camera feed */}
-      <div className="absolute inset-0 opacity-70">
-        <svg viewBox="0 0 400 700" preserveAspectRatio="xMidYMid slice" className="size-full">
-          <defs>
-            <radialGradient id="vignette" cx="50%" cy="45%" r="72%">
-              <stop offset="55%" stopColor="#1c2440" />
-              <stop offset="100%" stopColor="#05070f" />
-            </radialGradient>
-          </defs>
-          <rect width="400" height="700" fill="url(#vignette)" />
-          {/* a cardboard box sitting on a counter */}
-          <g transform="translate(112, 250)">
-            <rect x="0" y="24" width="176" height="132" rx="6" fill="#7c5a35" />
-            <rect x="0" y="24" width="176" height="34" rx="5" fill="#63482a" />
-            <rect x="76" y="24" width="24" height="132" fill="#5a4126" opacity="0.8" />
-            <rect x="26" y="82" width="52" height="34" rx="3" fill="#e8e2d5" opacity="0.92" />
-            <rect x="118" y="86" width="34" height="10" rx="2" fill="#e8e2d5" opacity="0.5" />
-            <rect x="118" y="102" width="26" height="8" rx="2" fill="#e8e2d5" opacity="0.35" />
-          </g>
-          <rect y="440" width="400" height="260" fill="#0b1020" opacity="0.55" />
-        </svg>
-      </div>
+      <video
+        ref={videoRef}
+        className={cn(
+          'absolute inset-0 size-full object-cover transition-opacity duration-500',
+          state === 'starting' ? 'opacity-0' : 'opacity-100',
+        )}
+        playsInline
+        muted
+      />
 
       {/* reticle */}
       <div className="absolute inset-0 grid place-items-center">
@@ -127,7 +249,7 @@ export function ScannerViewfinder({
               )}
             />
           ))}
-          {!locked && (
+          {state === 'live' && !locked && (
             <span className="anim-scanline absolute inset-x-3 h-0.5 rounded-full bg-gradient-to-r from-transparent via-brand-300 to-transparent shadow-[0_0_14px_2px_rgba(150,184,255,0.7)]" />
           )}
           {locked && (
@@ -140,100 +262,131 @@ export function ScannerViewfinder({
         </div>
       </div>
 
-      {/* hint + torch */}
-      <div className="absolute inset-x-0 bottom-0 px-6 pb-8">
-        <p className="mb-5 text-center text-[13.5px] font-medium text-white/80">{hint}</p>
-        <div className="flex items-center justify-center gap-3">
-          <button className="pressable-sm glass-dark grid size-12 place-items-center rounded-full text-white ring-1 ring-white/20">
-            <Lightning size={19} />
-          </button>
-          <button className="pressable-sm glass-dark grid size-12 place-items-center rounded-full text-white ring-1 ring-white/20">
-            <Image size={19} />
-          </button>
-          <button className="pressable-sm glass-dark grid size-12 place-items-center rounded-full text-white ring-1 ring-white/20">
-            <Keyboard size={19} />
-          </button>
+      {state === 'starting' && (
+        <div className="absolute inset-0 grid place-items-center">
+          <Spinner size={26} />
         </div>
+      )}
+
+      {/* hint, or the reason there is nothing to point at */}
+      <div className="absolute inset-x-0 bottom-0 px-6 pb-8">
+        {problem ? (
+          <div className="anim-fade-up glass-dark mb-5 rounded-(--radius-lg) p-4 text-center ring-1 ring-white/15">
+            <p className="text-[14px] font-bold text-white">{problem.title}</p>
+            <p className="mt-1.5 text-[12.5px] leading-relaxed text-white/75">{problem.body}</p>
+          </div>
+        ) : (
+          <p className="mb-5 text-center text-[13.5px] font-medium text-white/80">{hint}</p>
+        )}
         {children}
       </div>
     </div>
   )
 }
 
-/** Photo evidence capture — required at every handoff per PRD §9. */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Photo evidence — required at every hand-off, and now actually taken.
+
+   The server rejects a custody step with no photo id (`photo-required`), so
+   this component is load-bearing rather than decorative: a shot is captured
+   through the OS camera, downscaled, uploaded, and the id it returns is what
+   the hand-off is recorded against.
+
+   An upload that fails says so and leaves the slot empty. There is no local
+   queue and no optimistic tick, because a photograph that exists only on the
+   phone of the person who took it is not evidence either party can produce
+   later.
+   ═══════════════════════════════════════════════════════════════════════════ */
 export function PhotoCapture({
-  shots,
+  photoIds,
   required = 3,
-  onCapture,
+  onStored,
+  parcelId,
+  checkpoint,
   className,
 }: {
-  shots: number
+  /** Ids already stored, which is also the count. */
+  photoIds: string[]
   required?: number
-  onCapture: () => void
+  onStored: (photoId: string) => void
+  parcelId?: string
+  checkpoint?: Checkpoint
   className?: string
 }) {
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string>()
+  /* Thumbnails come from the shot in hand, never re-fetched — the bytes are
+     already here and a round trip to look at your own photograph is waste. */
+  const [thumbs, setThumbs] = useState<string[]>([])
 
-  const fire = () => {
+  const shots = photoIds.length
+
+  const fire = async () => {
     if (shots >= required || busy) return
+    setError(undefined)
     setBusy(true)
-    setTimeout(() => {
-      onCapture()
+    try {
+      const shot = await capturePhoto()
+      if (!shot) return // backed out of the camera, which is not a failure
+      const { photoId } = await photos.store(shot.dataUrl, parcelId, checkpoint)
+      setThumbs((t) => [...t, shot.dataUrl])
+      onStored(photoId)
+    } catch (e) {
+      setError(explain(e))
+    } finally {
       setBusy(false)
-    }, 520)
+    }
   }
 
   return (
     <div className={cn('flex flex-col', className)}>
       <div className="relative flex-1 overflow-hidden rounded-(--radius-lg) bg-ink-950">
-        <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" className="size-full opacity-80">
-          <rect width="400" height="300" fill="#141b30" />
-          <rect y="196" width="400" height="104" fill="#0d1424" />
-          <g transform="translate(126, 92)">
-            <rect x="0" y="18" width="150" height="112" rx="6" fill="#7c5a35" />
-            <rect x="0" y="18" width="150" height="30" rx="5" fill="#63482a" />
-            <rect x="64" y="18" width="22" height="112" fill="#5a4126" opacity="0.8" />
-            <rect x="20" y="68" width="44" height="30" rx="3" fill="#e8e2d5" opacity="0.92" />
-          </g>
-        </svg>
-
-        {/* framing guides */}
-        <div className="pointer-events-none absolute inset-6 rounded-(--radius-md) border-2 border-dashed border-white/35" />
-        {busy && (
-          <div className="anim-fade-in absolute inset-0 bg-white/85" />
+        {/* The most recent shot stands in for a viewfinder: the OS camera owns
+            the live preview, and what matters here is whether what you just
+            took is usable. */}
+        {thumbs.length > 0 ? (
+          <img
+            src={thumbs[thumbs.length - 1]}
+            alt={`Hand-over photo ${thumbs.length}`}
+            className="anim-fade-in absolute inset-0 size-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 grid place-items-center px-8 text-center">
+            <div>
+              <Camera size={34} className="mx-auto text-white/45" />
+              <p className="mt-3 text-[13.5px] font-semibold text-white/80">
+                Tap the shutter to open the camera
+              </p>
+              <p className="mt-1 text-[12px] leading-relaxed text-white/50">
+                {required} photo{required === 1 ? '' : 's'} required. They upload as you take them.
+              </p>
+            </div>
+          </div>
         )}
 
-        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-5 pb-4">
+        <div className="pointer-events-none absolute inset-6 rounded-(--radius-md) border-2 border-dashed border-white/35" />
+
+        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-ink-950/85 to-transparent px-5 pt-8 pb-4">
           <div className="flex gap-1.5">
             {Array.from({ length: required }).map((_, i) => (
               <span
                 key={i}
                 className={cn(
-                  'size-9 rounded-md ring-2 transition-all duration-300',
-                  i < shots
-                    ? 'bg-success-500/25 ring-success-400'
-                    : 'bg-white/10 ring-white/25',
+                  'size-9 overflow-hidden rounded-md ring-2 transition-all duration-300',
+                  i < shots ? 'bg-success-500/25 ring-success-400' : 'bg-white/10 ring-white/25',
                 )}
               >
-                {i < shots && (
-                  <svg viewBox="0 0 24 24" className="size-full p-1.5 text-white" fill="none">
-                    <path
-                      d="m5 13 4 4L19 7"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                {thumbs[i] && (
+                  <img src={thumbs[i]} alt="" className="size-full object-cover opacity-90" />
                 )}
               </span>
             ))}
           </div>
 
           <button
-            onClick={fire}
-            disabled={shots >= required}
-            aria-label="Capture photo"
+            onClick={() => void fire()}
+            disabled={shots >= required || busy}
+            aria-label={busy ? 'Uploading photo' : 'Capture photo'}
             className="pressable-sm grid size-16 place-items-center rounded-full bg-white ring-4 ring-white/35 disabled:opacity-40"
           >
             {busy ? <Spinner size={22} tone="ink" /> : <Camera size={24} className="text-ink-900" />}
@@ -244,6 +397,12 @@ export function PhotoCapture({
           </span>
         </div>
       </div>
+
+      {error && (
+        <p className="anim-fade-in mt-2.5 text-center text-[12.5px] font-semibold text-danger-600">
+          {error}
+        </p>
+      )}
     </div>
   )
 }

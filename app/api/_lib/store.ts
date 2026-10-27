@@ -59,6 +59,60 @@ export async function kvSet(key: string, value: unknown, ttlSeconds?: number): P
   mem.set(key, { value: raw, expiresAt: ttlSeconds ? Date.now() + ttlSeconds * 1000 : null })
 }
 
+/**
+ * Sets a key only if it does not already exist. Returns true if this call is
+ * the one that created it.
+ *
+ * This is the only primitive here that is genuinely atomic, and it exists for
+ * one reason: claiming. Two travellers tapping "accept" on the same parcel at
+ * the same moment both read "unclaimed", both write their own id, and the
+ * second silently wins — so one of them drives to a hub for a parcel that is
+ * no longer theirs. Redis SET NX decides that race in the one place that can,
+ * which is the database.
+ *
+ * The in-memory fallback is not atomic across processes, but it does not need
+ * to be: a single warm function instance is a single thread, and the fallback
+ * is already documented as unfit for anything real.
+ */
+export async function kvSetIfAbsent(
+  key: string,
+  value: unknown,
+  ttlSeconds?: number,
+): Promise<boolean> {
+  const raw = JSON.stringify(value)
+  if (storageDurable()) {
+    const cmd = ttlSeconds
+      ? ['SET', key, raw, 'NX', 'EX', String(ttlSeconds)]
+      : ['SET', key, raw, 'NX']
+    /* Upstash answers "OK" when it set the key and null when it did not. */
+    return (await upstash(cmd)) !== null
+  }
+  sweep()
+  if (mem.has(key)) return false
+  mem.set(key, { value: raw, expiresAt: ttlSeconds ? Date.now() + ttlSeconds * 1000 : null })
+  return true
+}
+
+/**
+ * Atomic add (or subtract, with a negative delta) — the only primitive here
+ * that is safe for a bounded counter under concurrency. `INCRBY` is a single
+ * Redis command, so two seats being booked in the same instant still resolve
+ * to one correct total rather than a last-write-wins race. Callers that must
+ * not go negative (seats left, a wallet balance) decrement first and roll
+ * back if the result is negative — cheaper than a Lua script and exactly as
+ * safe, because the decrement itself can never be lost or duplicated.
+ */
+export async function kvIncrBy(key: string, delta: number): Promise<number> {
+  if (storageDurable()) {
+    return Number(await upstash(['INCRBY', key, String(delta)]))
+  }
+  sweep()
+  const hit = mem.get(key)
+  const next = (hit ? Number(JSON.parse(hit.value)) : 0) + delta
+  mem.set(key, { value: JSON.stringify(next), expiresAt: hit?.expiresAt ?? null })
+  return next
+}
+
 export async function kvDel(key: string): Promise<void> {
   if (storageDurable()) {
     await upstash(['DEL', key])

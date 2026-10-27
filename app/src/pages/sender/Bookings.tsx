@@ -65,7 +65,7 @@ export default function SenderBookings() {
     <Screen>
       <LargeTitle
         title="Bookings"
-        subtitle={`${counts.all} parcels sent with Stowza`}
+        subtitle={`${counts.all} parcels sent with WayPool`}
         className="pt-safe"
         action={
           <>

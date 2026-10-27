@@ -74,10 +74,12 @@ export default function PaymentMethods() {
             <WalletIcon size={20} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[14px] font-bold text-ink-900">Stowza Wallet</p>
+            <p className="text-[14px] font-bold text-ink-900">WayPool Wallet</p>
             <p className="mt-0.5 text-[12px] text-ink-500">Fastest checkout, instant refunds</p>
           </div>
-          <p className="tabular shrink-0 text-[16px] font-extrabold text-brand-700">
+          {/* The balance is the only reason this card is at the top, so it is
+              set at display size rather than matching the label beside it. */}
+          <p className="tabular text-display tracking-title shrink-0 text-[20px] leading-none font-extrabold text-brand-700">
             {inr(balance)}
           </p>
         </Card>
@@ -106,14 +108,14 @@ export default function PaymentMethods() {
                       <>
                         <button
                           onClick={() => makePrimary(m.id)}
-                          className="pressable-sm rounded-full px-2.5 py-1 text-[11.5px] font-bold text-brand-600 hover:bg-brand-50"
+                          className="pressable-sm rounded-full px-3 py-1.5 text-[11.5px] font-bold text-brand-600 hover:bg-brand-50"
                         >
                           Set default
                         </button>
                         <button
                           onClick={() => setRemoving(m)}
                           aria-label={`Remove ${m.label}`}
-                          className="pressable-sm grid size-8 place-items-center rounded-full text-ink-400 hover:bg-danger-50 hover:text-danger-600"
+                          className="pressable-sm grid size-9 place-items-center rounded-full text-ink-400 hover:bg-danger-50 hover:text-danger-600"
                         >
                           <Trash size={15} />
                         </button>
@@ -131,12 +133,12 @@ export default function PaymentMethods() {
         </Button>
 
         <Note tone="neutral" icon={<Lock size={15} />} className="mt-6" title="How we store this">
-          Stowza never stores card numbers or UPI PINs. Cards are tokenised by our PCI-DSS compliant
+          WayPool never stores card numbers or UPI PINs. Cards are tokenised by our PCI-DSS compliant
           gateway as required by RBI, and we only keep the last four digits.
         </Note>
 
         <Note tone="brand" className="mt-3" title="Refunds">
-          Cancellations refund to your Stowza wallet instantly, or back to the original method in 3–5
+          Cancellations refund to your WayPool wallet instantly, or back to the original method in 3–5
           working days if you prefer.
         </Note>
       </ScreenBody>

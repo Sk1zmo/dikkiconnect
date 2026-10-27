@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="title_activity_main">Stowza</string>
-    <string name="package_name">in.stowza.app</string>
-    <string name="custom_url_scheme">in.stowza.app</string>
+    <string name="title_activity_main">WayPool</string>
+    <string name="package_name">in.waypool.app</string>
+    <string name="custom_url_scheme">in.waypool.app</string>
 </resources>

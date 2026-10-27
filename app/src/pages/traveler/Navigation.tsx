@@ -17,7 +17,7 @@ import { categoryById, hubShort, jobFromParcel } from '@/lib/data'
 import { inr, kg } from '@/lib/format'
 import { useCountdown } from '@/lib/hooks'
 import { useManifest, useMe } from '@/lib/store'
-import { CategoryIcon } from '@/components/domain/CategoryIcon'
+import { CategoryMark } from '@/components/domain/CategoryIcon'
 
 const STEPS = [
   { in: '400 m', instruction: 'Turn right onto Hosur Road', icon: ArrowBendUpRight },
@@ -153,11 +153,9 @@ export default function TravelerNavigation() {
             return (
               <div
                 key={j.id}
-                className="flex items-center gap-3 rounded-(--radius-md) border border-ink-100 bg-white p-3.5"
+                className="flex min-h-12 items-center gap-3 rounded-(--radius-md) border border-ink-200 bg-white p-3.5"
               >
-                <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-ink-700">
-                  <CategoryIcon id={cat.id} />
-                </span>
+                <CategoryMark id={cat.id} size={40} />
                 <div className="min-w-0 flex-1">
                   <p className="tabular truncate text-[13.5px] font-bold text-ink-900">
                     {j.parcelId}
@@ -167,7 +165,7 @@ export default function TravelerNavigation() {
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="tabular text-[13.5px] font-extrabold text-success-600">
+                  <p className="tabular text-[15px] leading-none font-extrabold tracking-title text-success-600">
                     +{inr(j.payout)}
                   </p>
                   {j.fragile && (
@@ -203,7 +201,7 @@ export default function TravelerNavigation() {
         <div className="flex flex-col gap-2.5">
           {[
             { label: 'Call emergency services (112)', tone: 'danger' as const },
-            { label: 'Call Stowza safety desk', tone: 'brand' as const },
+            { label: 'Call WayPool safety desk', tone: 'brand' as const },
             { label: 'Share live trip with emergency contact', tone: 'neutral' as const },
             { label: 'Report an accident or breakdown', tone: 'neutral' as const },
           ].map((a) => (
@@ -211,7 +209,7 @@ export default function TravelerNavigation() {
               key={a.label}
               onClick={() => {
                 setSosOpen(false)
-                toast.info('Safety desk notified', 'A Stowza agent will call you within 60 seconds.')
+                toast.info('Safety desk notified', 'A WayPool agent will call you within 60 seconds.')
               }}
               className={`pressable rounded-(--radius-md) p-4 text-left text-[14px] font-bold ${
                 a.tone === 'danger'

@@ -11,18 +11,25 @@ import {
   IconButton,
   Segmented,
   SkeletonList,
-  Stars,
 } from '@/components/ui'
-import { cityName, travelerById } from '@/lib/data'
-import { dayDate, inr, time } from '@/lib/format'
+import { cityName } from '@/lib/data'
+import { dayDate, inr, relative, time } from '@/lib/format'
 import { useLoaded } from '@/lib/hooks'
 import { useMyRides } from '@/lib/store'
+import { rides as ridesApi } from '@/lib/api'
+import { LEAVING_SOON_MINS_LIST, leavingSoon } from '@/lib/scarcity'
 
 type Tab = 'upcoming' | 'past'
 
 export default function PassengerBookings() {
   const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('upcoming')
+  // Fetched on demand per booking, never held longer than it takes to show
+  // it — the server is asked again each time this is opened.
+  const [codes, setCodes] = useState<Record<string, string>>({})
+  const revealCode = (bookingId: string) => {
+    void ridesApi.otp(bookingId).then(({ code }) => setCodes((c) => ({ ...c, [bookingId]: code })))
+  }
 
   // Every row here is a seat this passenger actually paid for — the list is
   // empty until they book one, and it survives a reload.
@@ -77,8 +84,15 @@ export default function PassengerBookings() {
         ) : (
           <div className="stagger flex flex-col gap-3">
             {list.map(({ ride, trip: t }) => {
-              const driver = travelerById(t.travelerId)!
               const upcoming = tab === 'upcoming'
+              /* The one thing on this list that genuinely runs out: a seat you
+                 have already paid for stops being useful the moment the car
+                 leaves without you. Three hours is roughly when "later today"
+                 turns into "start moving", so that is where the yellow starts. */
+              const soon =
+                upcoming &&
+                ride.status !== 'cancelled' &&
+                leavingSoon(t.departAt, LEAVING_SOON_MINS_LIST)
               return (
                 <Card key={ride.id} padded={false} className="overflow-hidden">
                   <div className="flex items-center gap-2 border-b border-ink-100 bg-ink-50/70 px-4 py-2.5">
@@ -86,6 +100,11 @@ export default function PassengerBookings() {
                     <span className="text-[11.5px] font-bold text-ink-600">
                       {dayDate(t.departAt)}
                     </span>
+                    {soon && (
+                      <Badge tone="signal" size="sm">
+                        Leaves {relative(t.departAt)}
+                      </Badge>
+                    )}
                     <Badge
                       tone={
                         ride.status === 'cancelled'
@@ -115,7 +134,7 @@ export default function PassengerBookings() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex items-baseline gap-2">
-                          <span className="tabular text-display text-[19px] font-extrabold text-ink-900">
+                          <span className="tabular text-display text-[19px] font-extrabold tracking-title text-ink-900">
                             {time(t.departAt)}
                           </span>
                           <span className="text-[12px] text-ink-400">→</span>
@@ -127,38 +146,43 @@ export default function PassengerBookings() {
                           {cityName(t.fromCityId)} → {cityName(t.toCityId)}
                         </p>
                       </div>
-                      <p className="tabular shrink-0 text-[15px] font-extrabold text-ink-900">
+                      <p className="tabular shrink-0 text-[17px] font-extrabold tracking-title text-ink-900">
                         {inr(ride.fare)}
                       </p>
                     </div>
 
                     <div className="mt-3.5 flex items-center gap-2.5 border-t border-ink-100 pt-3.5">
-                      <Avatar name={driver.name} size={32} tone={driver.avatarTone} />
+                      <Avatar name={t.travelerName} size={32} />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-bold text-ink-900">{driver.name}</p>
-                        <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-ink-500">
-                          <Stars value={driver.rating} size={10} />
-                          <span className="tabular truncate">{driver.vehicle.plate}</span>
-                        </div>
+                        <p className="truncate text-[13px] font-bold text-ink-900">{t.travelerName}</p>
+                        {t.vehicle && (
+                          <p className="tabular mt-0.5 truncate text-[11.5px] text-ink-500">
+                            {t.vehicle.plate}
+                          </p>
+                        )}
                       </div>
                       <CaretRight size={16} className="shrink-0 text-ink-300" />
                     </div>
                   </button>
 
                   {upcoming ? (
-                    <div className="flex items-center gap-3 border-t border-ink-100 bg-brand-50/50 px-4 py-3">
-                      <span className="text-[11.5px] font-bold text-brand-700/70">Boarding OTP</span>
-                      <span className="tabular ml-auto text-[16px] font-extrabold tracking-[0.15em] text-brand-700">
-                        {ride.boardingOtp}
+                    <button
+                      onClick={() => !codes[ride.id] && revealCode(ride.id)}
+                      className="flex min-h-12 w-full items-center gap-3 border-t border-ink-100 bg-brand-50/50 px-4 py-3 text-left"
+                    >
+                      <span className="text-[11.5px] font-semibold text-brand-700/70">
+                        Boarding OTP
                       </span>
-                    </div>
+                      <span className="tabular ml-auto text-[16px] font-extrabold tracking-[0.15em] text-brand-700">
+                        {codes[ride.id] ?? 'Tap to show'}
+                      </span>
+                    </button>
                   ) : (
                     <div className="border-t border-ink-100 p-3">
                       <Button
                         variant="outline"
                         block
-                        size="sm"
-                        icon={<Star size={14} />}
+                        icon={<Star size={16} />}
                         onClick={() => navigate(`/passenger/complete/${t.id}`)}
                       >
                         Rate this ride

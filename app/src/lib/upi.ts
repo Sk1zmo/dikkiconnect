@@ -26,7 +26,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface UpiPayee {
-  /** Virtual Payment Address, e.g. dikkiconnect@okhdfcbank */
+  /** Virtual Payment Address, e.g. waypool@okhdfcbank */
   vpa: string
   /** Registered name shown inside the UPI app. */
   name: string
@@ -36,9 +36,9 @@ export interface UpiPayee {
  * The collecting account. Replace with the business VPA once the entity is
  * registered — nothing else in the flow needs to change.
  */
-export const DIKKI_PAYEE: UpiPayee = {
-  vpa: import.meta.env.VITE_UPI_VPA ?? 'dikkiconnect@okaxis',
-  name: import.meta.env.VITE_UPI_NAME ?? 'Stowza',
+export const WAYPOOL_PAYEE: UpiPayee = {
+  vpa: import.meta.env.VITE_UPI_VPA ?? 'waypool@okaxis',
+  name: import.meta.env.VITE_UPI_NAME ?? 'WayPool',
 }
 
 export type UpiApp = 'gpay' | 'phonepe' | 'paytm' | 'bhim' | 'any'
@@ -72,7 +72,7 @@ export interface UpiRequest {
 
 /** Builds a spec-compliant UPI intent URL. */
 export function buildUpiUrl(req: UpiRequest, app: UpiApp = 'any') {
-  const payee = req.payee ?? DIKKI_PAYEE
+  const payee = req.payee ?? WAYPOOL_PAYEE
   const params = new URLSearchParams({
     pa: payee.vpa,
     pn: payee.name,
@@ -138,4 +138,4 @@ export function launchUpi(req: UpiRequest, app: UpiApp = 'any'): Promise<UpiLaun
 
 /** Reconciliation reference for a booking — what you'd match a webhook on. */
 export const upiReference = (kind: 'parcel' | 'ride', id: string) =>
-  `DKC${kind === 'parcel' ? 'P' : 'R'}${id.replace(/\D/g, '')}${Date.now().toString().slice(-5)}`
+  `WYP${kind === 'parcel' ? 'P' : 'R'}${id.replace(/\D/g, '')}${Date.now().toString().slice(-5)}`

@@ -21,7 +21,7 @@ export const FONTS = {
 
 export type FontKey = keyof typeof FONTS
 
-const STORAGE_KEY = 'dikkiconnect.font'
+const STORAGE_KEY = 'waypool.font'
 
 const isFontKey = (v: string | null | undefined): v is FontKey => !!v && v in FONTS
 

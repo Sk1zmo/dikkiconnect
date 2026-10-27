@@ -22,6 +22,7 @@ import {
   SkeletonList,
 } from '@/components/ui'
 import { ParcelCard, PromoBanner } from '@/components/domain/Cards'
+import { CategoryMark } from '@/components/domain/CategoryIcon'
 import { HubMap } from '@/components/viz/Map'
 import { useApp } from '@/lib/store'
 import { useLoaded } from '@/lib/hooks'
@@ -169,7 +170,7 @@ export default function SenderHome() {
                     <button
                       key={h.id}
                       onClick={() => navigate('/sender/book')}
-                      className="pressable flex items-center gap-3 text-left"
+                      className="pressable flex min-h-12 items-center gap-3 text-left"
                     >
                       <span
                         className={`grid size-9 shrink-0 place-items-center rounded-(--radius-sm) text-[12px] font-extrabold ${
@@ -187,8 +188,13 @@ export default function SenderHome() {
                           {h.openFrom} – {h.openTo}
                         </span>
                       </span>
-                      <span className="tabular shrink-0 text-[12.5px] font-bold text-ink-700">
-                        {h.distanceKm} km
+                      {/* How far it is, is the only reason to read this row, so the
+                          number carries the weight and the unit drops to a label. */}
+                      <span className="flex shrink-0 items-baseline gap-1">
+                        <span className="tabular text-[16px] font-extrabold tracking-title text-ink-900">
+                          {h.distanceKm}
+                        </span>
+                        <span className="text-[11px] font-semibold text-ink-500">km</span>
                       </span>
                     </button>
                   ))}
@@ -204,11 +210,15 @@ export default function SenderHome() {
             <TrendDown size={20} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[14px] font-bold text-success-800">
-              You&apos;ve saved {inr(2340)} this year
+            {/* The amount saved is the entire claim of this strip. As a sentence
+                it read as a line of body copy and was skipped; leading with the
+                figure and demoting the qualification to its label is the whole
+                difference between a stat and a note. */}
+            <p className="tabular text-[22px] leading-none font-extrabold tracking-title text-success-800">
+              {inr(2340)}
             </p>
-            <p className="mt-0.5 text-[12px] text-success-700/80">
-              Compared to standard courier rates on the same routes
+            <p className="mt-1 text-[11.5px] font-semibold text-success-700/85">
+              saved this year vs standard courier rates on the same routes
             </p>
           </div>
         </Card>
@@ -226,9 +236,7 @@ export default function SenderHome() {
             <div className="stagger flex flex-col gap-3">
               {recent.map((p) => (
                 <Card key={p.id} to={`/sender/track/${p.id}`} className="flex items-center gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-ink-500">
-                    <Package size={18} />
-                  </span>
+                  <CategoryMark id={p.category} size={40} />
                   <div className="min-w-0 flex-1">
                     <p className="tabular truncate text-[13.5px] font-bold text-ink-900">{p.id}</p>
                     <p className="mt-0.5 truncate text-[11.5px] text-ink-500">

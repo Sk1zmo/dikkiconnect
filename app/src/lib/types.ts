@@ -1,6 +1,11 @@
-/** Domain model for Stowza — mirrors the PRD's hub-to-hub custody chain. */
+/** Domain model for WayPool — mirrors the PRD's hub-to-hub custody chain. */
 
 export type Role = 'sender' | 'traveler' | 'passenger' | 'hub'
+
+/** Where a role lands once it is active — the single source of truth for both
+ *  the role picker and a returning sign-in, so the two can never disagree. */
+export const roleHome = (role: Role): string =>
+  ({ sender: '/sender', traveler: '/traveler', passenger: '/passenger', hub: '/hub' })[role]
 
 export type ParcelStatus =
   | 'booked'
@@ -51,32 +56,6 @@ export interface Hub {
   held: number
 }
 
-export interface Person {
-  id: string
-  name: string
-  phone: string
-  rating: number
-  trips: number
-  avatarTone: number
-}
-
-export interface Vehicle {
-  id: string
-  model: string
-  plate: string
-  colour: string
-  type: 'hatchback' | 'sedan' | 'suv' | 'bike'
-  bootCapacityKg: number
-  seats: number
-}
-
-export interface Traveler extends Person {
-  vehicle: Vehicle
-  kycTier: KycTier
-  verifiedSince: string
-  languages: string[]
-}
-
 /** One node in the custody chain. `otp` present means a physical handoff. */
 export interface TrackingEvent {
   id: string
@@ -125,12 +104,25 @@ export interface Parcel {
   etaAt: string
   price: number
   travelerId?: string
+  travelerName?: string
   timeline: TrackingEvent[]
+}
+
+/** A real car, as its own driver typed it — never a fixture. */
+export interface TripVehicle {
+  model: string
+  plate: string
+  colour: string
+  seats: number
 }
 
 export interface Trip {
   id: string
   travelerId: string
+  /** Carried on the trip itself, so a passenger's screen never has to join
+   *  against a fixture to know who is driving. */
+  travelerName: string
+  travelerPhone: string
   fromCityId: string
   toCityId: string
   departAt: string
@@ -139,9 +131,12 @@ export interface Trip {
   seatsLeft: number
   bootSlots: ParcelSize[]
   farePerSeat: number
+  vehicle: TripVehicle | null
+  /** Parcel-to-trip matching is not wired yet — always empty for now. */
   parcelIds: string[]
-  status: 'draft' | 'published' | 'running' | 'completed'
+  status: 'published' | 'running' | 'completed' | 'cancelled'
   viaStops: string[]
+  createdAt: string
 }
 
 export interface ParcelJob {
@@ -165,11 +160,15 @@ export interface ParcelJob {
 export interface RideBooking {
   id: string
   tripId: string
+  passengerId: string
+  passengerName: string
   seats: number
   fare: number
   boardingPoint: string
-  boardingOtp: string
+  paymentMethod: 'wallet' | 'upi' | 'card'
+  /** Never stored client-side — see src/lib/api.ts rides.otp(). */
   status: 'upcoming' | 'boarding' | 'running' | 'completed' | 'cancelled'
+  bookedAt: string
 }
 
 export interface WalletTxn {

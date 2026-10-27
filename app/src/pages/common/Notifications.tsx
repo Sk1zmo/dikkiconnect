@@ -10,7 +10,7 @@ import {
   Users,
 } from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
-import { Card, ChipRow, EmptyState, SkeletonRow, useToast } from '@/components/ui'
+import { Badge, Card, ChipRow, EmptyState, SkeletonRow, useToast } from '@/components/ui'
 import { useApp } from '@/lib/store'
 import { relative } from '@/lib/format'
 import { useLoaded } from '@/lib/hooks'
@@ -44,10 +44,19 @@ const KIND_META: Record<NotificationItem['kind'], { icon: typeof Package; tone: 
   alert: { icon: Warning, tone: 'bg-danger-50 text-danger-600' },
 }
 
-const TIER_TONE: Record<NotificationTier, string> = {
-  critical: 'text-brand-700 bg-brand-50',
-  contextual: 'text-ink-600 bg-ink-100',
-  marketing: 'text-accent-600 bg-accent-50',
+/* Tier → the Badge tone that already means the same thing, rather than the
+   hand-rolled pill this used to draw. Same three colours, one less bespoke
+   shape on a screen made of repeated rows.
+
+   Not `signal`, tempting as a marketing row is: the rationed yellow is for a
+   thing that expires or saves money, and a tier is a category. A discount
+   notification is still, on this line, a label saying what kind of message it
+   is — and if yellow starts meaning "offer" here it is no longer available
+   when something is genuinely about to run out. */
+const TIER_TONE: Record<NotificationTier, 'brand' | 'neutral' | 'accent'> = {
+  critical: 'brand',
+  contextual: 'neutral',
+  marketing: 'accent',
 }
 
 type Filter = 'all' | NotificationTier
@@ -139,7 +148,12 @@ export default function Notifications() {
                         }}
                         className={cn(
                           'pressable relative flex w-full items-start gap-3.5 rounded-(--radius-lg) border bg-white p-4 text-left transition-colors',
-                          n.read ? 'border-ink-100' : 'border-ink-200 shadow-(--shadow-e1)',
+                          /* Unread was a dead shadow token (--shadow-e1 is
+                             `none`), so it separated from read rows by nothing
+                             at all except the left rule. It is a darker
+                             hairline now — the same way every other surface in
+                             the app separates. */
+                          n.read ? 'border-ink-100' : 'border-ink-300',
                         )}
                       >
                         {!n.read && (
@@ -161,14 +175,13 @@ export default function Notifications() {
                             <span className="ml-auto shrink-0 text-[11px] text-ink-400">{relative(n.at)}</span>
                           </span>
                           <span className="mt-1 block text-[12.5px] leading-[1.5] text-ink-500">{n.body}</span>
-                          <span
-                            className={cn(
-                              'mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase',
-                              TIER_TONE[tier],
-                            )}
+                          <Badge
+                            tone={TIER_TONE[tier]}
+                            size="sm"
+                            className="mt-2 tracking-wide uppercase"
                           >
                             {TIER_META[tier].label}
-                          </span>
+                          </Badge>
                         </span>
                       </button>
                     )

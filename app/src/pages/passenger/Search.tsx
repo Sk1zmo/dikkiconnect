@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowsDownUp,
@@ -12,6 +12,7 @@ import { Screen, ScreenBody, BrandHeader } from '@/components/layout/Screen'
 import { PortalSwitcher } from '@/components/layout/PortalSwitcher'
 import {
   Avatar,
+  Badge,
   Button,
   Card,
   Counter,
@@ -21,11 +22,12 @@ import {
   SkeletonList,
 } from '@/components/ui'
 import { TripCard } from '@/components/domain/Cards'
-import { CITIES, TRAVELERS, corridorKm } from '@/lib/data'
+import { CITIES, corridorKm } from '@/lib/data'
 import { inr } from '@/lib/format'
-import { useLoaded } from '@/lib/hooks'
+import { rides } from '@/lib/api'
 import { LOADING } from '@/lib/copy'
-import { useApp, useTrips } from '@/lib/store'
+import { useApp } from '@/lib/store'
+import type { Trip } from '@/lib/types'
 
 const POPULAR = [
   { from: 'blr', to: 'mys', price: 399, badge: 'Most booked' },
@@ -44,10 +46,25 @@ export default function PassengerSearch() {
   const [seats, setSeats] = useState(1)
   const [searching, setSearching] = useState(false)
 
-  const suggested = useTrips()
-    .filter((t) => t.status !== 'completed')
-    .slice(0, 2)
-  const { loading } = useLoaded(suggested, 1200)
+  // A real teaser from the busiest corridor, not a client-local fixture — if
+  // nobody has published a ride there yet, the section below just doesn't
+  // show, rather than inventing one.
+  const [suggested, setSuggested] = useState<Trip[] | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    rides
+      .search(POPULAR[0].from, POPULAR[0].to)
+      .then(({ trips }) => {
+        if (!cancelled) setSuggested(trips.slice(0, 2))
+      })
+      .catch(() => {
+        if (!cancelled) setSuggested([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  const loading = suggested === null
 
   const cityOptions = CITIES.map((c) => ({ value: c.id, label: `${c.name}, ${c.state}` }))
   const both = Boolean(from && to)
@@ -138,7 +155,7 @@ export default function PassengerSearch() {
 
         {/* Cost-sharing disclosure — required framing per PRD §10 */}
         <Note tone="brand" icon={<Users size={15} />} className="mt-4" title="Cost-sharing, not a taxi">
-          Stowza rides are private cars sharing fuel and toll costs between people already making the
+          WayPool rides are private cars sharing fuel and toll costs between people already making the
           trip. Drivers are not commercial operators and fares are capped at cost.
         </Note>
 
@@ -162,21 +179,27 @@ export default function PassengerSearch() {
                     <span className="grid size-9 place-items-center rounded-(--radius-sm) bg-brand-50 text-brand-600">
                       <MapPin size={17} />
                     </span>
+                    {/* Hand-rolled chip before — same warn tint, but a ring and
+                        metrics of its own, so two chips sitting side by side in
+                        the rail never lined up. Badge is the one chip now. */}
                     {r.badge && (
-                      <span className="rounded-full bg-warn-50 px-2 py-0.5 text-[10px] font-bold text-warn-700">
+                      <Badge tone="warn" size="sm">
                         {r.badge}
-                      </span>
+                      </Badge>
                     )}
                   </div>
                   <p className="mt-3 truncate text-[14.5px] font-bold text-ink-900">
                     {f.name} → {t.name}
                   </p>
-                  <p className="mt-0.5 text-[11.5px] text-ink-500">
+                  <p className="tabular mt-0.5 text-[11.5px] text-ink-500">
                     {corridorKm(r.from, r.to)} km · ~{Math.round(corridorKm(r.from, r.to) / 45)}h
                   </p>
-                  <p className="tabular mt-2.5 text-[15px] font-extrabold text-brand-700">
-                    from {inr(r.price)}
-                  </p>
+                  <div className="mt-2.5 flex items-baseline gap-1.5">
+                    <span className="text-[11px] font-semibold text-ink-500">from</span>
+                    <span className="tabular text-[18px] font-extrabold tracking-title text-brand-700">
+                      {inr(r.price)}
+                    </span>
+                  </div>
                 </button>
               )
             })}
@@ -193,30 +216,34 @@ export default function PassengerSearch() {
           />
           {loading ? (
             <SkeletonList count={2} />
-          ) : (
+          ) : suggested && suggested.length > 0 ? (
             <div className="stagger flex flex-col gap-3">
               {suggested.map((t) => (
                 <TripCard key={t.id} trip={t} to={`/passenger/ride/${t.id}`} />
               ))}
             </div>
+          ) : (
+            <Card>
+              <p className="text-[13px] text-ink-500">
+                Nobody has published a ride on this corridor yet. Try a search above.
+              </p>
+            </Card>
           )}
         </div>
 
         {/* Trust */}
         <Card className="mt-5">
           <div className="flex items-center gap-2.5">
-            <Sparkle size={17} className="shrink-0 text-brand-600" />
-            <p className="text-[13.5px] font-bold text-ink-900">Every driver is verified</p>
-          </div>
-          <div className="mt-3 flex items-center gap-2">
-            <div className="flex -space-x-2.5">
-              {TRAVELERS.slice(0, 4).map((t) => (
-                <Avatar key={t.id} name={t.name} size={30} tone={t.avatarTone} ring />
-              ))}
+            <span className="grid size-9 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-50 text-brand-600">
+              <Sparkle size={17} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13.5px] font-bold text-ink-900">Every driver is verified</p>
+              <p className="mt-0.5 text-[12px] text-ink-500">
+                Aadhaar, licence and RC checked against government registries before their first
+                ride.
+              </p>
             </div>
-            <p className="text-[12px] text-ink-500">
-              Aadhaar, licence and RC checked against government registries before their first ride.
-            </p>
           </div>
         </Card>
       </ScreenBody>

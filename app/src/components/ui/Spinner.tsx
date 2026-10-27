@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/cn'
-import { LOADING, TIPS, type LoadingContext } from '@/lib/copy'
-import { MARK_DOT, MARK_PATH } from '@/components/brand/Logo'
+import { LOADING, QUOTE_FAMILY, QUOTES, type LoadingContext, type QuoteFamily } from '@/lib/copy'
+import { WaitMark } from '@/components/brand/WaitMark'
+import { MARK_PATH, MARK_STROKE } from '@/components/brand/Logo'
 
 const TONES = {
   brand: 'border-brand-600/25 border-t-brand-600',
@@ -44,9 +45,8 @@ export function DotLoader({ className }: { className?: string }) {
 }
 
 /**
- * The brand's loader: the mark drawing itself as a road, over and over, the
- * dot landing at its end each time. Pure CSS, so it paints before whatever it
- * is waiting for arrives.
+ * The brand's loader: the mark drawing itself as a road, over and over.
+ * Pure CSS, so it paints before whatever it is waiting for arrives.
  */
 export function MarkLoader({ size = 40, className }: { size?: number; className?: string }) {
   return (
@@ -56,12 +56,11 @@ export function MarkLoader({ size = 40, className }: { size?: number; className?
         pathLength={1}
         fill="none"
         stroke="var(--color-brand-600)"
-        strokeWidth="7.5"
+        strokeWidth={MARK_STROKE}
         strokeLinecap="round"
         strokeLinejoin="round"
         className="anim-draw-loop"
       />
-      <circle cx={MARK_DOT.cx} cy={MARK_DOT.cy} r={MARK_DOT.r} fill="var(--color-brand-400)" className="anim-dot-land" />
     </svg>
   )
 }
@@ -70,83 +69,113 @@ export function MarkLoader({ size = 40, className }: { size?: number; className?
  * Full-screen branded loader — the route-level Suspense fallback, and the
  * loading state of any screen that has nothing to show yet.
  *
- * It says what it is doing. `context` picks the line from lib/copy so
- * "Finding the closest hubs" appears where hubs are being found and
- * "Talking to your bank" where money is moving; a wait you understand is a
- * wait you tolerate. The mark draws itself above it — the same road the
- * opening ends on, so the wait and the app are visibly one product.
+ * Two lines and a mark. The first line says what is happening: `context`
+ * picks it from lib/copy, so "Finding the closest hubs" appears where hubs
+ * are being found and "Talking to your bank" where money is moving. A wait
+ * you understand is a wait you tolerate. Under it, a quote — short enough to
+ * finish at a glance, rotating so a long wait is not one line staring back.
  *
- * Pure CSS: it has to paint before the route chunk it is waiting for arrives,
- * so it cannot depend on anything that ships in that chunk.
+ * Above both, WaitMark: a parcel riding a road that draws itself. It replaced
+ * a blue pixel dissolve that played on every route change; this plays only
+ * when there is something to wait for.
+ *
+ * ── The delay is the feature ──────────────────────────────────────────────
+ * Nothing paints for the first `delay` ms. Most waits in this app resolve
+ * inside that window, and the user sees the next screen with no loader at
+ * all — which is what makes navigation feel instant. The loader is for the
+ * waits that are genuinely long, and showing it for the short ones is what
+ * would make a fast app look slow.
+ *
+ * Pure CSS below the gate: it has to paint before the route chunk it is
+ * waiting for arrives, so it cannot depend on anything inside that chunk.
  */
 export function ScreenLoader({
   label,
   context = 'screen',
   compact,
-  tips = true,
+  quote = true,
+  delay = 350,
 }: {
   label?: string
   context?: LoadingContext
   compact?: boolean
-  /** A small true line under the loader once the wait has lasted a beat. */
-  tips?: boolean
+  /** The rotating line under the mark. Off where the wait is its own screen. */
+  quote?: boolean
+  /** Hold before anything paints. 0 where the loader IS the screen. */
+  delay?: number
 }) {
   const copy = LOADING[context]
   const line = label ?? copy.line
-  const tip = useTip(tips)
+  const shown = useAfter(delay)
+  const quoteLine = useQuote(QUOTE_FAMILY[context], quote && shown)
+
+  /* The gate. An empty box of the right height, so nothing jumps when the
+     loader does arrive and nothing flashes when it does not. */
+  if (!shown) return <div className={compact ? 'min-h-[220px]' : 'min-h-[60vh]'} aria-hidden />
+
   return (
     <div
       className={cn(
-        'flex h-full flex-col items-center justify-center gap-4 px-8 text-center',
+        'flex h-full flex-col items-center justify-center gap-5 px-8 text-center',
         compact ? 'min-h-[220px] py-8' : 'min-h-[60vh]',
       )}
       role="status"
       aria-live="polite"
     >
-      <MarkLoader size={compact ? 34 : 44} />
+      <WaitMark size={compact ? 72 : 96} />
       <div>
-        <p className="text-[14px] font-bold text-ink-800">{line}…</p>
+        <p className="text-[15px] font-bold tracking-title text-ink-800">{line}…</p>
         {!label && copy.sub && <p className="mt-1 text-[12.5px] text-ink-500">{copy.sub}</p>}
       </div>
-      <span className="h-px w-24 overflow-hidden bg-ink-200" aria-hidden>
-        <span className="anim-track block h-full w-1/3 bg-brand-600" />
-      </span>
-      {tip && (
+      {quoteLine && (
+        /* Keyed on the line so each new quote replays the entrance rather
+           than swapping in place. */
         <p
-          key={tip}
-          className="anim-fade-up mt-2 max-w-[300px] text-[12px] leading-[1.55] text-ink-400"
+          key={quoteLine}
+          className="anim-quote-in max-w-[280px] text-[13px] leading-[1.5] font-medium text-ink-600"
           aria-live="off"
         >
-          {tip}
+          {quoteLine}
         </p>
       )}
     </div>
   )
 }
 
-/** A tip after TIP_AFTER_MS, a new one every TIP_EVERY_MS. Starts at a random one so a long session does not always open on the first. */
-const TIP_AFTER_MS = 1400
-const TIP_EVERY_MS = 4000
-function useTip(enabled: boolean) {
-  const [tip, setTip] = useState<string | null>(null)
+/** True once `ms` has passed since mount. `0` is true on the first paint. */
+function useAfter(ms: number) {
+  const [past, setPast] = useState(ms <= 0)
   useEffect(() => {
-    if (!enabled) return
-    let i = Math.floor(Math.random() * TIPS.length)
-    const start = setTimeout(() => {
-      setTip(TIPS[i])
-      const every = setInterval(() => {
-        i = (i + 1) % TIPS.length
-        setTip(TIPS[i])
-      }, TIP_EVERY_MS)
-      cleanup = () => clearInterval(every)
-    }, TIP_AFTER_MS)
-    let cleanup = () => {}
-    return () => {
-      clearTimeout(start)
-      cleanup()
+    if (ms <= 0) return
+    setPast(false)
+    const t = setTimeout(() => setPast(true), ms)
+    return () => clearTimeout(t)
+  }, [ms])
+  return past
+}
+
+/* A quote straight away — the loader has already waited out its own gate by
+   the time this runs, so there is no second delay to sit through — and a new
+   one every QUOTE_EVERY_MS after that. It starts at a random index so a long
+   session does not open on the same line every time. */
+const QUOTE_EVERY_MS = 3600
+function useQuote(family: QuoteFamily, enabled: boolean) {
+  const [quote, setQuote] = useState<string | null>(null)
+  useEffect(() => {
+    if (!enabled) {
+      setQuote(null)
+      return
     }
-  }, [enabled])
-  return tip
+    const lines = QUOTES[family]
+    let i = Math.floor(Math.random() * lines.length)
+    setQuote(lines[i])
+    const every = setInterval(() => {
+      i = (i + 1) % lines.length
+      setQuote(lines[i])
+    }, QUOTE_EVERY_MS)
+    return () => clearInterval(every)
+  }, [family, enabled])
+  return quote
 }
 
 /** Indeterminate top progress line — shown during route transitions. */

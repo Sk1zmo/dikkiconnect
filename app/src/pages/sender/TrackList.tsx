@@ -54,7 +54,7 @@ export default function TrackList() {
         <Card>
           <Field
             label="Tracking ID"
-            placeholder="e.g. DKC-4821"
+            placeholder="e.g. WYP-4821"
             value={id}
             error={error}
             onChange={(e) => {
@@ -70,9 +70,9 @@ export default function TrackList() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => toast.info('Scanner', 'Point at any Stowza QR to auto-fill the ID.')}
+              onClick={() => toast.info('Scanner', 'Point at any WayPool QR to auto-fill the ID.')}
               icon={<Scan size={17} />}
-              aria-label="Scan a Stowza QR code"
+              aria-label="Scan a WayPool QR code"
               className="w-12 shrink-0 px-0"
             />
           </div>
@@ -88,7 +88,7 @@ export default function TrackList() {
                   <button
                     key={p.id}
                     onClick={() => navigate(`/sender/track/${p.id}`)}
-                    className="pressable flex w-full items-center gap-3 text-left"
+                    className="pressable flex min-h-12 w-full items-center gap-3 text-left"
                   >
                     <span className="relative flex size-3 shrink-0">
                       <span className="anim-ping absolute inline-flex size-full rounded-full bg-success-500" />

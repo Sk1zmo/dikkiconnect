@@ -1,4 +1,4 @@
-package in.stowza.app;
+package in.waypool.app;
 
 import com.getcapacitor.BridgeActivity;
 

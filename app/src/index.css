@@ -141,6 +141,32 @@
   --color-accent-500: #8b5cf6;
   --color-accent-600: #7c3aed;
 
+  /* ── Signal ────────────────────────────────────────────────────────────
+     One rationed yellow. It means "this expires, this saves you money, this
+     is nearly gone" and it means nothing else. The moment it appears on a
+     button or a heading it stops reading as urgent and starts reading as
+     decoration, so it is allowed on badges and counters only.            */
+  --color-signal-50: #fff9e6;
+  --color-signal-100: #fff0c2;
+  --color-signal-300: #ffdc72;
+  --color-signal-500: #ffc531;
+  --color-signal-600: #a87400;
+  --color-signal-700: #8a5f00;
+
+  /* ── Category tints ────────────────────────────────────────────────────
+     A wash per parcel category, each one the palest possible reading of
+     that category's own artwork. They sit under an illustration, never
+     under type, so they are tuned for a 1.05:1 contrast against white —
+     enough to bound the tile, not enough to become a colour in the UI.   */
+  --color-tile-documents: #eef3ff;
+  --color-tile-electronics: #eaf6fa;
+  --color-tile-clothing: #fff1e6;
+  --color-tile-food: #fff8e1;
+  --color-tile-medicine: #f0fbf3;
+  --color-tile-gifts: #fff0f3;
+  --color-tile-spares: #f3f4f8;
+  --color-tile-other: #f4f0ff;
+
   /* ── Action ────────────────────────────────────────────────────────────
      Committed actions are near-black, not blue. Blue stays the brand: nav
      state, links, highlights, status. Black carries weight, blue carries
@@ -178,13 +204,23 @@
   --tracking-display: -0.034em;
   --tracking-hero: -0.042em;
 
-  /* ── Radii ─────────────────────────────────────────────────────────────── */
-  --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 14px;
-  --radius-xl: 18px;
-  --radius-2xl: 22px;
+  /* ── Radii ─────────────────────────────────────────────────────────────
+     Softened a full step across the ramp. Radius is the cheapest signal a
+     touch interface has for "this is an object you can pick up" — a 22px
+     card reads as a panel, a 28px one reads as a thing. The whole ramp
+     moves together so the relationships between nested corners hold.    */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-2xl: 28px;
+
+  /* A category tile's corner, and a bottom sheet's top corners. Both are
+     named rather than borrowed from the ramp because both are load-bearing
+     for the product's character and should change deliberately. */
+  --radius-tile: 20px;
+  --radius-sheet: 28px;
 
   /* ── Elevation — soft, layered, never harsh ────────────────────────────── */
   --shadow-e1: none;
@@ -385,7 +421,7 @@ html[data-font='jakarta'] .tabular {
 
 /* ═══ Skeleton shimmer ═════════════════════════════════════════════════════ */
 
-@keyframes dikkiconnect-shimmer {
+@keyframes waypool-shimmer {
   0% {
     background-position: -180% 0;
   }
@@ -403,7 +439,7 @@ html[data-font='jakarta'] .tabular {
     var(--color-ink-100) 36%
   );
   background-size: 220% 100%;
-  animation: dikkiconnect-shimmer 1.6s var(--ease-smooth) infinite;
+  animation: waypool-shimmer 1.6s var(--ease-smooth) infinite;
 }
 
 .skeleton-on-brand {
@@ -414,12 +450,12 @@ html[data-font='jakarta'] .tabular {
     rgba(255, 255, 255, 0.1) 36%
   );
   background-size: 220% 100%;
-  animation: dikkiconnect-shimmer 1.6s var(--ease-smooth) infinite;
+  animation: waypool-shimmer 1.6s var(--ease-smooth) infinite;
 }
 
 /* ═══ Entrance animations ══════════════════════════════════════════════════ */
 
-@keyframes dikkiconnect-fade-up {
+@keyframes waypool-fade-up {
   from {
     opacity: 0;
     transform: translate3d(0, 14px, 0);
@@ -430,7 +466,7 @@ html[data-font='jakarta'] .tabular {
   }
 }
 
-@keyframes dikkiconnect-fade-in {
+@keyframes waypool-fade-in {
   from {
     opacity: 0;
   }
@@ -439,7 +475,7 @@ html[data-font='jakarta'] .tabular {
   }
 }
 
-@keyframes dikkiconnect-scale-in {
+@keyframes waypool-scale-in {
   from {
     opacity: 0;
     transform: scale(0.94);
@@ -450,7 +486,7 @@ html[data-font='jakarta'] .tabular {
   }
 }
 
-@keyframes dikkiconnect-pop {
+@keyframes waypool-pop {
   0% {
     transform: scale(0.7);
     opacity: 0;
@@ -465,21 +501,21 @@ html[data-font='jakarta'] .tabular {
 }
 
 .anim-fade-up {
-  animation: dikkiconnect-fade-up 0.5s var(--ease-out-expo) both;
+  animation: waypool-fade-up 0.5s var(--ease-out-expo) both;
 }
 .anim-fade-in {
-  animation: dikkiconnect-fade-in 0.45s var(--ease-smooth) both;
+  animation: waypool-fade-in 0.45s var(--ease-smooth) both;
 }
 .anim-scale-in {
-  animation: dikkiconnect-scale-in 0.4s var(--ease-out-expo) both;
+  animation: waypool-scale-in 0.4s var(--ease-out-expo) both;
 }
 .anim-pop {
-  animation: dikkiconnect-pop 0.55s var(--ease-spring) both;
+  animation: waypool-pop 0.55s var(--ease-spring) both;
 }
 
 /* Stagger utility — children animate in sequence */
 .stagger > * {
-  animation: dikkiconnect-fade-up 0.5s var(--ease-out-expo) both;
+  animation: waypool-fade-up 0.5s var(--ease-out-expo) both;
 }
 .stagger > *:nth-child(1) { animation-delay: 0.02s; }
 .stagger > *:nth-child(2) { animation-delay: 0.07s; }
@@ -494,7 +530,7 @@ html[data-font='jakarta'] .tabular {
 
 /* ═══ Ambient / live indicators ════════════════════════════════════════════ */
 
-@keyframes dikkiconnect-ping {
+@keyframes waypool-ping {
   0% {
     transform: scale(0.9);
     opacity: 0.7;
@@ -506,10 +542,10 @@ html[data-font='jakarta'] .tabular {
   }
 }
 .anim-ping {
-  animation: dikkiconnect-ping 1.8s var(--ease-smooth) infinite;
+  animation: waypool-ping 1.8s var(--ease-smooth) infinite;
 }
 
-@keyframes dikkiconnect-breathe {
+@keyframes waypool-breathe {
   0%,
   100% {
     opacity: 1;
@@ -521,28 +557,28 @@ html[data-font='jakarta'] .tabular {
   }
 }
 .anim-breathe {
-  animation: dikkiconnect-breathe 2s var(--ease-smooth) infinite;
+  animation: waypool-breathe 2s var(--ease-smooth) infinite;
 }
 
-@keyframes dikkiconnect-spin {
+@keyframes waypool-spin {
   to {
     transform: rotate(360deg);
   }
 }
 .anim-spin {
-  animation: dikkiconnect-spin 0.8s linear infinite;
+  animation: waypool-spin 0.8s linear infinite;
 }
 
-@keyframes dikkiconnect-dash {
+@keyframes waypool-dash {
   to {
     stroke-dashoffset: -1000;
   }
 }
 .anim-route-flow {
-  animation: dikkiconnect-dash 22s linear infinite;
+  animation: waypool-dash 22s linear infinite;
 }
 
-@keyframes dikkiconnect-scanline {
+@keyframes waypool-scanline {
   0% {
     top: 4%;
   }
@@ -554,10 +590,10 @@ html[data-font='jakarta'] .tabular {
   }
 }
 .anim-scanline {
-  animation: dikkiconnect-scanline 2.4s var(--ease-smooth) infinite;
+  animation: waypool-scanline 2.4s var(--ease-smooth) infinite;
 }
 
-@keyframes dikkiconnect-progress-indeterminate {
+@keyframes waypool-progress-indeterminate {
   0% {
     transform: translateX(-100%) scaleX(0.35);
   }
@@ -569,11 +605,11 @@ html[data-font='jakarta'] .tabular {
   }
 }
 .anim-progress {
-  animation: dikkiconnect-progress-indeterminate 1.5s var(--ease-smooth) infinite;
+  animation: waypool-progress-indeterminate 1.5s var(--ease-smooth) infinite;
   transform-origin: left;
 }
 
-@keyframes dikkiconnect-bob {
+@keyframes waypool-bob {
   0%,
   100% {
     transform: translateY(0);
@@ -583,7 +619,7 @@ html[data-font='jakarta'] .tabular {
   }
 }
 .anim-bob {
-  animation: dikkiconnect-bob 3.2s var(--ease-smooth) infinite;
+  animation: waypool-bob 3.2s var(--ease-smooth) infinite;
 }
 
 /* Inside an SVG, a CSS transform REPLACES the element's transform attribute and
@@ -593,47 +629,97 @@ html[data-font='jakarta'] .tabular {
 svg .anim-bob,
 svg .anim-ping,
 svg .anim-breathe,
+svg .anim-parcel-run,
 svg .anim-blink {
   transform-box: fill-box;
   transform-origin: center;
 }
 
 /* A slow blink — a light on a barrier, a typing dot. Opacity only. */
-@keyframes stowza-blink {
+@keyframes waypool-blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.25; }
 }
 .anim-blink {
-  animation: stowza-blink 1.6s var(--ease-smooth) infinite;
+  animation: waypool-blink 1.6s var(--ease-smooth) infinite;
 }
 
 /* A dashed route that travels. Needs a stroke-dasharray on the element. */
-@keyframes stowza-dash {
+@keyframes waypool-dash {
   to { stroke-dashoffset: -26; }
 }
 .anim-dash {
-  animation: stowza-dash 1.4s linear infinite;
+  animation: waypool-dash 1.4s linear infinite;
 }
 
-/* One cell of the pixel wipe: pops in, holds while the screens swap, pops
-   out. Scale from the cell's own centre so the flood reads as squares
-   growing, not a curtain. Duration and delay are set per cell inline. */
-@keyframes stowza-pixel {
-  0% { transform: scale(0); opacity: 0; }
-  25% { transform: scale(1.04); opacity: 1; }
-  70% { transform: scale(1.04); opacity: 1; }
-  100% { transform: scale(0); opacity: 0; }
+/* ═══ The waiting mark ═════════════════════════════════════════════════════
+   One idea, four parts: a road draws itself between two pins, a parcel rides
+   the arc above it, the far pin lands as the parcel arrives, and the whole
+   loop restarts. 2.2s, shared clock — every part reads the same duration so
+   the phases stay locked however the browser schedules them.
+
+   Transform and stroke-dashoffset only. `stroke-dashoffset` is not a
+   compositor property, but the path is forty pixels of a 96px mark, so the
+   raster cost is a rounding error and the alternative (a masked div) costs
+   more. Nothing here animates layout.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* The road, drawing left to right. pathLength="1" on the path makes the dash
+   units fractions of the whole, so the timing is independent of the geometry
+   and the path can be redrawn without retuning the animation. */
+@keyframes waypool-road-draw {
+  0%        { stroke-dashoffset: 1; }
+  38%, 100% { stroke-dashoffset: 0; }
 }
-.anim-pixel {
-  transform: scale(0);
-  opacity: 0;
-  animation: stowza-pixel 620ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
-  will-change: transform, opacity;
+.anim-road-draw {
+  stroke-dasharray: 1;
+  animation: waypool-road-draw var(--wait-dur, 2.2s) var(--ease-out-expo) infinite;
+}
+
+/* The parcel travelling it. offset-path would be the honest way to say
+   "follow that curve", but it is unreliable inside an SVG in the WebView this
+   APK ships against, so the arc is expressed as an x/y pair with the vertical
+   peaking at the midpoint. Same curve, no layout dependency. */
+@keyframes waypool-parcel-run {
+  0%       { transform: translate(0, 0) rotate(-6deg); opacity: 0; }
+  10%      { opacity: 1; }
+  50%      { transform: translate(30px, -9px) rotate(3deg); }
+  78%      { transform: translate(60px, 0) rotate(0deg); opacity: 1; }
+  /* Held to 94% rather than 88%: leaving earlier left a quarter-second at the
+     end of every loop with neither parcel nor pin on screen, which read as a
+     stall in the thing that exists to say work is happening. */
+  94%,100% { transform: translate(60px, 0) rotate(0deg); opacity: 0; }
+}
+.anim-parcel-run {
+  animation: waypool-parcel-run var(--wait-dur, 2.2s) var(--ease-smooth) infinite;
+}
+
+/* The destination pin, landing as the parcel gets there. */
+@keyframes waypool-pin-land {
+  0%, 62%   { transform: scale(0); opacity: 0; }
+  74%       { transform: scale(1.18); opacity: 1; }
+  82%, 96%  { transform: scale(1); opacity: 1; }
+  100%      { transform: scale(1); opacity: 0; }
+}
+.anim-pin-land {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: waypool-pin-land var(--wait-dur, 2.2s) var(--ease-spring) infinite;
+}
+
+/* The quote under the mark, changing without a jump: out, swap, in. Driven by
+   a key change on the element, so each line plays it once from the start. */
+@keyframes waypool-quote-in {
+  0%   { opacity: 0; transform: translate3d(0, 6px, 0); }
+  100% { opacity: 1; transform: none; }
+}
+.anim-quote-in {
+  animation: waypool-quote-in 0.42s var(--ease-out-expo) both;
 }
 
 /* The mark drawing itself: the brand's loader. `pathLength="1"` on the path
    makes the dash units fractions of the whole, whatever its real length. */
-@keyframes stowza-draw-loop {
+@keyframes waypool-draw-loop {
   0% { stroke-dashoffset: 1; opacity: 0.35; }
   45% { stroke-dashoffset: 0; opacity: 1; }
   70% { stroke-dashoffset: 0; opacity: 1; }
@@ -641,23 +727,11 @@ svg .anim-blink {
 }
 .anim-draw-loop {
   stroke-dasharray: 1;
-  animation: stowza-draw-loop 1.7s var(--ease-smooth) infinite;
+  animation: waypool-draw-loop 1.7s var(--ease-smooth) infinite;
 }
-@keyframes stowza-dot-land {
-  0%, 35% { transform: scale(0); opacity: 0; }
-  50% { transform: scale(1.25); opacity: 1; }
-  60%, 70% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(0); opacity: 0; }
-}
-.anim-dot-land {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: stowza-dot-land 1.7s var(--ease-smooth) infinite;
-}
-
 /* Burst, not rain: pieces launch up and out, then fall — so the arc peaks
    partway through instead of dropping in a straight line. */
-@keyframes dikkiconnect-confetti-fall {
+@keyframes waypool-confetti-fall {
   0% {
     transform: translate3d(0, 0, 0) rotate(0deg) scale(0.6);
     opacity: 0;
@@ -673,7 +747,7 @@ svg .anim-blink {
   }
 }
 .anim-confetti {
-  animation: dikkiconnect-confetti-fall 1.6s var(--ease-smooth) forwards;
+  animation: waypool-confetti-fall 1.6s var(--ease-smooth) forwards;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -682,58 +756,58 @@ svg .anim-blink {
    step and the frame reads as alive rather than as a looping GIF.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-@keyframes dikkiconnect-drift {
+@keyframes waypool-drift {
   0%, 100% { transform: translate3d(0, 0, 0); }
   50%      { transform: translate3d(var(--dx, 6px), var(--dy, 0px), 0); }
 }
-.anim-drift { animation: dikkiconnect-drift var(--dur, 14s) var(--ease-smooth) infinite; }
+.anim-drift { animation: waypool-drift var(--dur, 14s) var(--ease-smooth) infinite; }
 
-@keyframes dikkiconnect-twinkle {
+@keyframes waypool-twinkle {
   0%, 100% { opacity: var(--o, 0.5); }
   50%      { opacity: calc(var(--o, 0.5) * 0.2); }
 }
-.anim-twinkle { animation: dikkiconnect-twinkle var(--dur, 4s) var(--ease-smooth) infinite; }
+.anim-twinkle { animation: waypool-twinkle var(--dur, 4s) var(--ease-smooth) infinite; }
 
-@keyframes dikkiconnect-glow {
+@keyframes waypool-glow {
   0%, 100% { opacity: 0.82; transform: scale(1); }
   50%      { opacity: 1;    transform: scale(1.07); }
 }
-.anim-glow { animation: dikkiconnect-glow 6s var(--ease-smooth) infinite; }
+.anim-glow { animation: waypool-glow 6s var(--ease-smooth) infinite; }
 
 /* Plane resets far off-frame, so the loop never snaps in view */
-@keyframes dikkiconnect-fly {
+@keyframes waypool-fly {
   0%   { transform: translate3d(-60px, 18px, 0); opacity: 0; }
   10%  { opacity: 0.9; }
   86%  { opacity: 0.9; }
   100% { transform: translate3d(170px, -30px, 0); opacity: 0; }
 }
-.anim-fly { animation: dikkiconnect-fly 24s linear infinite; }
+.anim-fly { animation: waypool-fly 24s linear infinite; }
 
 /* Lane dashes rushing toward the viewer */
-@keyframes dikkiconnect-rush {
+@keyframes waypool-rush {
   0%   { transform: translate3d(0, -40px, 0) scale(0.7); opacity: 0; }
   15%  { opacity: 0.55; }
   85%  { opacity: 0.55; }
   100% { transform: translate3d(0, 210px, 0) scale(1.5); opacity: 0; }
 }
-.anim-rush { animation: dikkiconnect-rush var(--dur, 3.4s) linear infinite; }
+.anim-rush { animation: waypool-rush var(--dur, 3.4s) linear infinite; }
 
-@keyframes dikkiconnect-flicker {
+@keyframes waypool-flicker {
   0%, 100% { opacity: 0.5; }
   45%      { opacity: 0.68; }
   72%      { opacity: 0.44; }
 }
-.anim-flicker { animation: dikkiconnect-flicker 5s var(--ease-smooth) infinite; }
+.anim-flicker { animation: waypool-flicker 5s var(--ease-smooth) infinite; }
 
-@keyframes dikkiconnect-roll { to { transform: rotate(360deg); } }
-.anim-roll { animation: dikkiconnect-roll var(--dur, 1.8s) linear infinite; }
+@keyframes waypool-roll { to { transform: rotate(360deg); } }
+.anim-roll { animation: waypool-roll var(--dur, 1.8s) linear infinite; }
 
 /* Stroke reveal for timelines, ticks and route lines */
-@keyframes dikkiconnect-draw { to { stroke-dashoffset: 0; } }
+@keyframes waypool-draw { to { stroke-dashoffset: 0; } }
 .anim-draw {
   stroke-dasharray: var(--len, 100);
   stroke-dashoffset: var(--len, 100);
-  animation: dikkiconnect-draw var(--dur, 0.8s) var(--ease-out-expo) var(--delay, 0s) forwards;
+  animation: waypool-draw var(--dur, 0.8s) var(--ease-out-expo) var(--delay, 0s) forwards;
 }
 
 svg .anim-drift,
@@ -750,7 +824,7 @@ svg .anim-rush {
    overshoot is what makes a tap feel answered rather than merely registered.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-@keyframes dikkiconnect-sheen {
+@keyframes waypool-sheen {
   from { transform: translateX(-130%) skewX(-18deg); }
   to   { transform: translateX(240%) skewX(-18deg); }
 }
@@ -768,7 +842,7 @@ svg .anim-rush {
   transform: translateX(-130%) skewX(-18deg);
   pointer-events: none;
 }
-.sheen-disabled:hover::after { animation: dikkiconnect-sheen 0.9s var(--ease-smooth); }
+.sheen-disabled:hover::after { animation: waypool-sheen 0.9s var(--ease-smooth); }
 
 /* Springy press — replaces the flat `pressable` scale on primary surfaces */
 .springy {
@@ -782,45 +856,45 @@ svg .anim-rush {
 .springy-sm:active { transform: scale(0.94); transition-duration: 0.06s; }
 
 /* Celebratory pop with a real overshoot, for success marks and rewards */
-@keyframes dikkiconnect-boing {
+@keyframes waypool-boing {
   0%   { transform: scale(0.3) rotate(-8deg); opacity: 0; }
   55%  { transform: scale(1.14) rotate(3deg); opacity: 1; }
   75%  { transform: scale(0.95) rotate(-1.5deg); }
   100% { transform: scale(1) rotate(0deg); }
 }
-.anim-boing { animation: dikkiconnect-boing 0.72s var(--ease-smooth) both; }
+.anim-boing { animation: waypool-boing 0.72s var(--ease-smooth) both; }
 
 /* Attention nudge — a wobble that stops, never a loop that nags */
-@keyframes dikkiconnect-wiggle {
+@keyframes waypool-wiggle {
   0%, 100% { transform: rotate(0deg); }
   25%      { transform: rotate(-6deg); }
   50%      { transform: rotate(5deg); }
   75%      { transform: rotate(-3deg); }
 }
-.anim-wiggle { animation: dikkiconnect-wiggle 0.6s var(--ease-smooth) both; }
+.anim-wiggle { animation: waypool-wiggle 0.6s var(--ease-smooth) both; }
 
 /* Value counters and balances landing */
-@keyframes dikkiconnect-rise {
+@keyframes waypool-rise {
   0%   { transform: translate3d(0, 60%, 0); opacity: 0; }
   100% { transform: none; opacity: 1; }
 }
-.anim-rise { animation: dikkiconnect-rise 0.55s var(--ease-out-expo) both; }
+.anim-rise { animation: waypool-rise 0.55s var(--ease-out-expo) both; }
 
 /* Loader — the mark's two arms lighting in sequence, which is the same forward
    motion the launch animation opens with. A branded wait should look like it
    belongs to the brand, not like a borrowed spinner. */
-@keyframes dikkiconnect-chevron {
+@keyframes waypool-chevron {
   0%, 70%, 100% { opacity: 0.22; transform: translateX(0); }
   25%           { opacity: 1;    transform: translateX(1.5px); }
 }
-.anim-chevron { animation: dikkiconnect-chevron 1.25s var(--ease-smooth) infinite; }
+.anim-chevron { animation: waypool-chevron 1.25s var(--ease-smooth) infinite; }
 
 /* The track under it. Travels rather than pulses, so it reads as progress. */
-@keyframes dikkiconnect-track {
+@keyframes waypool-track {
   0%   { transform: translateX(-100%); }
   100% { transform: translateX(300%); }
 }
-.anim-track { animation: dikkiconnect-track 1.15s var(--ease-smooth) infinite; }
+.anim-track { animation: waypool-track 1.15s var(--ease-smooth) infinite; }
 
 /* ═══ Surfaces ═════════════════════════════════════════════════════════════ */
 
@@ -917,7 +991,7 @@ svg .anim-rush {
 /* ── Entrance for anything revealed mid-scroll ─────────────────────────────
    Paired with `.stagger` on a list, or used alone on a single card. Kept as a
    class rather than a framer-motion wrapper so it costs nothing at runtime. */
-@keyframes dikkiconnect-rise {
+@keyframes waypool-rise {
   from {
     opacity: 0;
     transform: translate3d(0, 14px, 0) scale(0.985);
@@ -929,7 +1003,7 @@ svg .anim-rush {
 }
 
 .anim-rise {
-  animation: dikkiconnect-rise 0.5s var(--ease-out-expo) both;
+  animation: waypool-rise 0.5s var(--ease-out-expo) both;
 }
 
 .focus-ring:focus-visible {
@@ -972,10 +1046,23 @@ h4 {
   text-transform: uppercase;
 }
 
+/* `.tabular` makes figures the same width so a fare or a countdown does not
+   shuffle as it ticks. That is its whole job.
+
+   It used to set `letter-spacing: -0.012em` as well, and because this rule is
+   unlayered it beat every layered `tracking-*` utility — so `tabular
+   tracking-title` on a fare silently rendered at -0.012em and the tracking
+   class did nothing at all. The bug was invisible (the two values differ by
+   less than a hundredth of an em) and it disarmed the class on exactly the
+   elements that wanted it: the big numbers.
+
+   The spacing is gone rather than moved. A number in body copy now inherits
+   the body's own tracking, and a number set as a display figure takes
+   whichever `tracking-*` it is given, which is what the class name promised
+   all along. */
 .tabular {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum', 'cv11', 'ss01';
-  letter-spacing: -0.012em;
 }
 
 .truncate-2 {

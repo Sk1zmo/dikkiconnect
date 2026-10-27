@@ -12,7 +12,7 @@ const SLIDES = [
     icon: Lightning,
     eyebrow: 'Same-day, not five-day',
     title: 'Your parcel rides with someone already going there',
-    body: 'Crores of cars drive between cities every day with an empty boot. Stowza matches your parcel to one of them — so Bangalore to Mysore takes hours, not days.',
+    body: 'Crores of cars drive between cities every day with an empty boot. WayPool matches your parcel to one of them — so Bangalore to Mysore takes hours, not days.',
     art: <ArtRoute />,
   },
   {
@@ -231,10 +231,10 @@ function ArtSavings() {
       <text x="212" y="82" fill="#97a3bd" fontSize="11" fontWeight="700">
         2–5 days
       </text>
-      {/* dikkiconnect bar */}
+      {/* waypool bar */}
       <rect x="52" y="112" width="86" height="34" rx="10" fill="#1650e0" />
       <text x="64" y="134" fill="#fff" fontSize="12" fontWeight="800">
-        Stowza · ₹189
+        WayPool · ₹189
       </text>
       <text x="148" y="134" fill="#1650e0" fontSize="11" fontWeight="800">
         Same day

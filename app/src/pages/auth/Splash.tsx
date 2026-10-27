@@ -1,24 +1,32 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight, CheckCircle } from '@phosphor-icons/react'
-import { Logo } from '@/components/brand/Logo'
-import { HeroImage } from '@/components/viz/HeroImage'
+import { LogoMark } from '@/components/brand/Logo'
 import { HeroHeadline } from '@/components/ui'
 import { Screen } from '@/components/layout/Screen'
 import { useApp } from '@/lib/store'
-import { BRAND } from '@/lib/brand'
+import { BRAND, LAUNCH_BG } from '@/lib/brand'
 import { SUCCESS } from '@/lib/copy'
 import { DEMO } from '@/lib/demo'
 
 const EASE = [0.16, 1, 0.3, 1] as const
 
 /**
- * Landing screen. The picture is the whole screen: a hatchback on the highway
- * at dusk, boot open, a suitcase and two parcels riding in it — which is the
- * proposition, drawn once, and the same evening the opening just played in.
- * The name sits in the sky, and the two things you can do sit on a dark scrim
- * at the foot of the road. Nothing is boxed, listed or promised in between;
- * the car is doing that.
+ * Landing screen — a title card.
+ *
+ * This was a full-bleed photograph: a hatchback at dusk, boot open, parcels
+ * inside. It was a good picture and it was doing the wrong job. The first
+ * thing a new person sees should say what the thing is CALLED, and the car
+ * said what it does while the name sat small in a corner of the sky.
+ *
+ * It also fought the opening. The launch animation ends on a navy field with
+ * the mark drawn in the middle of it; the landing then cut to an orange sunset
+ * photograph. Two brand moments in a row, disagreeing.
+ *
+ * So the card continues the opening instead: the same navy, the same glow
+ * behind the same mark, which means the hand-over from the animation is a
+ * settle rather than a cut. The headline and the two things you can do sit
+ * under it. Nothing else.
  *
  * On a cold start this mounts beneath the launch screen (App.tsx) and is
  * already in place by the time that lifts — so the opening dissolves into a
@@ -44,32 +52,45 @@ export default function Splash() {
 
   return (
     <Screen tone="dark" className="relative overflow-hidden">
-      {/* The world. Anchored low so the car stays in frame on a short phone —
-          it is the sky that gives, never the boot. */}
-      <div className="absolute inset-0">
-        <HeroImage focus="bottom" />
-        {/* Two scrims: one for the name at the top, one for the actions at the
-            foot. The middle — the car — is left alone. */}
-        <div className="absolute inset-x-0 top-0 h-[42%] bg-gradient-to-b from-dusk-950/75 via-dusk-950/25 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-[38%] bg-gradient-to-t from-dusk-950/90 via-dusk-950/55 to-transparent" />
-      </div>
+      {/* The exact navy the opening ends on, plus the same wash, so the two
+          are one continuous field rather than two brand moments in a row. */}
+      <div className="absolute inset-0" style={{ background: LAUNCH_BG }} />
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(70% 48% at 50% 34%, rgba(47,107,255,0.30), rgba(7,18,49,0) 72%)',
+        }}
+      />
 
       <div className="relative flex min-h-0 flex-1 flex-col">
-        {/* ── Brand + headline ─────────────────────────────────────────── */}
-        <div className="px-6 pt-safe">
-          <motion.div {...rise(0)} className="pt-5">
-            <Logo size="lg" tone="white" markTone="white" tagline={BRAND.tagline} />
+        {/* ── The card ──────────────────────────────────────── */}
+        <div className="flex flex-1 flex-col items-center justify-center px-7 text-center">
+          <motion.div {...rise(0)}>
+            <LogoMark size={104} tone="white" />
           </motion.div>
 
-          <motion.div {...rise(0.1)} className="mt-8">
+          <motion.h1
+            {...rise(0.08)}
+            className="text-display mt-6 text-[44px] leading-none font-extrabold tracking-[-0.045em] text-white"
+          >
+            {BRAND.name}
+          </motion.h1>
+
+          <motion.p
+            {...rise(0.14)}
+            className="mt-3.5 text-[10.5px] font-bold tracking-[0.34em] text-brand-300 uppercase"
+          >
+            {BRAND.tagline}
+          </motion.p>
+
+          <motion.div {...rise(0.24)} className="mt-11">
             <HeroHeadline lines={['Anything', 'Anywhere']} className="text-[38px]" />
-            <p className="mt-3 max-w-[290px] text-[15px] leading-[1.5] text-white/80">
+            <p className="mx-auto mt-3.5 max-w-[300px] text-[15px] leading-[1.55] text-white/75">
               Your parcel rides in the empty boot of a car already making the trip.
             </p>
           </motion.div>
         </div>
-
-        <div className="min-h-4 flex-1" />
 
         {/* ── Actions ──────────────────────────────────────────────────── */}
         <motion.div {...rise(0.2)} className="pb-safe-6 px-6">

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 import type { ParcelStatus } from '@/lib/types'
 
-type Tone = 'brand' | 'success' | 'warn' | 'danger' | 'neutral' | 'accent' | 'dark'
+type Tone = 'brand' | 'success' | 'warn' | 'danger' | 'neutral' | 'accent' | 'dark' | 'signal'
 
 const TONES: Record<Tone, { chip: string; dot: string }> = {
   brand: { chip: 'bg-brand-50 text-brand-700 ring-brand-100', dot: 'bg-brand-600' },
@@ -12,6 +12,12 @@ const TONES: Record<Tone, { chip: string; dot: string }> = {
   neutral: { chip: 'bg-ink-100 text-ink-600 ring-ink-200', dot: 'bg-ink-400' },
   accent: { chip: 'bg-accent-50 text-accent-600 ring-accent-100', dot: 'bg-accent-500' },
   dark: { chip: 'bg-ink-900 text-white ring-ink-900', dot: 'bg-white' },
+  /* The rationed yellow. Only for things that expire, save money, or are
+     nearly gone — "2 seats left", "₹40 off", "holds for 24h". Used anywhere
+     else it stops meaning urgent and starts meaning decorative, and then it
+     is not available when something genuinely is urgent. Ink on yellow, not
+     white: yellow is a light colour and white type on it fails contrast. */
+  signal: { chip: 'bg-signal-100 text-signal-700 ring-signal-300', dot: 'bg-signal-600' },
 }
 
 export function Badge({

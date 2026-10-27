@@ -59,6 +59,66 @@ export const LOADING: Record<LoadingContext, { line: string; sub?: string }> = {
   photos: { line: 'Uploading the handover photo', sub: 'This is your proof, so we wait for it' },
 }
 
+/* ── Quotes: the line under the mark while you wait ─────────────────────────
+   TIPS teach; these do not. A quote's whole job is to make three hundred
+   milliseconds of nothing feel like part of the product rather than a gap in
+   it, so each one is short enough to finish reading at a glance — nine words
+   is the ceiling — and says something true about how this network works.
+
+   They are grouped by what is being waited for, because a line about shared
+   fuel under a payment spinner is noise. Every loading context maps to a
+   family; the family is chosen at random within itself, so the same wait
+   twice is rarely the same line twice.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+export type QuoteFamily = 'parcel' | 'ride' | 'payment' | 'hub' | 'auth' | 'general'
+
+export const QUOTES: Record<QuoteFamily, string[]> = {
+  parcel: [
+    'Somebody’s boot is already going your way.',
+    'Empty space is the cheapest thing on the road.',
+    'Your parcel is hitching a ride, not booking one.',
+    'One car. Two errands.',
+    'Nothing new is on the road because of you.',
+  ],
+  ride: [
+    'Same road, split fare.',
+    'Four seats. Finally, four people.',
+    'The road is cheaper when it is shared.',
+    'Someone is driving there anyway.',
+  ],
+  payment: [
+    'Money moves slower than parcels.',
+    'Counting it twice, so you don’t have to.',
+    'Banks keep their own hours.',
+  ],
+  hub: [
+    'A shelf, a scan, a signature.',
+    'Every parcel sleeps somewhere.',
+    'Custody is a chain, not a promise.',
+  ],
+  auth: ['Six digits between you and the road.', 'Checking it’s really you.'],
+  general: ['Move more. Together.', 'Store. Travel. Freely.', 'Getting out of your way.'],
+}
+
+/** Which family of quotes a given wait draws from. */
+export const QUOTE_FAMILY: Record<LoadingContext, QuoteFamily> = {
+  app: 'general',
+  screen: 'general',
+  search: 'ride',
+  hubs: 'hub',
+  rides: 'ride',
+  map: 'ride',
+  booking: 'parcel',
+  payment: 'payment',
+  verify: 'auth',
+  code: 'auth',
+  tracking: 'parcel',
+  wallet: 'payment',
+  messages: 'general',
+  photos: 'hub',
+}
+
 /* ── Empty: nothing here, and what would put something here ─────────────── */
 
 export type EmptyKind =

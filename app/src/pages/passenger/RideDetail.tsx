@@ -1,32 +1,21 @@
-import { Navigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import {
   Armchair,
   Car,
   Cigarette,
-  Translate,
   Suitcase,
   ChatCircle,
   MusicNotes,
   PawPrint,
   ShieldCheck,
-  Star,
 } from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
-import {
-  ActionBar,
-  Avatar,
-  Badge,
-  Button,
-  Card,
-  IconButton,
-  Note,
-  Stars,
-  VerifiedChip,
-} from '@/components/ui'
+import { ActionBar, Avatar, Badge, Button, Card, IconButton, Note } from '@/components/ui'
 import { RouteMap } from '@/components/viz/Map'
-import { cityName, travelerById } from '@/lib/data'
+import { cityName } from '@/lib/data'
 import { useTrip } from '@/lib/store'
-import { dayDate, inr, time } from '@/lib/format'
+import { dayDate, inr, relative, time } from '@/lib/format'
+import { leavingSoon, seatsScarce } from '@/lib/scarcity'
 
 const PREFERENCES = [
   { icon: MusicNotes, label: 'Music welcome', ok: true },
@@ -35,31 +24,24 @@ const PREFERENCES = [
   { icon: Suitcase, label: '1 cabin bag each', ok: true },
 ]
 
-const REVIEWS = [
-  {
-    name: 'Rhea Menon',
-    rating: 5,
-    text: 'Left exactly on time and drove really calmly on the highway. Would book again.',
-    when: '2 weeks ago',
-  },
-  {
-    name: 'Vikram S.',
-    rating: 5,
-    text: 'Clean car, good AC, and he waited when my meeting ran late. Very considerate.',
-    when: 'Last month',
-  },
-]
-
 export default function RideDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const trip = useTrip(id)
-  if (!trip) return <Navigate to="/passenger" replace />
+  if (trip === null) return <Navigate to="/passenger" replace />
+  if (!trip) return null
 
-  const driver = travelerById(trip.travelerId)!
   const durationH = (
     (new Date(trip.arriveAt).getTime() - new Date(trip.departAt).getTime()) /
     3_600_000
   ).toFixed(1)
+
+  /* Two things on this screen can actually run out: the seats, and the time
+     left to decide. Everything else here is stable, so those two — and only
+     those two — get the signal yellow. A 90-minute window is the point past
+     which "it leaves later today" stops being useful and becomes a deadline. */
+  const soon = leavingSoon(trip.departAt)
+  const scarce = seatsScarce(trip.seatsLeft)
 
   return (
     <Screen>
@@ -75,9 +57,16 @@ export default function RideDetail() {
       <ScreenBody className="-mt-6 pt-0">
         {/* Timing */}
         <Card elevation={3}>
-          <p className="text-[11.5px] font-bold tracking-wide text-ink-400 uppercase">
-            {dayDate(trip.departAt)}
-          </p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11.5px] font-bold tracking-wide text-ink-400 uppercase">
+              {dayDate(trip.departAt)}
+            </p>
+            {soon && (
+              <Badge tone="signal" size="sm">
+                Leaves {relative(trip.departAt)}
+              </Badge>
+            )}
+          </div>
           <div className="mt-3 flex gap-3.5">
             <span className="mt-1.5 flex flex-col items-center gap-1">
               <span className="size-2.5 rounded-full bg-brand-600 ring-4 ring-brand-600/15" />
@@ -86,7 +75,7 @@ export default function RideDetail() {
             </span>
             <div className="min-w-0 flex-1">
               <div className="mb-3.5">
-                <p className="tabular text-display text-[19px] leading-none font-extrabold text-ink-900">
+                <p className="tabular text-display text-[19px] leading-none font-extrabold tracking-title text-ink-900">
                   {time(trip.departAt)}
                 </p>
                 <p className="mt-1 truncate text-[13px] font-semibold text-ink-700">
@@ -97,77 +86,72 @@ export default function RideDetail() {
                 </p>
               </div>
               <div>
-                <p className="tabular text-display text-[19px] leading-none font-extrabold text-ink-900">
+                <p className="tabular text-display text-[19px] leading-none font-extrabold tracking-title text-ink-900">
                   {time(trip.arriveAt)}
                 </p>
                 <p className="mt-1 truncate text-[13px] font-semibold text-ink-700">
                   {cityName(trip.toCityId)}
                 </p>
                 <p className="truncate text-[11.5px] text-ink-500">
-                  Drop near {trip.viaStops.at(-1) ?? 'city centre'}
+                  {trip.viaStops.length ? `Drop near ${trip.viaStops.at(-1)}` : 'Drop point shared after booking'}
                 </p>
               </div>
             </div>
             <div className="shrink-0 text-right">
-              <p className="tabular text-display text-[24px] leading-none font-extrabold text-brand-700">
+              <p className="tabular text-display text-[26px] leading-none font-extrabold tracking-title text-brand-700">
                 {inr(trip.farePerSeat)}
               </p>
-              <p className="mt-1 text-[10.5px] font-bold text-ink-400">per seat</p>
-              <Badge
-                tone={trip.seatsLeft <= 1 ? 'warn' : 'success'}
-                size="sm"
-                className="mt-2"
-              >
+              <p className="mt-1 text-[11px] font-semibold text-ink-500">per seat</p>
+              <Badge tone={scarce ? 'signal' : 'success'} size="sm" className="mt-2">
                 {trip.seatsLeft} left
               </Badge>
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 border-t border-ink-100 pt-3.5 text-[11.5px] font-semibold text-ink-500">
-            <span>{durationH}h journey</span>
-            <span className="text-ink-300">·</span>
-            <span>via {trip.viaStops.join(' · ')}</span>
+          <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1.5 border-t border-ink-100 pt-3.5 text-[11.5px] font-semibold text-ink-500">
+            <span>
+              <span className="tabular font-extrabold text-ink-700">{durationH}h</span> journey
+            </span>
+            {trip.viaStops.length > 0 && (
+              <>
+                <span className="text-ink-300">·</span>
+                <span>via {trip.viaStops.join(' · ')}</span>
+              </>
+            )}
           </div>
         </Card>
 
         {/* Driver */}
         <Card className="mt-3">
           <div className="flex items-center gap-3.5">
-            <Avatar name={driver.name} size={52} tone={driver.avatarTone} />
+            <Avatar name={trip.travelerName} size={52} />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[16px] font-bold text-ink-900">{driver.name}</p>
-              <div className="mt-1 flex items-center gap-1.5 text-[12.5px] text-ink-500">
-                <Stars value={driver.rating} size={12} />
-                <span className="font-bold text-ink-800">{driver.rating.toFixed(1)}</span>
-                <span className="text-ink-300">·</span>
-                <span>{driver.trips} trips</span>
+              <p className="truncate text-[16px] font-bold text-ink-900">{trip.travelerName}</p>
+            </div>
+            <IconButton
+              icon={<ChatCircle size={17} />}
+              label="Message driver"
+              onClick={() => navigate(`/passenger/messages/${trip.id}`)}
+            />
+          </div>
+
+          {trip.vehicle && (
+            <div className="mt-4 flex items-center gap-3 rounded-(--radius-md) bg-ink-50 p-3.5">
+              <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-white text-ink-700 shadow-(--shadow-e1)">
+                <Car size={18} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13.5px] font-bold text-ink-900">{trip.vehicle.model}</p>
+                <p className="mt-0.5 truncate text-[11.5px] text-ink-500">
+                  {trip.vehicle.colour} · {trip.vehicle.plate}
+                </p>
               </div>
-              <VerifiedChip tier={driver.kycTier} className="mt-2" />
+              <span className="shrink-0 text-[11.5px] font-semibold text-ink-500">
+                <span className="tabular font-extrabold text-ink-700">{trip.vehicle.seats}</span>{' '}
+                seats
+              </span>
             </div>
-            <IconButton icon={<ChatCircle size={17} />} label="Message driver" />
-          </div>
-
-          <div className="mt-4 flex items-center gap-3 rounded-(--radius-md) bg-ink-50 p-3.5">
-            <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-white text-ink-700 shadow-(--shadow-e1)">
-              <Car size={18} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[13.5px] font-bold text-ink-900">
-                {driver.vehicle.model}
-              </p>
-              <p className="mt-0.5 truncate text-[11.5px] text-ink-500">
-                {driver.vehicle.colour} · {driver.vehicle.plate}
-              </p>
-            </div>
-            <span className="shrink-0 text-[11.5px] font-semibold text-ink-500">
-              {driver.vehicle.seats} seats
-            </span>
-          </div>
-
-          <div className="mt-3 flex items-center gap-2 text-[12px] text-ink-500">
-            <Translate size={13} className="shrink-0 text-ink-400" />
-            Speaks {driver.languages.join(', ')}
-          </div>
+          )}
         </Card>
 
         {/* Preferences */}
@@ -201,7 +185,10 @@ export default function RideDetail() {
               Seat availability
             </p>
             <span className="text-[11.5px] font-semibold text-ink-500">
-              {trip.seatsTotal - trip.seatsLeft} booked
+              <span className="tabular font-extrabold text-ink-700">
+                {trip.seatsTotal - trip.seatsLeft}
+              </span>{' '}
+              booked
             </span>
           </div>
           <div className="flex gap-2">
@@ -210,7 +197,7 @@ export default function RideDetail() {
               return (
                 <div
                   key={i}
-                  className={`flex flex-1 flex-col items-center gap-1.5 rounded-(--radius-sm) py-3 ${
+                  className={`flex min-h-12 flex-1 flex-col items-center justify-center gap-1.5 rounded-(--radius-md) py-3 ${
                     taken ? 'bg-ink-100 text-ink-400' : 'bg-brand-50 text-brand-600'
                   }`}
                 >
@@ -222,32 +209,6 @@ export default function RideDetail() {
           </div>
         </Card>
 
-        {/* Reviews */}
-        <Card className="mt-3">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-[12px] font-bold tracking-wide text-ink-400 uppercase">
-              Recent reviews
-            </p>
-            <span className="inline-flex items-center gap-1 text-[12.5px] font-bold text-ink-800">
-              <Star size={12} className="fill-warn-500 text-warn-500" />
-              {driver.rating.toFixed(1)}
-            </span>
-          </div>
-          <div className="flex flex-col gap-3.5">
-            {REVIEWS.map((r) => (
-              <div key={r.name} className="border-b border-ink-100 pb-3.5 last:border-0 last:pb-0">
-                <div className="flex items-center gap-2.5">
-                  <Avatar name={r.name} size={28} />
-                  <p className="flex-1 truncate text-[13px] font-bold text-ink-900">{r.name}</p>
-                  <span className="shrink-0 text-[11px] text-ink-400">{r.when}</span>
-                </div>
-                <Stars value={r.rating} size={11} className="mt-1.5" />
-                <p className="mt-1.5 text-[12.5px] leading-[1.55] text-ink-600">{r.text}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
-
         <Note tone="neutral" icon={<ShieldCheck size={15} />} className="mt-3" title="Safety">
           Live trip sharing with an emergency contact is on by default, and an SOS button is one tap
           away for the whole ride.
@@ -256,9 +217,9 @@ export default function RideDetail() {
 
       <ActionBar
         helper={
-          <div className="flex items-baseline justify-between">
-            <span className="text-[12px] font-semibold text-ink-500">Cost share per seat</span>
-            <span className="tabular text-display text-[22px] font-extrabold text-ink-900">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[11.5px] font-semibold text-ink-500">Cost share per seat</span>
+            <span className="tabular text-display text-[22px] font-extrabold tracking-title text-ink-900">
               {inr(trip.farePerSeat)}
             </span>
           </div>

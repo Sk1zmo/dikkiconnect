@@ -61,6 +61,53 @@ export const cityCoord = (cityId: string): LngLat => CITY_COORDS[cityId] ?? CITY
 export const hubCoord = (hubId: string, fallbackCity = 'blr'): LngLat =>
   HUB_COORDS[hubId] ?? cityCoord(fallbackCity)
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Where the map data comes from.
+
+   Three services answer every geographic question this app asks: a tile
+   server draws the map, a geocoder turns typed addresses into coordinates,
+   and a routing engine turns two coordinates into a distance and a drive
+   time. Today all three are free community endpoints, and two of them are
+   not licensed for production use:
+
+     · Nominatim caps request rates and expects an identifying User-Agent.
+       A real app's traffic gets blocked, and address search is the first
+       thing a booking does.
+     · router.project-osrm.org is OSRM's public DEMO server. The project
+       documents it as demo-only, with no uptime promise.
+
+   They are kept as the default because they work and need no account. What
+   changed here is that the endpoints are no longer hard-coded: set the three
+   environment variables below and the app points at a licensed provider
+   without a code change. Ola Maps is the intended destination — it serves
+   India, covers geocoding, directions and tiles, and its free allowance is
+   far above anything this app will use in its pilot.
+
+   To switch, set in `.env`:
+     VITE_MAP_TILES   full style URL, or leave unset for OpenFreeMap
+     VITE_GEOCODE_URL base URL of a Nominatim-compatible search endpoint
+     VITE_ROUTING_URL base URL of an OSRM-compatible routing endpoint
+     VITE_MAPS_KEY    appended as ?api_key= when the provider needs one
+
+   A provider whose response shape differs from Nominatim/OSRM needs an
+   adapter in the two parse functions below — the URLs move for free, the
+   parsing does not.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const env = import.meta.env
+
+/** Appended to provider calls when a key is configured; empty otherwise. */
+export const MAPS_KEY: string = (env.VITE_MAPS_KEY as string | undefined) ?? ''
+const keyParam = (sep: '?' | '&') => (MAPS_KEY ? `${sep}api_key=${encodeURIComponent(MAPS_KEY)}` : '')
+
+const GEOCODE_BASE: string =
+  (env.VITE_GEOCODE_URL as string | undefined) ?? 'https://nominatim.openstreetmap.org'
+const ROUTING_BASE: string =
+  (env.VITE_ROUTING_URL as string | undefined) ?? 'https://router.project-osrm.org'
+
+/** True when the app is pointed at a licensed provider rather than the free ones. */
+export const MAPS_LICENSED = Boolean(env.VITE_GEOCODE_URL && env.VITE_ROUTING_URL)
+
 /* ── Basemap ─────────────────────────────────────────────────────────────── */
 
 /**
@@ -68,10 +115,11 @@ export const hubCoord = (hubId: string, fallbackCity = 'blr'): LngLat =>
  * `positron` reads as a quiet neutral canvas so route lines and pins stay the
  * loudest thing on screen; `dark` matches the navigation and tracking screens.
  */
+const TILE_OVERRIDE = env.VITE_MAP_TILES as string | undefined
 export const MAP_STYLE = {
-  light: 'https://tiles.openfreemap.org/styles/positron',
-  dark: 'https://tiles.openfreemap.org/styles/dark',
-  bright: 'https://tiles.openfreemap.org/styles/bright',
+  light: TILE_OVERRIDE ?? 'https://tiles.openfreemap.org/styles/positron',
+  dark: TILE_OVERRIDE ?? 'https://tiles.openfreemap.org/styles/dark',
+  bright: TILE_OVERRIDE ?? 'https://tiles.openfreemap.org/styles/bright',
 } as const
 
 /* ── Routing ─────────────────────────────────────────────────────────────── */
@@ -96,9 +144,9 @@ export async function fetchRoute(from: LngLat, to: LngLat): Promise<Route | null
 
   try {
     const url =
-      `https://router.project-osrm.org/route/v1/driving/` +
+      `${ROUTING_BASE}/route/v1/driving/` +
       `${from.lng},${from.lat};${to.lng},${to.lat}` +
-      `?overview=full&geometries=geojson`
+      `?overview=full&geometries=geojson` + keyParam('&')
     const res = await fetch(url)
     if (!res.ok) throw new Error(String(res.status))
     const json = await res.json()
@@ -143,8 +191,9 @@ export async function geocode(query: string, limit = 5): Promise<Place[]> {
 
   try {
     const url =
-      `https://nominatim.openstreetmap.org/search?` +
-      `q=${encodeURIComponent(q)}&format=jsonv2&limit=${limit}&countrycodes=in&addressdetails=1`
+      `${GEOCODE_BASE}/search?` +
+      `q=${encodeURIComponent(q)}&format=jsonv2&limit=${limit}&countrycodes=in&addressdetails=1` +
+      keyParam('&')
     const res = await fetch(url, { headers: { Accept: 'application/json' } })
     if (!res.ok) throw new Error(String(res.status))
     const json = (await res.json()) as Array<{
@@ -171,8 +220,8 @@ export async function geocode(query: string, limit = 5): Promise<Place[]> {
 export async function reverseGeocode(at: LngLat): Promise<string | null> {
   try {
     const url =
-      `https://nominatim.openstreetmap.org/reverse?` +
-      `lat=${at.lat}&lon=${at.lng}&format=jsonv2&addressdetails=1`
+      `${GEOCODE_BASE}/reverse?` +
+      `lat=${at.lat}&lon=${at.lng}&format=jsonv2&addressdetails=1` + keyParam('&')
     const res = await fetch(url, { headers: { Accept: 'application/json' } })
     if (!res.ok) return null
     const json = await res.json()
@@ -285,8 +334,8 @@ export async function roadMatrix(from: LngLat, tos: LngLat[]): Promise<Leg[] | n
   try {
     const points = [from, ...tos].map((p) => `${p.lng},${p.lat}`).join(';')
     const url =
-      `https://router.project-osrm.org/table/v1/driving/${points}` +
-      `?sources=0&annotations=distance,duration`
+      `${ROUTING_BASE}/table/v1/driving/${points}` +
+      `?sources=0&annotations=distance,duration` + keyParam('&')
 
     const res = await fetch(url)
     if (!res.ok) throw new Error(String(res.status))

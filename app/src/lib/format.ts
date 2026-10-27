@@ -88,9 +88,13 @@ export function phone(raw: string) {
 }
 
 export function maskPhone(raw: string) {
+  /* A number is optional on an account now, and an empty string rendered into
+     a field labelled "Mobile" reads as a broken screen rather than as nothing
+     having been entered. Saying so is the formatter's job here. */
+  if (!raw || !raw.trim()) return 'Not added'
   const digits = raw.replace(/\D/g, '').slice(-10)
   if (digits.length !== 10) return raw
-  return `+91 ${digits.slice(0, 2)}••• ••${digits.slice(8)}`
+  return `+91 ${digits.slice(0, 2)}•• ••${digits.slice(8)}`
 }
 
 export function kg(weight: number) {

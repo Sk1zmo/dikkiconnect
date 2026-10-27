@@ -1,11 +1,12 @@
-# Stowza
+# WayPool
 
-Intercity parcel delivery using the empty **dikki** (boot) space of cars already
-making the trip — plus cost-shared carpooling on the same driver network.
-Built from `PRD_Stowza.pdf`; MVP corridor is **Bangalore ↔ Mysore**.
+Intercity parcel delivery in the empty boot space of cars already making the
+trip — plus cost-shared carpooling on the same driver network. MVP corridor is
+**Bangalore ↔ Mysore**. (The original brief, `PRD_DikkiConnect.pdf`, is named
+for the product's first name; *dikki* is the boot of a car.)
 
-This is a complete, working front end: 59 routes, five roles, real loading and
-empty states, and a desktop ops console.
+Five roles across 59 routes, a desktop ops console, and a server that owns
+pricing, custody and the hand-off codes — see `api/`.
 
 ## Run it
 
@@ -31,8 +32,8 @@ Writes `demo-out/`:
 
 | File | What it's for |
 | --- | --- |
-| `Stowza-demo.html` | One self-contained file, ~1.2 MB. Double-click, works offline, nothing to install. Email or WhatsApp it. Uses hash URLs (`#/sender`) since it runs off disk. |
-| `Stowza-demo-site.zip` | The hosted version. Unzip and drag the folder onto [app.netlify.com/drop](https://app.netlify.com/drop) for a public link — best for phones. Clean URLs, installable to a home screen. |
+| `WayPool-demo.html` | One self-contained file, ~1.2 MB. Double-click, works offline, nothing to install. Email or WhatsApp it. Uses hash URLs (`#/sender`) since it runs off disk. |
+| `WayPool-demo-site.zip` | The hosted version. Unzip and drag the folder onto [app.netlify.com/drop](https://app.netlify.com/drop) for a public link — best for phones. Clean URLs, installable to a home screen. |
 | `HOW-TO-VIEW.txt` | A short note for whoever receives it. |
 
 Connecting a git repo to Netlify/Vercel also works — `netlify.toml` and

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/cn'
-import { MARK_DOT, MARK_PATH } from '@/components/brand/Logo'
+import { MARK_PATH, MARK_STROKE } from '@/components/brand/Logo'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    State art — one small world for every moment nothing is happening.
@@ -8,7 +8,7 @@ import { MARK_DOT, MARK_PATH } from '@/components/brand/Logo'
    Every empty, error, offline and not-found screen draws the same place: a
    pale sky, a road running to the right, the low sun that was setting in the
    opening. What changes is what is on the road. So a screen with nothing on
-   it still looks like Stowza, and a person who has seen one of these knows
+   it still looks like WayPool, and a person who has seen one of these knows
    how to read the next.
 
    Drawn flat, on a 220 × 140 stage, with one or two things that move (a bob,
@@ -116,8 +116,14 @@ function Mark({ x, y, size = 18 }: { x: number; y: number; size?: number }) {
   const k = size / 48
   return (
     <g transform={`translate(${x - size / 2} ${y - size / 2}) scale(${k})`}>
-      <path d={MARK_PATH} fill="none" stroke="url(#sa-mark)" strokeWidth="7.5" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={MARK_DOT.cx} cy={MARK_DOT.cy} r={MARK_DOT.r} fill="#3a68f5" />
+      <path
+        d={MARK_PATH}
+        fill="none"
+        stroke="url(#sa-mark)"
+        strokeWidth={MARK_STROKE}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </g>
   )
 }

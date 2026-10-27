@@ -35,7 +35,7 @@ const FAQS = [
     cat: 'parcels',
   },
   {
-    q: 'How is Stowza cheaper than a courier?',
+    q: 'How is WayPool cheaper than a courier?',
     a: 'The boot space was travelling to your destination city anyway. We are not paying for a dedicated vehicle or a hub-and-spoke sorting network — just a handling fee to two hub partners and a share to the driver. That is why the same parcel costs roughly half of a standard courier and arrives the same or next day.',
     cat: 'payments',
   },
@@ -46,12 +46,12 @@ const FAQS = [
   },
   {
     q: 'Is my parcel insured?',
-    a: 'Stowza Protect covers up to ₹5,000 declared value against loss or damage in transit for ₹25 per parcel. That cap is a deliberate pilot limit while we build out insurance partnerships — do not send anything worth more than that yet.',
+    a: 'WayPool Protect covers up to ₹5,000 declared value against loss or damage in transit for ₹25 per parcel. That cap is a deliberate pilot limit while we build out insurance partnerships — do not send anything worth more than that yet.',
     cat: 'payments',
   },
   {
-    q: 'Is carpooling on Stowza legal?',
-    a: 'Stowza rides are structured as cost-sharing: riders contribute to fuel and tolls on a trip the driver is already making. Drivers are not commercial operators and fares are capped at cost, which is what keeps this inside the Motor Vehicles Act carpooling exemption in Karnataka.',
+    q: 'Is carpooling on WayPool legal?',
+    a: 'WayPool rides are structured as cost-sharing: riders contribute to fuel and tolls on a trip the driver is already making. Drivers are not commercial operators and fares are capped at cost, which is what keeps this inside the Motor Vehicles Act carpooling exemption in Karnataka.',
     cat: 'rides',
   },
   {
@@ -61,7 +61,7 @@ const FAQS = [
   },
   {
     q: 'When do I get paid as a driver?',
-    a: 'Parcel payouts credit to your Stowza wallet the moment the destination hub confirms drop-off. Seat fares credit at trip completion. Wallet balance transfers to your bank every Monday, or instantly for a 1% fee.',
+    a: 'Parcel payouts credit to your WayPool wallet the moment the destination hub confirms drop-off. Seat fares credit at trip completion. Wallet balance transfers to your bank every Monday, or instantly for a 1% fee.',
     cat: 'driving',
   },
   {
@@ -111,10 +111,13 @@ export default function HelpCenter() {
                     key={c.id}
                     onClick={() => setCategory(active ? null : c.id)}
                     className={cn(
-                      'pressable flex flex-col items-center gap-2 rounded-(--radius-lg) border-2 bg-white px-2 py-4 transition-all',
-                      active
-                        ? 'border-brand-600 bg-brand-50/60 shadow-(--shadow-brand-sm)'
-                        : 'border-ink-200',
+                      /* --radius-tile is the token named for exactly this: a
+                         category tile. Selection is a ring rather than a wash,
+                         because the icon square already flips to solid brand
+                         when a topic is picked and two tints on one tile made
+                         the grid read as busier than six words deserve. */
+                      'pressable flex flex-col items-center gap-2 rounded-(--radius-tile) border bg-white px-2 py-4 transition-all',
+                      active ? 'border-transparent ring-2 ring-brand-600' : 'border-ink-200',
                     )}
                   >
                     <span

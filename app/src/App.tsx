@@ -5,11 +5,9 @@ import { AppProvider, useApp } from '@/lib/store'
 import { AuthProvider, useAuth } from '@/lib/auth'
 import { BootProvider } from '@/lib/boot'
 import { DEMO } from '@/lib/demo'
-import { DemoBadge } from '@/components/brand/DemoBadge'
 import { LaunchScreen } from '@/components/brand/LaunchScreen'
 import { Maintenance } from '@/components/layout/Maintenance'
 import { LiveAlerts } from '@/components/layout/LiveAlerts'
-import { PIXEL_WIPE_MID_MS, playPixelWipe } from '@/components/layout/PixelWipe'
 import { initPush } from '@/lib/push'
 import { useMaintenance } from '@/lib/maintenance'
 import { ToastProvider } from '@/components/ui'
@@ -43,6 +41,7 @@ const DropOffQr = lazy(() => import('@/pages/sender/DropOffQr'))
 const TravelerHome = lazy(() => import('@/pages/traveler/Home'))
 const TravelerTrips = lazy(() => import('@/pages/traveler/Trips'))
 const CreateTrip = lazy(() => import('@/pages/traveler/CreateTrip'))
+const TripManifest = lazy(() => import('@/pages/traveler/TripManifest'))
 const TravelerJobs = lazy(() => import('@/pages/traveler/Jobs'))
 const JobDetail = lazy(() => import('@/pages/traveler/JobDetail'))
 const TravelerScan = lazy(() => import('@/pages/traveler/Scan'))
@@ -90,17 +89,26 @@ const Ops = lazy(() => import('@/pages/common/Ops'))
    the shell and the gate for the plainer reason that there is no account to
    check and no phone frame to sit in. */
 const Download = lazy(() => import('@/pages/common/Download'))
+const DeleteAccount = lazy(() => import('@/pages/common/DeleteAccount'))
 
 export default function App() {
   /* Both of these render full-width, outside the device shell: one is read on
      a laptop, the other by somebody deciding whether to install at all. */
-  const bare = ['/ops', '/download'].some((p) => location.pathname.startsWith(p))
+  /* Pages that render on their own, outside the phone shell and outside the
+     auth wall. `/delete-account` is here because Google Play requires the
+     deletion URL to work for someone who has already uninstalled the app —
+     which means it cannot sit behind a sign-in, and should not open inside a
+     simulated phone frame on a laptop. */
+  const bare = ['/ops', '/download', '/delete-account'].some((p) =>
+    location.pathname.startsWith(p),
+  )
   if (bare) {
     return (
       <Suspense fallback={null}>
         <Routes>
           <Route path="/ops" element={<Ops />} />
           <Route path="/download" element={<Download />} />
+          <Route path="/delete-account" element={<DeleteAccount />} />
         </Routes>
       </Suspense>
     )
@@ -109,7 +117,6 @@ export default function App() {
   return (
     <AuthProvider>
       <AppProvider>
-        <DemoBadge />
         <DeviceShell>
         <Launch>
         <ToastProvider>
@@ -157,6 +164,7 @@ export default function App() {
               <Route path="/traveler/jobs" element={<TravelerJobs />} />
               <Route path="/traveler/jobs/:id" element={<JobDetail />} />
               <Route path="/traveler/trips/new" element={<CreateTrip />} />
+              <Route path="/traveler/trips/:id" element={<TripManifest />} />
               <Route path="/traveler/handoff/:mode" element={<HandoffOtp />} />
               <Route path="/traveler/navigate" element={<Navigate2 />} />
               <Route path="/traveler/kyc" element={<TravelerKyc />} />
@@ -229,12 +237,10 @@ function Launch({ children }: { children: ReactNode }) {
   const [settled, setSettled] = useState(false)
   const [done, setDone] = useState(false)
   const settle = useCallback(() => setSettled(true), [])
-  /* The opening leaves through the pixel wipe: ask for one, and unmount the
-     screen at its midpoint, when the frame is fully covered. */
-  const finish = useCallback(() => {
-    playPixelWipe()
-    setTimeout(() => setDone(true), PIXEL_WIPE_MID_MS)
-  }, [])
+  /* The opening leaves by dissolving into the app underneath it — the fade
+     lives on LaunchScreen's own exit, so unmounting it is all that happens
+     here and AnimatePresence carries the rest. */
+  const finish = useCallback(() => setDone(true), [])
   const maintenance = useMaintenance()
   const navigate = useNavigate()
 

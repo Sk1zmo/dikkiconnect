@@ -60,8 +60,10 @@ export default function Signup() {
   const submit = () => {
     const next: typeof errors = {}
     if (name.trim().length < 2) next.name = 'Enter your full name'
-    if (!/^[6-9]\d{9}$/.test(digits)) {
-      next.phone = digits ? 'That doesn’t look like a mobile number' : 'Enter your mobile number'
+    /* The number is optional for the beta, but a number that IS typed has to
+       be real — a half-entered one on a parcel is worse than none at all. */
+    if (digits && !/^[6-9]\d{9}$/.test(digits)) {
+      next.phone = 'That doesn’t look like a mobile number'
     }
     setErrors(next)
     if (Object.keys(next).length) return
@@ -81,7 +83,7 @@ export default function Signup() {
       setRole(role)
       toast.success(
         'Account created',
-        `Welcome to Stowza, ${result.account.name.split(' ')[0]}.`,
+        `Welcome to WayPool, ${result.account.name.split(' ')[0]}.`,
       )
       navigate('/auth/role', { replace: true })
     })()
@@ -96,8 +98,8 @@ export default function Signup() {
           Almost there
         </h1>
         <p className="mt-2 text-[14px] leading-[1.55] text-ink-500">
-          <span className="font-bold text-ink-800">{identifier}</span> is verified. Two more things:
-          the name that goes on your parcels and rides, and a number somebody can call at the door.
+          <span className="font-bold text-ink-800">{identifier}</span> is verified. One more
+          thing: the name that goes on your parcels and rides.
         </p>
 
         <div className="mt-7 flex flex-col gap-4">
@@ -114,15 +116,24 @@ export default function Signup() {
             prefix={<UserCircle size={15} />}
           />
 
+          {/* Optional for the beta.
+
+              It was required, which put a second thing to type in front of a
+              tester before they had seen a single screen — and bought nothing,
+              because the sign-in code goes to the email either way. It is kept
+              rather than removed because a hub ringing a sender about a parcel
+              is a real need, and because a number still signs you in without
+              typing an address. */}
           <Field
             label="Mobile number"
+            optional
             placeholder="10-digit number"
             inputMode="numeric"
             autoComplete="tel"
             maxLength={11}
             value={phone}
             error={errors.phone}
-            hint="For delivery contact — and it signs you in without typing your email."
+            hint="Only used if a hub needs to reach you about a parcel. You can add it later."
             onChange={(e) => {
               setPhone(e.target.value.replace(/[^\d ]/g, ''))
               setErrors((x) => ({ ...x, phone: undefined }))
@@ -139,6 +150,10 @@ export default function Signup() {
         <p className="mt-7 mb-3 text-[12px] font-bold tracking-wide text-ink-400 uppercase">
           What brings you here?
         </p>
+        {/* Selected is a brand ring, not a brand wash — the icon square already
+            flips to brand-600 when a tile is picked, and two tints on the same
+            object made the grid read as noisier than a four-way choice is. Same
+            rule as the role picker on the next screen. */}
         <div className="grid grid-cols-2 gap-2.5">
           {ROLES.map((r) => {
             const active = role === r.id
@@ -148,9 +163,9 @@ export default function Signup() {
                 key={r.id}
                 onClick={() => setChosenRole(r.id)}
                 className={cn(
-                  'springy focus-ring rounded-(--radius-md) border-2 bg-white p-3.5 text-left',
+                  'springy focus-ring rounded-(--radius-md) border bg-white p-4 text-left',
                   active
-                    ? 'border-brand-600 bg-brand-50/60 shadow-(--shadow-brand-sm)'
+                    ? 'border-transparent ring-2 ring-brand-600'
                     : 'border-ink-200 hover:border-ink-300',
                 )}
               >

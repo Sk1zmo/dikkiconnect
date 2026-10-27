@@ -215,8 +215,15 @@ export default function BookHub() {
         </Card>
 
         <div className="mb-3 flex items-center justify-between gap-3">
-          <p className="text-[12px] font-bold tracking-wide text-ink-400 uppercase">
-            {ranked.length} counter{ranked.length === 1 ? '' : 's'} in {cityName(sideCityId)}
+          {/* How many counters there are is the answer this section gives, so it
+              leads the header and the rest of the line labels it. */}
+          <p className="flex items-baseline gap-1.5">
+            <span className="tabular text-[16px] leading-none font-extrabold tracking-title text-ink-900">
+              {ranked.length}
+            </span>
+            <span className="text-[11.5px] font-bold tracking-wide text-ink-400 uppercase">
+              counter{ranked.length === 1 ? '' : 's'} in {cityName(sideCityId)}
+            </span>
           </p>
           <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-ink-500">
             {refining ? (

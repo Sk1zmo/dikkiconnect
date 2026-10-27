@@ -14,15 +14,21 @@ import {
 import { PhotoCapture } from '@/components/viz/Scanner'
 import { Confetti } from '@/components/viz/Illustrations'
 import { LottieMark } from '@/components/brand/LottieMark'
-import { categoryById, hubById, jobFromParcel, otpFor } from '@/lib/data'
+import { categoryById, hubById, jobFromParcel } from '@/lib/data'
 import { inr, kg } from '@/lib/format'
 import { useApp, useManifest, useMe, useOpenJobs } from '@/lib/store'
-import { useOtpGate } from '@/lib/otp'
+import { useCustodyCode, useCustodyGate } from '@/lib/custody'
+import { parcels as parcelsApi } from '@/lib/api'
 import { OtpHelper } from '@/components/domain/OtpHelper'
-import { CategoryIcon } from '@/components/domain/CategoryIcon'
+import { CategoryMark } from '@/components/domain/CategoryIcon'
 
 
-type Stage = 'otp' | 'photos' | 'done'
+/* Photographs first. The server verifies the code and advances custody in one
+   call, with the shots attached, so there is no moment where a code has been
+   accepted but nothing has moved — and no way to take the pictures after the
+   fact. It is also the better order in a hub doorway: photograph the box while
+   you are holding it, then read six digits off someone else's phone. */
+type Stage = 'photos' | 'otp' | 'done'
 
 /**
  * Custody checkpoints 2 and 3 (PRD §6).
@@ -36,7 +42,7 @@ export default function HandoffOtp() {
   const toast = useToast()
 
   const isPickup = mode !== 'dropoff'
-  const { advanceParcel, earn, parcels } = useApp()
+  const { adoptParcel, earn, parcels } = useApp()
 
   // Pickup works on the parcel this driver has just claimed; drop-off on the
   // one they are currently carrying. Both come from the shared ledger, so the
@@ -47,19 +53,27 @@ export default function HandoffOtp() {
   const parcel = (isPickup ? claimed ?? openFallback : carrying ?? claimed) ?? parcels[0]
   const job = parcel ? jobFromParcel(parcel) : null
 
-  const [stage, setStage] = useState<Stage>('otp')
+  const [stage, setStage] = useState<Stage>('photos')
   const [code, setCode] = useState('')
-  const [verifying, setVerifying] = useState(false)
-  const [shots, setShots] = useState(0)
+  const [checkingHub, setCheckingHub] = useState(false)
+  const [photoIds, setPhotoIds] = useState<string[]>([])
+  const shots = photoIds.length
 
   // Hub drop-off is the one checkpoint the driver SHOWS rather than types —
   // the hub manager keys it in. Everywhere else the driver types.
   const p2pRoute = parcel?.mode === 'p2p'
   const entersCode = isPickup || p2pRoute
-  const expected = otpFor(
-    (job?.parcelId ?? '') + (isPickup ? 'pick' : p2pRoute ? 'recv' : 'drop'),
-  )
-  const gate = useOtpGate(expected)
+
+  /* Which of the four checkpoints this screen is standing at. Taking custody
+     is `handoff` either way; letting go of it is `deliver` to a person and
+     `arrive` at a hub, and those are different events in the record. */
+  const checkpoint = isPickup ? 'handoff' : p2pRoute ? 'deliver' : 'arrive'
+
+  const gate = useCustodyGate(parcel?.id, checkpoint, photoIds)
+  /* The hub drop-off code is issued to the driver, because at that checkpoint
+     the driver is the one holding the parcel. It is only asked for when that
+     screen is actually showing. */
+  const shown = useCustodyCode(parcel?.id, 'arrive', !entersCode && stage === 'otp')
 
   if (!parcel || !job) return <Navigate to="/traveler/jobs" replace />
 
@@ -74,38 +88,46 @@ export default function HandoffOtp() {
       ? "the receiver's collection screen"
       : "the destination hub's intake screen"
 
-  const verify = (value: string) => {
-    if (value.length < 6 || verifying) return
-    setVerifying(true)
-    setTimeout(() => {
-      setVerifying(false)
-      if (!gate.check(value)) {
-        setCode('')
-        toast.error('Incorrect OTP', `Ask ${isP2P ? 'them' : 'the hub manager'} to read it again.`)
-        return
-      }
-      setStage('photos')
-      toast.success('Custody verified', 'Now capture photo evidence.')
-    }, 900)
+  /** Code plus photographs, in one request. The server decides. */
+  const verify = async (value: string) => {
+    if (value.length < 6 || gate.submitting || !job) return
+    const moved = await gate.submit(value)
+    if (!moved) {
+      setCode('')
+      toast.error('Hand-off not accepted', gate.error ?? 'Ask them to read the code again.')
+      return
+    }
+    adoptParcel(moved)
+    if (!isPickup) earn(job.payout, 'Delivery payout credited', `${job.parcelId} · handed over`)
+    setStage('done')
+    toast.success('Custody recorded', isPickup ? 'The parcel is yours.' : 'Hand-off complete.')
   }
 
-  /** Photo evidence captured — write the handoff to the shared ledger. */
-  const commit = () => {
-    if (isPickup) {
-      advanceParcel(job.parcelId, 'in_transit', {
-        actor: ME.name,
-        location: isP2P ? job.fromLabel : hub?.name,
-        photos: shots,
-      })
-    } else {
-      advanceParcel(job.parcelId, isP2P ? 'delivered' : 'at_destination_hub', {
-        actor: ME.name,
-        location: isP2P ? job.toLabel : hub?.name,
-        photos: shots,
-      })
+  /* The hub drop-off is the hub's call to make: they type the code into their
+     own device and the server moves the parcel. This asks the server whether
+     that happened rather than taking the driver's word for it — a driver who
+     tapped "continue" on the kerb used to mark the parcel arrived at a hub
+     that had never seen it. */
+  const confirmHubTookIt = async () => {
+    if (!job) return
+    setCheckingHub(true)
+    try {
+      const { parcel: latest } = await parcelsApi.one(job.parcelId)
+      if (latest.status !== 'at_destination_hub') {
+        toast.error(
+          'Not confirmed yet',
+          'The hub has not accepted it. Wait for them to enter the code.',
+        )
+        return
+      }
+      adoptParcel(latest)
       earn(job.payout, 'Delivery payout credited', `${job.parcelId} · handed over`)
+      setStage('done')
+    } catch {
+      toast.error('Could not check', 'No connection. Nothing has been recorded.')
+    } finally {
+      setCheckingHub(false)
     }
-    setStage('done')
   }
 
   /* ── Success ─────────────────────────────────────────────────────────── */
@@ -129,9 +151,7 @@ export default function HandoffOtp() {
 
           <Card className="mt-8">
             <div className="flex items-center gap-3">
-              <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-[20px]">
-                <CategoryIcon id={cat.id} />
-              </span>
+              <CategoryMark id={cat.id} size={44} />
               <div className="min-w-0 flex-1">
                 <p className="tabular truncate text-[14px] font-bold text-ink-900">
                   {job.parcelId}
@@ -182,16 +202,18 @@ export default function HandoffOtp() {
   if (stage === 'photos') {
     return (
       <Screen tone="white">
-        <TopBar back={false} title="Photo evidence" subtitle={`${shots} of 3 captured`} />
+        <TopBar back title="Photo evidence" subtitle={`${shots} of 3 captured`} />
         <div className="flex flex-1 flex-col px-5 pb-4">
           <p className="mb-3 text-[13px] leading-relaxed text-ink-500">
             Capture the parcel from three angles. These protect both you and the sender if there is
             ever a dispute.
           </p>
           <PhotoCapture
-            shots={shots}
+            photoIds={photoIds}
             required={3}
-            onCapture={() => setShots((s) => s + 1)}
+            onStored={(pid) => setPhotoIds((ids) => [...ids, pid])}
+            parcelId={job.parcelId}
+            checkpoint={checkpoint}
             className="flex-1"
           />
         </div>
@@ -200,10 +222,10 @@ export default function HandoffOtp() {
             block
             size="lg"
             disabled={shots < 3}
-            onClick={commit}
+            onClick={() => setStage('otp')}
             icon={<Camera size={18} />}
           >
-            {shots < 3 ? `Capture ${3 - shots} more` : 'Confirm handoff'}
+            {shots < 3 ? `Capture ${3 - shots} more` : 'Continue to the code'}
           </Button>
         </ActionBar>
       </Screen>
@@ -221,10 +243,8 @@ export default function HandoffOtp() {
 
       <ScreenBody>
         <Card className="mb-6">
-          <div className="flex items-center gap-3">
-            <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-ink-700">
-              <CategoryIcon id={cat.id} />
-            </span>
+          <div className="flex min-h-12 items-center gap-3">
+            <CategoryMark id={cat.id} size={44} />
             <div className="min-w-0 flex-1">
               <p className="tabular truncate text-[14.5px] font-extrabold text-ink-900">
                 {job.parcelId}
@@ -233,9 +253,15 @@ export default function HandoffOtp() {
                 {cat.label} · size {job.size} · {kg(job.weightKg)}
               </p>
             </div>
-            <p className="tabular shrink-0 text-[15px] font-extrabold text-success-600">
-              +{inr(job.payout)}
-            </p>
+            {/* What this handover is worth, with the word under it rather than
+                beside it — the figure has to survive being read at arm's length
+                at a hub counter. */}
+            <div className="shrink-0 text-right">
+              <p className="tabular text-[17px] leading-none font-extrabold tracking-title text-success-600">
+                +{inr(job.payout)}
+              </p>
+              <p className="mt-1 text-[11px] font-semibold text-ink-500">payout</p>
+            </div>
           </div>
         </Card>
 
@@ -258,7 +284,7 @@ export default function HandoffOtp() {
               <OtpInput
                 value={code}
                 onChange={setCode}
-                onComplete={verify}
+                onComplete={(v) => void verify(v)}
                 error={Boolean(gate.error)}
                 disabled={gate.locked}
               />
@@ -281,7 +307,15 @@ export default function HandoffOtp() {
             </p>
 
             <Card className="mt-7 border-brand-100 bg-brand-50/60">
-              <OtpDisplay code={expected} label="Drop-off OTP" />
+              <OtpDisplay
+                code={shown.loading ? '——————' : (shown.code ?? '——————')}
+                label="Drop-off OTP"
+              />
+              {shown.error && (
+                <p className="mt-3 text-center text-[12.5px] font-semibold text-danger-600">
+                  {shown.error}
+                </p>
+              )}
             </Card>
 
             <Note tone="brand" icon={<ShieldCheck size={15} />} className="mt-4">
@@ -296,19 +330,24 @@ export default function HandoffOtp() {
           <Button
             block
             size="lg"
-            loading={verifying}
+            loading={gate.submitting}
             disabled={code.length < 6 || gate.locked}
-            onClick={() => verify(code)}
+            onClick={() => void verify(code)}
           >
-            {verifying
+            {gate.submitting
               ? 'Verifying…'
               : isPickup
                 ? 'Verify & take custody'
                 : 'Verify & complete delivery'}
           </Button>
         ) : (
-          <Button block size="lg" onClick={() => setStage('photos')}>
-            They&apos;ve entered it — continue
+          <Button
+            block
+            size="lg"
+            loading={checkingHub}
+            onClick={() => void confirmHubTookIt()}
+          >
+            {checkingHub ? 'Checking…' : 'Check they’ve accepted it'}
           </Button>
         )}
       </ActionBar>

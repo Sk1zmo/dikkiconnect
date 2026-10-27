@@ -26,7 +26,7 @@ import { tierOf, type NotificationTier } from './notifications'
    call here would stay as is.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const PREF_KEY = 'dikkiconnect.notify'
+const PREF_KEY = 'waypool.notify'
 
 export interface NotifyPrefs {
   contextual: boolean
@@ -124,7 +124,7 @@ export function useNotificationPermission() {
 
 /* ── Foreground: live alerts ────────────────────────────────────────────── */
 
-export const LIVE_ALERT_EVENT = 'stowza:alert'
+export const LIVE_ALERT_EVENT = 'waypool:alert'
 
 export function pushLiveAlert(item: NotificationItem) {
   window.dispatchEvent(new CustomEvent<NotificationItem>(LIVE_ALERT_EVENT, { detail: item }))
@@ -233,5 +233,57 @@ export async function initPush(navigate: (href: string) => void) {
     })
   } catch {
     /* plugin missing on this platform */
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Remote push — the server waking the phone.
+
+   Everything above is triggered by this device. That covers the foreground
+   alert and anything scheduled in advance, and it covers nothing at all for
+   the case that matters most: a sender whose parcel is taken in at a hub
+   three hours after they closed the app. They find out when they next open
+   it, which for a fortnight-long test is the difference between engaged
+   testers and silent ones.
+
+   This registers the device with FCM and hands the token to the server. It
+   is deliberately separate from `initPush`: permission for a remote push is
+   asked after the first booking, with a reason, not on first launch when
+   there is nothing to notify anybody about.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Registers for remote push and tells the server where to find this phone. */
+export async function registerRemotePush(
+  sendToken: (token: string, platform: string) => Promise<void>,
+  navigate: (href: string) => void,
+): Promise<'registered' | 'denied' | 'unavailable'> {
+  if (!isNative()) return 'unavailable'
+  try {
+    const { PushNotifications } = await import('@capacitor/push-notifications')
+
+    const existing = await PushNotifications.checkPermissions()
+    const granted =
+      existing.receive === 'granted'
+        ? existing
+        : await PushNotifications.requestPermissions()
+    if (granted.receive !== 'granted') return 'denied'
+
+    /* The token arrives asynchronously, on an event, which is why this
+       cannot simply return it. */
+    await PushNotifications.addListener('registration', (t) => {
+      void sendToken(t.value, 'android')
+    })
+
+    await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+      const href = (action.notification.data as { href?: string } | undefined)?.href
+      if (href) navigate(href)
+    })
+
+    await PushNotifications.register()
+    return 'registered'
+  } catch {
+    /* Plugin not installed, or no Firebase config in this build. Local
+       notifications keep working either way. */
+    return 'unavailable'
   }
 }

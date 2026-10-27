@@ -21,6 +21,7 @@ import { LottieMark } from '@/components/brand/LottieMark'
 import { useFakeProgress } from '@/lib/hooks'
 import { bookSteps } from './BookRoute'
 import { ERROR } from '@/lib/copy'
+import { explain, payments } from '@/lib/api'
 
 
 
@@ -39,15 +40,50 @@ export default function BookPayment() {
 
   const walletShort = balance < price.total
 
-  /** Wallet and card settle in-app; UPI hands off to the user's own bank app. */
-  const settle = () => setPaidId(commitBooking())
+  /* Wallet and card settle in-app; UPI hands off to the user's own bank app.
+
+     The booking is the server's to accept. If it refuses — no session, no
+     network, a price it will not honour — the person goes back to this screen
+     with the reason, because the alternative is a receipt for a parcel no hub
+     will ever be told about. */
+  const settle = async () => {
+    try {
+      setPaidId(await commitBooking())
+    } catch (e) {
+      setProcessing(false)
+      toast.error('Booking not confirmed', explain(e))
+    }
+  }
 
   const leaveForReceipt = () => {
     toast.success('Payment successful', `${inr(price.total)} paid · ${paidId}`)
     navigate('/sender/book/confirmed', { replace: true })
   }
 
+  /* A gateway payment needs a parcel to exist before it can be paid for, so
+     the booking is created first (unpaid) and the link is issued against it.
+     That is also the only order that can ever be honest: the webhook marks
+     the parcel paid, and a webhook has to have something to mark. */
+  const payByLink = async () => {
+    setProcessing(true)
+    try {
+      const parcelId = await commitBooking()
+      const { url } = await payments.link(parcelId)
+      /* Leaves the app for the payer's own bank or wallet. They come back to
+         the tracking screen, which shows whether the payment landed. */
+      window.location.href = url
+    } catch (e) {
+      setProcessing(false)
+      toast.error('Could not start the payment', explain(e))
+    }
+  }
+
   const pay = async () => {
+    if (draft.paymentMethod === 'link') {
+      void payByLink()
+      return
+    }
+
     // The decline path is deterministic: a wallet payment that exceeds the
     // balance fails, exactly as a real gateway would respond.
     if (draft.paymentMethod === 'wallet' && walletShort) {
@@ -60,7 +96,7 @@ export default function BookPayment() {
       const req = {
         amount: price.total,
         reference,
-        note: `Stowza parcel ${draft.fromCityId.toUpperCase()}-${draft.toCityId.toUpperCase()}`,
+        note: `WayPool parcel ${draft.fromCityId.toUpperCase()}-${draft.toCityId.toUpperCase()}`,
       }
       const result = await launchUpi(req, upiApp.id)
 
@@ -80,7 +116,7 @@ export default function BookPayment() {
     }
 
     setProcessing(true)
-    setTimeout(settle, 2300)
+    setTimeout(() => void settle(), 2300)
   }
 
   if (paidId) {
@@ -122,7 +158,9 @@ export default function BookPayment() {
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="tabular mt-3 text-[12px] font-bold text-ink-400">{progress}%</p>
+          <p className="tabular mt-3 text-[15px] font-extrabold tracking-title text-ink-500">
+            {progress}%
+          </p>
 
           <div className="mt-10 flex flex-col gap-2.5 text-[12.5px] text-ink-400">
             {['Reserving your hub slot', 'Notifying travelers on this route', 'Generating drop-off OTP'].map(
@@ -171,6 +209,16 @@ export default function BookPayment() {
         </p>
 
         <div className="flex flex-col gap-2.5">
+          {/* The only option here that ends in a payment the server can prove.
+              It is first because it is the real one. */}
+          <RadioCard
+            selected={draft.paymentMethod === 'link'}
+            onSelect={() => patchDraft({ paymentMethod: 'link' })}
+            icon={<Lock size={18} />}
+            title="Pay online"
+            subtitle="UPI, card or net banking — opens your bank app"
+          />
+
           <RadioCard
             selected={draft.paymentMethod === 'upi'}
             onSelect={() => patchDraft({ paymentMethod: 'upi' })}
@@ -182,10 +230,12 @@ export default function BookPayment() {
           {draft.paymentMethod === 'upi' && (
             <div className="anim-fade-up -mt-1 mb-1 grid grid-cols-4 gap-2 px-1">
               {UPI_APPS.map((app) => (
+                /* Tall enough to hit with a thumb, and two pixels of border in
+                   both states so choosing an app changes only its colour. */
                 <button
                   key={app.id}
                   onClick={() => setUpiApp(app)}
-                  className={`pressable rounded-(--radius-sm) border px-1.5 py-2.5 text-[10.5px] font-bold transition-colors ${
+                  className={`pressable flex min-h-12 items-center justify-center rounded-(--radius-sm) border-2 px-1.5 py-2.5 text-[11px] font-bold transition-colors ${
                     upiApp.id === app.id
                       ? 'border-brand-600 bg-brand-50 text-brand-700'
                       : 'border-ink-200 bg-white text-ink-500'
@@ -209,11 +259,18 @@ export default function BookPayment() {
             selected={draft.paymentMethod === 'wallet'}
             onSelect={() => !walletShort && patchDraft({ paymentMethod: 'wallet' })}
             icon={<WalletIcon size={18} />}
-            title="Stowza Wallet"
+            title="WayPool Wallet"
             subtitle={
-              walletShort
-                ? `Balance ${inr(balance)} — not enough for this booking`
-                : `Balance ${inr(balance)}`
+              /* The balance is the number this choice turns on — whether it is
+                 enough is the whole question — so it carries the weight and the
+                 word "Balance" is only its label. */
+              <>
+                Balance{' '}
+                <span className="tabular font-extrabold tracking-title text-ink-800">
+                  {inr(balance)}
+                </span>
+                {walletShort && ' — not enough for this booking'}
+              </>
             }
             className={walletShort ? 'opacity-55' : undefined}
           />
@@ -237,7 +294,7 @@ export default function BookPayment() {
         </div>
 
         <Note tone="neutral" icon={<Lock size={15} />} className="mt-5">
-          Payments are processed over a PCI-DSS compliant gateway. Stowza never stores your card or
+          Payments are processed over a PCI-DSS compliant gateway. WayPool never stores your card or
           UPI credentials.
         </Note>
 
@@ -251,7 +308,9 @@ export default function BookPayment() {
         helper={
           <div className="flex items-baseline justify-between">
             <span className="text-[12px] font-semibold text-ink-500">
-              {draft.paymentMethod === 'upi'
+              {draft.paymentMethod === 'link'
+                ? 'Paying online'
+                : draft.paymentMethod === 'upi'
                 ? `Paying via ${upiApp.label}`
                 : draft.paymentMethod === 'wallet'
                   ? 'Paying from wallet'
@@ -282,7 +341,7 @@ export default function BookPayment() {
               <DeviceMobile size={19} />
             </span>
             <div className="min-w-0">
-              <p className="text-[14px] font-bold text-ink-900">{inr(price.total)} to Stowza</p>
+              <p className="text-[14px] font-bold text-ink-900">{inr(price.total)} to WayPool</p>
               <p className="mt-0.5 text-[12px] text-ink-500">
                 Approve it in {upiApp.label}, then come back here.
               </p>
@@ -310,7 +369,7 @@ export default function BookPayment() {
             onClick={() => {
               setHandoff(null)
               setProcessing(true)
-              setTimeout(settle, 1400)
+              setTimeout(() => void settle(), 1400)
             }}
           >
             I&apos;ve paid — book my parcel

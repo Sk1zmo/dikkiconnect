@@ -27,8 +27,14 @@ import {
 import { RouteMap } from '@/components/viz/Map'
 import { CITIES, corridorKm } from '@/lib/data'
 import { inr } from '@/lib/format'
-import { useApp, useMe } from '@/lib/store'
+import { explain } from '@/lib/api'
+import { useApp } from '@/lib/store'
+import { useLocalStorage } from '@/lib/hooks'
 import { cn } from '@/lib/cn'
+import { ArtTile } from '@/components/domain/ParcelArt'
+import type { TripVehicle } from '@/lib/types'
+
+const BLANK_VEHICLE: TripVehicle = { model: '', plate: '', colour: '', seats: 4 }
 
 /** yyyy-mm-dd for today + n days, in local time (not UTC — dates must not slip). */
 function isoDay(offset: number) {
@@ -49,10 +55,14 @@ const WHEN_PRESETS = [
 const STEPS = ['Route', 'Capacity', 'Publish']
 
 export default function CreateTrip() {
-  const ME = useMe()
   const navigate = useNavigate()
   const toast = useToast()
   const { publishTrip } = useApp()
+
+  // The driver's own car, typed once and remembered on this device — never a
+  // fixture standing in for it. Nothing here is verified; that is RC + KYC's
+  // job, not this form's.
+  const [vehicle, setVehicle] = useLocalStorage<TripVehicle>('waypool.myVehicle', BLANK_VEHICLE)
 
   const [step, setStep] = useState(0)
   const [from, setFrom] = useState('blr')
@@ -68,6 +78,8 @@ export default function CreateTrip() {
   const [carryPassengers, setCarryPassengers] = useState(true)
   const [fare, setFare] = useState(449)
   const [publishing, setPublishing] = useState(false)
+
+  const vehicleComplete = vehicle.model.trim() && vehicle.plate.trim()
 
   const km = corridorKm(from, to)
   const fuelShare = Math.round((km * 7.2) / Math.max(1, seats + 1))
@@ -86,28 +98,28 @@ export default function CreateTrip() {
 
   const publish = () => {
     setPublishing(true)
-    setTimeout(() => {
-      const bootSizes: Array<'S' | 'M' | 'L'> = carryParcels
-        ? Array.from({ length: bootSlots }, () => maxSize)
-        : []
-      publishTrip({
-        travelerId: ME.id,
-        fromCityId: from,
-        toCityId: to,
-        departAt: departAt.toISOString(),
-        arriveAt: arriveAt.toISOString(),
-        seatsTotal: carryPassengers ? seats : 0,
-        seatsLeft: carryPassengers ? seats : 0,
-        bootSlots: bootSizes,
-        farePerSeat: carryPassengers ? fare : 0,
-        viaStops: [],
+    const bootSizes: Array<'S' | 'M' | 'L'> = carryParcels
+      ? Array.from({ length: bootSlots }, () => maxSize)
+      : []
+    void publishTrip({
+      fromCityId: from,
+      toCityId: to,
+      departAt: departAt.toISOString(),
+      arriveAt: arriveAt.toISOString(),
+      seatsTotal: carryPassengers ? seats : 0,
+      farePerSeat: carryPassengers ? fare : 0,
+      bootSlots: bootSizes,
+      vehicle,
+    })
+      .then(() => {
+        toast.success(
+          daysAhead > 0 ? `Ride published for ${whenLabel}` : 'Ride published',
+          'Passengers can book it now — start it when you set off.',
+        )
+        navigate('/traveler/trips', { replace: true })
       })
-      toast.success(
-        daysAhead > 0 ? `Ride published for ${whenLabel}` : 'Ride published',
-        'Passengers can book it now — start it when you set off.',
-      )
-      navigate('/traveler/trips', { replace: true })
-    }, 1100)
+      .catch((e) => toast.error('Could not publish', explain(e)))
+      .finally(() => setPublishing(false))
   }
 
   const cityOptions = CITIES.map((c) => ({ value: c.id, label: `${c.name}, ${c.state}` }))
@@ -166,7 +178,7 @@ export default function CreateTrip() {
 
             {sameCity && (
               <Note tone="warn" className="mt-4">
-                Pick two different cities — Stowza only matches intercity trips.
+                Pick two different cities — WayPool only matches intercity trips.
               </Note>
             )}
 
@@ -233,19 +245,46 @@ export default function CreateTrip() {
               </Note>
             )}
 
-            <Card className="mt-2 flex items-center gap-3.5">
-              <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-50 text-brand-600">
-                <Car size={19} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[14px] font-bold text-ink-900">{ME.vehicle.model}</p>
-                <p className="mt-0.5 truncate text-[12px] text-ink-500">
-                  {ME.vehicle.plate} · {ME.vehicle.colour} · boot {ME.vehicle.bootCapacityKg} kg
-                </p>
+            <Card className="mt-2">
+              <div className="mb-3 flex items-center gap-2.5">
+                <span className="grid size-9 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-50 text-brand-600">
+                  <Car size={17} />
+                </span>
+                <p className="text-[13px] font-bold text-ink-900">Your vehicle</p>
               </div>
-              <span className="shrink-0 rounded-full bg-success-50 px-2.5 py-1 text-[11px] font-bold text-success-700">
-                RC verified
-              </span>
+              <div className="grid grid-cols-2 gap-2.5">
+                <Field
+                  label="Model"
+                  placeholder="e.g. Maruti Swift"
+                  value={vehicle.model}
+                  onChange={(e) => setVehicle((v) => ({ ...v, model: e.target.value }))}
+                />
+                <Field
+                  label="Plate"
+                  placeholder="KA 05 AB 1234"
+                  value={vehicle.plate}
+                  onChange={(e) => setVehicle((v) => ({ ...v, plate: e.target.value.toUpperCase() }))}
+                />
+                <Field
+                  label="Colour"
+                  placeholder="e.g. White"
+                  value={vehicle.colour}
+                  onChange={(e) => setVehicle((v) => ({ ...v, colour: e.target.value }))}
+                />
+                <Field
+                  label="Seats incl. driver"
+                  type="number"
+                  value={String(vehicle.seats)}
+                  onChange={(e) =>
+                    setVehicle((v) => ({ ...v, seats: Math.max(2, Number(e.target.value) || 2) }))
+                  }
+                />
+              </div>
+              {!vehicleComplete && (
+                <p className="mt-2.5 text-[11.5px] text-ink-500">
+                  Needed before you can publish — passengers see this on the ride.
+                </p>
+              )}
             </Card>
 
             <Note tone="brand" className="mt-3">
@@ -287,22 +326,31 @@ export default function CreateTrip() {
                 <p className="mt-4 mb-2.5 text-[12.5px] font-semibold text-ink-700">
                   Largest size you can take
                 </p>
+                {/* ═══════════════════════════════════════════════════════════
+                    The same size picker the sender sees, drawn the same way.
+
+                    This was three bordered boxes with a letter in each, which
+                    asked the driver to translate "L" into "how much of my boot
+                    does that take". One box getting visibly bigger answers the
+                    question without the translation, and — more to the point —
+                    it is the identical object the sender picked from when they
+                    booked, so the two ends of the transaction are talking
+                    about the same thing in the same picture.
+
+                    Selection is ArtTile's ring, not a fill swap: the brand
+                    wash behind a size is already carrying meaning here.
+                    ═══════════════════════════════════════════════════════════ */}
                 <div className="grid grid-cols-3 gap-2.5">
                   {(['S', 'M', 'L'] as const).map((s) => (
-                    <button
+                    <ArtTile
                       key={s}
+                      id={s}
+                      kind="size"
+                      label={s}
+                      sub={s === 'S' ? '≤3 kg' : s === 'M' ? '≤10 kg' : '≤20 kg'}
+                      selected={maxSize === s}
                       onClick={() => setMaxSize(s)}
-                      className={`pressable rounded-(--radius-md) border-2 py-3 text-center transition-all ${
-                        maxSize === s
-                          ? 'border-brand-600 bg-brand-50 text-brand-700'
-                          : 'border-ink-200 bg-white text-ink-600'
-                      }`}
-                    >
-                      <span className="block text-[18px] font-extrabold">{s}</span>
-                      <span className="mt-0.5 block text-[10.5px] font-semibold">
-                        {s === 'S' ? '≤3 kg' : s === 'M' ? '≤10 kg' : '≤20 kg'}
-                      </span>
-                    </button>
+                    />
                   ))}
                 </div>
               </div>
@@ -314,7 +362,13 @@ export default function CreateTrip() {
                   Passenger seats
                 </p>
                 <p className="mb-2 text-[12.5px] font-semibold text-ink-700">Seats available</p>
-                <Counter value={seats} onChange={setSeats} min={0} max={ME.vehicle.seats} suffix="seats" />
+                <Counter
+                  value={seats}
+                  onChange={setSeats}
+                  min={0}
+                  max={Math.max(1, vehicle.seats - 1)}
+                  suffix="seats"
+                />
 
                 <p className="mt-4 mb-2 text-[12.5px] font-semibold text-ink-700">
                   Cost share per seat
@@ -366,7 +420,7 @@ export default function CreateTrip() {
                 })} · ${depart}`}
               />
               <KeyValue label="Goes live" value={daysAhead > 0 ? `Now — ${whenLabel}` : 'Now'} />
-              <KeyValue label="Vehicle" value={`${ME.vehicle.model} · ${ME.vehicle.plate}`} />
+              <KeyValue label="Vehicle" value={`${vehicle.model} · ${vehicle.plate}`} />
               <div className="my-2 h-px bg-ink-100" />
               <KeyValue
                 label="Parcel slots"
@@ -417,7 +471,7 @@ export default function CreateTrip() {
             block
             size="lg"
             disabled={
-              (step === 0 && (sameCity || inPast)) ||
+              (step === 0 && (sameCity || inPast || !vehicleComplete)) ||
               (step === 1 && !carryParcels && !carryPassengers)
             }
             onClick={() => setStep((s) => s + 1)}

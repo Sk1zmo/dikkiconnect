@@ -61,7 +61,7 @@ export type SignupResult =
   | { ok: false; reason: 'phone-taken' | 'failed' }
 
 export type VerifyResult =
-  | { ok: true; isNewUser: false }
+  | { ok: true; isNewUser: false; account: Account }
   | { ok: true; isNewUser: true; ticket: string }
   | {
       ok: false
@@ -147,8 +147,8 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useLocalStorage<string | null>('dikkiconnect.token', null)
-  const [account, setAccount] = useLocalStorage<Account | null>('dikkiconnect.account', null)
+  const [token, setToken] = useLocalStorage<string | null>('waypool.token', null)
+  const [account, setAccount] = useLocalStorage<Account | null>('waypool.account', null)
   const [loading, setLoading] = useState(false)
 
   // A token without an account (cleared cache, older build) is not a session.
@@ -220,7 +220,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(res.token)
         setAccount(res.account)
       }
-      return { ok: true, isNewUser: false }
+      // res.account is always present here: the server only takes this branch
+      // when verifyChallenge found an existing account to issue a token for.
+      return { ok: true, isNewUser: false, account: res.account as Account }
     },
     [setToken, setAccount],
   )

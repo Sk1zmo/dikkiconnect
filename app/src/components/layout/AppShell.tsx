@@ -3,13 +3,17 @@ import { Outlet, useLocation, useNavigate, useNavigationType } from 'react-route
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowsClockwise, CellSignalLow, CheckCircle, WifiSlash } from '@phosphor-icons/react'
 import { ScreenLoader } from '@/components/ui'
+import { DemoBadge } from '@/components/brand/DemoBadge'
+import { Tour } from '@/components/domain/Tour'
 import { BottomNav } from './BottomNav'
 import { ErrorBoundary } from './ErrorBoundary'
-import { PIXEL_WIPE_MID_MS, PixelWipeHost, RouteWipe } from './PixelWipe'
 import { RouteSettled } from '@/lib/boot'
+import { TabBarProvider } from '@/lib/chrome'
 import { NETWORK } from '@/lib/copy'
 import { useConnection, useUpdateReady } from '@/lib/hooks'
 import { useApp } from '@/lib/store'
+import { registerRemotePush } from '@/lib/push'
+import { push as pushApi } from '@/lib/api'
 import type { Role } from '@/lib/types'
 
 const HOME: Record<Role, string> = { sender: '/sender', traveler: '/traveler', passenger: '/passenger', hub: '/hub' }
@@ -61,7 +65,7 @@ function NetworkBanner() {
         >
           <span className="flex items-center gap-2 py-1.5">
             <ArrowsClockwise size={13} />
-            A newer Stowza is ready — tap to reload
+            A newer WayPool is ready — tap to reload
           </span>
         </motion.button>
       )}
@@ -79,10 +83,9 @@ export function DeviceShell({ children }: { children: React.ReactNode }) {
     <div className="device-stage">
       <div className="device-shell">
         <RouteProgress />
+        <DemoBadge />
         <NetworkBanner />
         {children}
-        <RouteWipe />
-        <PixelWipeHost />
       </div>
     </div>
   )
@@ -116,7 +119,7 @@ function RouteProgress() {
 export function RoleLayout({ role }: { role: Role }) {
   const location = useLocation()
   const navigate = useNavigate()
-  const { role: storedRole, setRole } = useApp()
+  const { role: storedRole, setRole, authed } = useApp()
 
   // Landing on /hub (deep link, refresh, portal switch) has to become the
   // active role, or the shared Wallet/Profile tabs and the portal switcher
@@ -125,8 +128,37 @@ export function RoleLayout({ role }: { role: Role }) {
     if (storedRole !== role) setRole(role)
   }, [role, storedRole, setRole])
 
+  /* Remote push, once per signed-in session.
+     
+     Here rather than at launch because this component only renders for
+     somebody who is signed in, and a device token is meaningless without an
+     account to attach it to. The OS permission prompt therefore arrives
+     after sign-in, in context, rather than on a cold first launch when there
+     is nothing to notify anyone about. */
+  useEffect(() => {
+    if (!authed) return
+    let cancelled = false
+    void registerRemotePush(
+      async (token, platform) => {
+        if (cancelled) return
+        try {
+          await pushApi.register(token, platform)
+        } catch {
+          /* An unreachable server is not worth a message here — the person
+             did not ask for this and nothing they can see is broken. */
+        }
+      },
+      (href) => navigate(href),
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [authed, navigate])
+
   return (
-    <>
+    /* Everything under here has a tab bar below it, which owns the bottom
+       safe-area inset. ActionBar reads this so it does not pay it twice. */
+    <TabBarProvider>
       <div className="relative flex min-h-0 flex-1 flex-col">
         <ErrorBoundary resetKey={location.pathname} onHome={() => navigate(HOME[role])}>
           <Suspense fallback={<ScreenLoader />}>
@@ -140,7 +172,10 @@ export function RoleLayout({ role }: { role: Role }) {
         </ErrorBoundary>
       </div>
       <BottomNav role={role} />
-    </>
+      {/* Above the tab bar, inside the shell, so switching portals shows that
+          portal's tour and nothing else has to know about it. */}
+      <Tour />
+    </TabBarProvider>
   )
 }
 
@@ -168,14 +203,18 @@ export function FlowLayout() {
 /**
  * Route transitions.
  *
- * The pixel wipe (PixelWipe.tsx) carries the change: it floods the frame,
- * the screens swap underneath at its midpoint, and it drains. So the frames
- * themselves do very little — the outgoing one holds until the frame is
- * covered, the incoming one is simply there when it uncovers, with a touch
- * of lift so it does not feel pasted. Flows keep a hint of direction (a few
- * pixels of slide, forward or back) under the wipe.
+ * A grid of blue squares used to flood the frame on every navigation, swap
+ * the screens underneath itself, and drain — about 620ms, every tap. It was
+ * striking the first time and tiring by the tenth, and it made a fast app
+ * feel deliberate in the worst sense.
  *
- * Under reduced motion there is no wipe, and the frames crossfade.
+ * What replaced it is nearly nothing: 120ms of crossfade, with a few pixels
+ * of directional slide on flow screens so forward and back still read as
+ * forward and back. Navigation should feel like the screen was already
+ * there. The waiting mark (ScreenLoader) carries the weight instead, and it
+ * only appears when there is genuinely something to wait for.
+ *
+ * Under reduced motion the frames swap with no animation at all.
  */
 function RouteFrame({
   children,
@@ -190,22 +229,24 @@ function RouteFrame({
   if (reduced) return <div className="flex h-full min-h-0 flex-col">{children}</div>
 
   const back = navigationType === 'POP'
-  const slide = variant === 'flow' ? (back ? -10 : 10) : 0
-  const hold = PIXEL_WIPE_MID_MS / 1000
+  const slide = variant === 'flow' ? (back ? -12 : 12) : 0
 
   return (
     <motion.div
       className="flex h-full min-h-0 flex-col"
-      initial={{ opacity: 0, x: slide, y: variant === 'tab' ? 6 : 0 }}
+      initial={{ opacity: 0, x: slide }}
       animate={{
         opacity: 1,
         x: 0,
-        y: 0,
-        transition: { duration: 0.22, delay: hold * 0.6, ease: [0.16, 1, 0.3, 1] },
+        transition: { duration: 0.12, ease: [0.16, 1, 0.3, 1] },
       }}
+      /* Shorter than the entrance, and no travel: the outgoing screen should
+         get out of the way, not perform. `mode="wait"` means this runs to
+         completion first, so every millisecond here is a millisecond before
+         the next screen appears. */
       exit={{
-        opacity: 1,
-        transition: { duration: hold },
+        opacity: 0,
+        transition: { duration: 0.08, ease: 'linear' },
       }}
     >
       {children}

@@ -24,12 +24,11 @@ import {
   SkeletonList,
   useToast,
 } from '@/components/ui'
-import { PromoBanner } from '@/components/domain/Cards'
-import { SENDER_TXNS, TRAVELER_TXNS } from '@/lib/data'
 import { inr, relative } from '@/lib/format'
 import { useApp } from '@/lib/store'
 import { useCountUp, useLoaded } from '@/lib/hooks'
 import { cn } from '@/lib/cn'
+import { explain } from '@/lib/api'
 
 type Tab = 'all' | 'in' | 'out'
 
@@ -45,7 +44,7 @@ const TOP_UPS = [200, 500, 1000, 2000]
 
 export default function WalletPage() {
   const toast = useToast()
-  const { balance, addMoney, role } = useApp()
+  const { balance, walletTxns, addMoney, role } = useApp()
 
   const [tab, setTab] = useState<Tab>('all')
   const [addOpen, setAddOpen] = useState(false)
@@ -53,29 +52,33 @@ export default function WalletPage() {
   const [adding, setAdding] = useState(false)
 
   const isEarner = role === 'traveler' || role === 'hub'
-  const source = isEarner ? TRAVELER_TXNS : SENDER_TXNS
-  const { loading } = useLoaded(source, 950)
+  const { loading } = useLoaded(walletTxns, 650)
   const animated = useCountUp(balance, 1000)
 
   const visible = useMemo(() => {
-    if (tab === 'in') return source.filter((t) => t.kind === 'credit')
-    if (tab === 'out') return source.filter((t) => t.kind === 'debit')
-    return source
-  }, [tab, source])
+    if (tab === 'in') return walletTxns.filter((t) => t.kind === 'credit')
+    if (tab === 'out') return walletTxns.filter((t) => t.kind === 'debit')
+    return walletTxns
+  }, [tab, walletTxns])
 
-  const monthIn = source.filter((t) => t.kind === 'credit').reduce((s, t) => s + t.amount, 0)
-  const monthOut = source
+  const monthIn = walletTxns.filter((t) => t.kind === 'credit').reduce((s, t) => s + t.amount, 0)
+  const monthOut = walletTxns
     .filter((t) => t.kind === 'debit')
     .reduce((s, t) => s + Math.abs(t.amount), 0)
 
   const topUp = () => {
     setAdding(true)
-    setTimeout(() => {
-      addMoney(amount)
-      setAdding(false)
-      setAddOpen(false)
-      toast.success('Money added', `${inr(amount)} credited to your Stowza wallet`)
-    }, 1300)
+    void (async () => {
+      try {
+        await addMoney(amount)
+        setAddOpen(false)
+        toast.success('Money added', `${inr(amount)} credited to your WayPool wallet`)
+      } catch (e) {
+        toast.error('Could not add money', explain(e))
+      } finally {
+        setAdding(false)
+      }
+    })()
   }
 
   return (
@@ -120,38 +123,72 @@ export default function WalletPage() {
           </div>
         </Card>
 
-        {/* Month summary */}
+        {/* Month summary. The figure is the whole point of each tile, so it is
+            set at display size and the label sits under it as a caption. At
+            16px against an 11px label the two were close enough in weight that
+            the eye read "Money in" first, which is the one thing nobody needs
+            to be told twice. */}
         <div className="mt-3 grid grid-cols-2 gap-3">
           <Card className="flex items-center gap-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-(--radius-sm) bg-success-50 text-success-600">
-              <ArrowDownLeft size={17} />
+            <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-success-50 text-success-600">
+              <ArrowDownLeft size={18} />
             </span>
             <div className="min-w-0">
-              <p className="tabular text-[16px] font-extrabold text-ink-900">{inr(monthIn)}</p>
-              <p className="text-[11px] font-medium text-ink-500">Money in</p>
+              <p className="tabular text-display tracking-title text-[20px] leading-none font-extrabold text-ink-900">
+                {inr(monthIn)}
+              </p>
+              <p className="mt-1.5 text-[11.5px] font-semibold text-ink-500">Money in</p>
             </div>
           </Card>
           <Card className="flex items-center gap-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-(--radius-sm) bg-danger-50 text-danger-600">
-              <ArrowUpRight size={17} />
+            <span className="grid size-10 shrink-0 place-items-center rounded-(--radius-sm) bg-danger-50 text-danger-600">
+              <ArrowUpRight size={18} />
             </span>
             <div className="min-w-0">
-              <p className="tabular text-[16px] font-extrabold text-ink-900">{inr(monthOut)}</p>
-              <p className="text-[11px] font-medium text-ink-500">Money out</p>
+              <p className="tabular text-display tracking-title text-[20px] leading-none font-extrabold text-ink-900">
+                {inr(monthOut)}
+              </p>
+              <p className="mt-1.5 text-[11.5px] font-semibold text-ink-500">Money out</p>
             </div>
           </Card>
         </div>
 
+        {/* Referral. This used the shared PromoBanner — a solid brand-600 slab
+            — and it was the loudest object on a screen whose loudest object
+            should be the balance. It is a white row now, separated by the same
+            hairline as everything else, with the reward carrying the line.
+
+            The chip is brand blue, not signal yellow. It briefly wore the
+            yellow, which was wrong twice over: the rule is that signal marks
+            what expires, saves or runs out, and "INVITE" is none of those —
+            it is a verb. It also sits inside a button and reads as that
+            button's action, and an action is the one thing the rationed
+            colour must never be, or it stops meaning urgency the first time
+            somebody sees it on something they can simply press. The ₹100
+            already carries the value of this row. */}
         {!isEarner && (
-          <div className="mt-4">
-            <PromoBanner
-              title="₹100 for every friend"
-              body="They get ₹50 off their first parcel"
-              code="INVITE"
-              icon={<Gift size={20} />}
-              onClick={() => toast.success('Invite link copied', 'Share it anywhere.')}
-            />
-          </div>
+          <button
+            onClick={() => toast.success('Invite link copied', 'Share it anywhere.')}
+            className="pressable mt-4 flex w-full items-center gap-3.5 rounded-(--radius-lg) border border-ink-200 bg-white p-4 text-left hover:bg-ink-50"
+          >
+            <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-brand-50 text-brand-600">
+              <Gift size={20} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-baseline gap-1.5">
+                <span className="tabular text-display tracking-title text-[21px] leading-none font-extrabold text-ink-900">
+                  ₹100
+                </span>
+                <span className="truncate text-[12.5px] font-semibold text-ink-500">
+                  for every friend
+                </span>
+              </span>
+              <span className="mt-1.5 block truncate text-[12px] text-ink-500">
+                They get ₹50 off their first parcel
+              </span>
+            </span>
+            <Badge tone="brand">INVITE</Badge>
+          </button>
         )}
 
         {/* Transactions */}
@@ -240,7 +277,7 @@ export default function WalletPage() {
         open={addOpen}
         onClose={() => setAddOpen(false)}
         title="Add money"
-        subtitle="Top up your Stowza wallet for faster checkout"
+        subtitle="Top up your WayPool wallet for faster checkout"
         footer={
           <Button block size="lg" loading={adding} onClick={topUp}>
             {adding ? 'Processing…' : `Add ${inr(amount)}`}
@@ -253,7 +290,7 @@ export default function WalletPage() {
               key={v}
               onClick={() => setAmount(v)}
               className={cn(
-                'pressable rounded-(--radius-md) border-2 py-3 text-[14px] font-bold transition-colors',
+                'tabular pressable min-h-12 rounded-(--radius-md) border-2 py-3.5 text-[15px] font-extrabold transition-colors',
                 amount === v
                   ? 'border-brand-600 bg-brand-50 text-brand-700'
                   : 'border-ink-200 bg-white text-ink-600',
@@ -264,37 +301,10 @@ export default function WalletPage() {
           ))}
         </div>
 
-        <div className="mt-5">
-          <p className="mb-2.5 text-[12px] font-bold tracking-wide text-ink-400 uppercase">
-            Pay from
-          </p>
-          <div className="flex flex-col gap-2.5">
-            {[
-              { icon: DeviceMobile, label: 'UPI', sub: 'Google Pay, PhonePe, Paytm' },
-              { icon: CreditCard, label: 'HDFC •••• 4412', sub: 'Visa · expires 08/28' },
-            ].map((m, i) => {
-              const Icon = m.icon
-              return (
-                <div
-                  key={m.label}
-                  className={cn(
-                    'flex items-center gap-3 rounded-(--radius-md) border-2 p-3.5',
-                    i === 0 ? 'border-brand-600 bg-brand-50/50' : 'border-ink-200',
-                  )}
-                >
-                  <span className="grid size-9 shrink-0 place-items-center rounded-(--radius-sm) bg-white text-ink-700 shadow-(--shadow-e1)">
-                    <Icon size={17} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13.5px] font-bold text-ink-900">{m.label}</p>
-                    <p className="mt-0.5 truncate text-[11.5px] text-ink-500">{m.sub}</p>
-                  </div>
-                  {i === 0 && <Badge tone="brand" size="sm">Selected</Badge>}
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        <Note tone="neutral" className="mt-5">
+          This is a pilot balance, not a real payment — nothing is actually charged. It credits your
+          WayPool wallet so checkout can be tested end to end.
+        </Note>
 
         <Card className="mt-4">
           <KeyValue label="Amount" value={inr(amount)} />

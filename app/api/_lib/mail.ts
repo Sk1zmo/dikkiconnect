@@ -28,9 +28,13 @@ const SMTP_PORT = Number(process.env.SMTP_PORT ?? 465)
 const SMTP_USER = process.env.SMTP_USER
 const SMTP_PASS = process.env.SMTP_PASS
 
+/* The address sign-in codes come from. SMTP_USER is preferred over the
+   hard-coded fallback so the From header always matches the mailbox actually
+   doing the sending — Gmail rewrites a mismatched From anyway, and a header
+   that disagrees with the envelope is a fast way into a spam folder. */
 const FROM =
   process.env.MAIL_FROM ??
-  (SMTP_USER ? `Stowza <${SMTP_USER}>` : 'Stowza <onboarding@resend.dev>')
+  (SMTP_USER ? `WayPool <${SMTP_USER}>` : 'WayPool <waypool1@gmail.com>')
 
 export function mailProvider(): 'resend' | 'smtp' | null {
   if (KEY) return 'resend'
@@ -64,6 +68,15 @@ async function viaSmtp(to: string, subject: string, html: string, text: string):
     // 465 is implicit TLS; 587 upgrades with STARTTLS.
     secure: SMTP_PORT === 465,
     auth: { user: SMTP_USER, pass: SMTP_PASS },
+    /* Timeouts matter more here than they would on a long-lived server. This
+       runs in a serverless function with a hard ceiling on its whole
+       invocation, so an SMTP connection that hangs does not just delay the
+       mail — it burns the request and the caller sees a timeout rather than
+       "we could not send that". Eight seconds is generous for Gmail and still
+       leaves room to answer. */
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 8000,
   })
   const info = await transport.sendMail({ from: FROM, to, subject, html, text })
   return { sent: true, provider: 'smtp', id: info.messageId }
@@ -89,10 +102,10 @@ export async function sendMail(
 
 /** The verification email. Plain, high-contrast, and legible in any client. */
 export function otpEmail(code: string, minutes: number) {
-  const subject = `${code} is your Stowza code`
+  const subject = `${code} is your WayPool code`
 
   const text = [
-    `Your Stowza verification code is ${code}.`,
+    `Your WayPool verification code is ${code}.`,
     ``,
     `It expires in ${minutes} minutes and can only be used once.`,
     `If you didn't ask for this, you can ignore this email — nobody can sign in without the code.`,
@@ -105,7 +118,7 @@ export function otpEmail(code: string, minutes: number) {
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:440px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 2px 10px rgba(16,26,56,.07);">
         <tr><td style="background:#0b0e15;padding:22px 28px;">
-          <span style="color:#ffffff;font-size:17px;font-weight:800;letter-spacing:-.02em;">Stowza</span>
+          <span style="color:#ffffff;font-size:17px;font-weight:800;letter-spacing:-.02em;">WayPool</span>
         </td></tr>
         <tr><td style="padding:32px 28px 8px;">
           <p style="margin:0 0 6px;font-size:19px;font-weight:800;color:#101a38;">Your verification code</p>
@@ -125,7 +138,7 @@ export function otpEmail(code: string, minutes: number) {
         <tr><td style="padding:24px 28px 28px;">
           <div style="height:1px;background:#e7ecf5;margin-bottom:16px;"></div>
           <p style="margin:0;font-size:11.5px;line-height:1.6;color:#98a2b6;">
-            Stowza — intercity parcel delivery and cost-shared travel.
+            WayPool — intercity parcel delivery and cost-shared travel.
           </p>
         </td></tr>
       </table>
@@ -138,15 +151,15 @@ export function otpEmail(code: string, minutes: number) {
 
 /** Sent once, when an account is first created. */
 export function welcomeEmail(name: string) {
-  const subject = 'Your Stowza account is ready'
-  const text = `Welcome to Stowza, ${name}.\n\nYour account is live. Sign in any time with your mobile number or this email address — we'll send a fresh code each time. There is no password to remember or lose.`
+  const subject = 'Your WayPool account is ready'
+  const text = `Welcome to WayPool, ${name}.\n\nYour account is live. Sign in any time with your mobile number or this email address — we'll send a fresh code each time. There is no password to remember or lose.`
   const html = `<!doctype html>
 <html><body style="margin:0;padding:0;background:#f4f6fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;padding:32px 16px;">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:440px;background:#ffffff;border-radius:18px;overflow:hidden;">
         <tr><td style="background:#0b0e15;padding:22px 28px;">
-          <span style="color:#ffffff;font-size:17px;font-weight:800;letter-spacing:-.02em;">Stowza</span>
+          <span style="color:#ffffff;font-size:17px;font-weight:800;letter-spacing:-.02em;">WayPool</span>
         </td></tr>
         <tr><td style="padding:32px 28px;">
           <p style="margin:0 0 6px;font-size:19px;font-weight:800;color:#101a38;">Welcome, ${name}</p>

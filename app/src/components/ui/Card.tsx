@@ -113,7 +113,7 @@ export function Note({
   icon?: ReactNode
   title?: string
   children: ReactNode
-  tone?: 'brand' | 'warn' | 'danger' | 'success' | 'neutral'
+  tone?: 'brand' | 'warn' | 'danger' | 'success' | 'neutral' | 'signal'
   className?: string
 }) {
   const tones = {
@@ -122,6 +122,12 @@ export function Note({
     danger: 'bg-danger-50 text-danger-700 border-danger-100',
     success: 'bg-success-50 text-success-700 border-success-100',
     neutral: 'bg-ink-50 text-ink-700 border-ink-200',
+    /* The rationed yellow, in note form. A hub holding a parcel for 24 hours
+       and a promo that expires are the same kind of fact — a clock the reader
+       has to act inside — and until this existed they were dressed as brand
+       blue, which reads as information rather than as a deadline. Same rule
+       as the Badge tone: only for what expires, saves money, or is scarce. */
+    signal: 'bg-signal-50 text-signal-700 border-signal-300',
   }
   return (
     <div

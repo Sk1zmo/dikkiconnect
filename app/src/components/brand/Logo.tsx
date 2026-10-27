@@ -2,24 +2,34 @@ import { useId } from 'react'
 import { cn } from '@/lib/cn'
 import { BRAND } from '@/lib/brand'
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   The Stowza mark — a switchback road that spells an S, and the dot it is
-   heading for.
+/* ════════════════════════════════════════════════════════════════════════════
+   The WayPool mark — one road, dipping through two pools, rising out again.
 
-   Three straight runs joined by two hairpins: a route drawn the way a map
-   draws one, with the parcel's destination sitting just past the last bend.
-   It is one stroke and one circle, which is what lets it hold up at 16px in a
-   tab bar and at 432px on a launcher. The stroke is the heavy part; the dot
-   is the accent, always the lighter blue, so it reads as "where to" and not
-   as a full stop.
+   The mark it replaces was a switchback road that spelled an S. That S was
+   Stowza's, and it survived the rename because a logo is the one asset a
+   find-and-replace cannot touch: every string said WayPool while the drawing
+   still said the old name to anyone who knew to look.
+
+   This one is a W, which is the initial, drawn as a route rather than a
+   letter — two rounded basins where the line gathers and a peak between them.
+   That is the product in one stroke: ways pooling, then carrying on. It is a
+   single continuous path, which is what lets it hold at 16px in a tab bar and
+   at 432px on a launcher, and what lets the launch animation draw it in one
+   movement rather than assemble it from parts.
+
+   There is no accent dot any more. The old mark needed one to say "where to";
+   this one ends on a rise, which says the same thing with less.
 
    The path is shared with `public/icon.svg`, the launcher icons and the
    native launch assets — regenerate those (scripts/brand-icons.mjs) if it
    ever changes here.
-   ═══════════════════════════════════════════════════════════════════════════ */
+   ════════════════════════════════════════════════════════════════════════════ */
 
-export const MARK_PATH = 'M36 9.5H14.5a5.75 5.75 0 0 0 0 11.5h17a5.75 5.75 0 0 1 0 11.5H9'
-export const MARK_DOT = { cx: 39.5, cy: 38.5, r: 4.25 }
+export const MARK_PATH =
+  'M6 12 L12.6 29.5 a5 5 0 0 0 9.3 0 L24 20.5 L26.1 29.5 a5 5 0 0 0 9.3 0 L42 12'
+
+/** The stroke weight the mark is drawn at, everywhere it appears. */
+export const MARK_STROKE = 7.5
 
 export function LogoMark({
   size = 36,
@@ -34,7 +44,6 @@ export function LogoMark({
      page would otherwise share an id and the second silently paints black. */
   const id = useId()
   const stroke = tone === 'white' ? '#ffffff' : tone === 'brand' ? '#1650e0' : `url(#${id})`
-  const dot = tone === 'white' ? '#96b8ff' : tone === 'brand' ? '#3a68f5' : '#3a68f5'
 
   return (
     <svg
@@ -46,7 +55,7 @@ export function LogoMark({
     >
       {tone === 'gradient' && (
         <defs>
-          <linearGradient id={id} x1="8" y1="6" x2="40" y2="42" gradientUnits="userSpaceOnUse">
+          <linearGradient id={id} x1="6" y1="12" x2="42" y2="34" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#7ba5ff" />
             <stop offset="50%" stopColor="#1650e0" />
             <stop offset="100%" stopColor="#0c2f92" />
@@ -57,11 +66,10 @@ export function LogoMark({
         d={MARK_PATH}
         fill="none"
         stroke={stroke}
-        strokeWidth="7.5"
+        strokeWidth={MARK_STROKE}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx={MARK_DOT.cx} cy={MARK_DOT.cy} r={MARK_DOT.r} fill={dot} />
     </svg>
   )
 }

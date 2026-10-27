@@ -1,23 +1,20 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "in.stowza.app"
+    namespace = "in.waypool.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        /* Passing -PdemoBuild gives the demo a package id and a name of its
-           own, so a tester can hold both apps at once. Same id would make
-           installing one silently replace the other, and the one they end up
-           with would depend on which they installed last. */
-        applicationId project.hasProperty('demoBuild')
-            ? "in.stowza.app.demo"
-            : "in.stowza.app"
-        resValue "string", "app_name", project.hasProperty('demoBuild')
-            ? "Stowza Demo"
-            : "Stowza"
+        /* One app, one id. The demo variant is gone: it existed so a build
+           without sign-in could be passed around, and a demo twin sitting
+           beside the real product on a store is how people end up reviewing
+           the wrong one. VITE_DEMO_MODE still works for a local walkthrough
+           in a browser; it no longer produces an installable app. */
+        applicationId "in.waypool.app"
+        resValue "string", "app_name", "WayPool"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
-        versionName "1.2.0"
+        versionCode 15
+        versionName "2.6.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -25,10 +22,42 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    /* Release signing.
+     *
+     * The key lives in android/waypool-upload.keystore and its passwords in
+     * android/keystore.properties. Both are gitignored: they are the app's
+     * identity, not source. If the properties file is absent â€” a fresh clone,
+     * or CI without the secret â€” the release build still configures, it just
+     * comes out unsigned, which fails loudly at install time rather than
+     * silently shipping something nobody can verify.
+     *
+     * Debug builds keep the Android debug key, which is what makes them
+     * installable on a developer's phone and unfit for a public download:
+     * a debug build carries android:debuggable="true", and anything
+     * debuggable can be attached to with ADB on a real user's device. */
+    signingConfigs {
+        release {
+            def propsFile = rootProject.file('keystore.properties')
+            if (propsFile.exists()) {
+                def props = new Properties()
+                propsFile.withInputStream { props.load(it) }
+                storeFile = rootProject.file(props['storeFile'])
+                storePassword = props['storePassword']
+                keyAlias = props['keyAlias']
+                keyPassword = props['keyPassword']
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            /* Only attach the config when the key is actually present, or
+               Gradle fails configuration on every machine that lacks it. */
+            if (rootProject.file('keystore.properties').exists()) {
+                signingConfig = signingConfigs.release
+            }
         }
     }
 }

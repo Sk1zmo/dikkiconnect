@@ -1,6 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/cn'
+import { useHasTabBar } from '@/lib/chrome'
 import { Spinner } from './Spinner'
 
 type Variant =
@@ -148,10 +149,19 @@ export function ActionBar({
   helper?: ReactNode
   className?: string
 }) {
+  /* On a flow screen this bar is the bottom of the phone and owes the
+     home-indicator inset. On a tabbed screen the tab bar below it already
+     paid, and adding it twice leaves a band of dead white that only appears
+     on hardware with an indicator — invisible on desktop and in the preview
+     frame. The `.pb-safe*` rules are unlayered, so a Tailwind `pb-4` passed
+     in className cannot override them: the class has to not be applied. */
+  const tabbed = useHasTabBar()
+
   return (
     <div
       className={cn(
-        'pb-safe-4 sticky bottom-0 z-30 border-t border-ink-200 bg-white px-5 pt-3',
+        'sticky bottom-0 z-30 border-t border-ink-200 bg-white px-5 pt-3',
+        tabbed ? 'pb-4' : 'pb-safe-4',
         className,
       )}
     >

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Camera, PencilLine, ShieldCheck, User } from '@phosphor-icons/react'
+import { Camera, ShieldCheck, User } from '@phosphor-icons/react'
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   ActionBar,
@@ -11,64 +11,54 @@ import {
   Note,
   OtpInput,
   Stepper,
-  Switch,
   useToast,
 } from '@/components/ui'
 import { PhotoCapture } from '@/components/viz/Scanner'
 import { LottieMark } from '@/components/brand/LottieMark'
-import { HUB_HANDLING_FEE, categoryById, otpFor } from '@/lib/data'
+import { HUB_HANDLING_FEE, categoryById } from '@/lib/data'
 import { inr, phone as fmtPhone, relative } from '@/lib/format'
 import { useApp, useAwaitingPickup } from '@/lib/store'
-import { useOtpGate } from '@/lib/otp'
+import { useCustodyGate } from '@/lib/custody'
 import { OtpHelper } from '@/components/domain/OtpHelper'
-import { CategoryIcon } from '@/components/domain/CategoryIcon'
+import { CategoryMark } from '@/components/domain/CategoryIcon'
 
-const STEPS = ['Verify', 'Evidence', 'Delivered']
+/* Evidence before the code, because the server verifies and delivers in one
+   call and the photographs have to be attached to it. It is also the right
+   order at a counter: photograph the parcel while it is still in your hands,
+   then read six digits off the receiver's phone as you let go of it. */
+const STEPS = ['Evidence', 'Verify', 'Delivered']
 
 /** Custody checkpoint 4 — the final handoff that closes the loop. */
 export default function ReceiverPickup() {
   const navigate = useNavigate()
   const toast = useToast()
-  const { advanceParcel, earn } = useApp()
+  const { adoptParcel, earn } = useApp()
 
   // The oldest parcel actually waiting to be collected at this hub.
   const parcel = useAwaitingPickup()[0]
 
   const [step, setStep] = useState(0)
   const [code, setCode] = useState('')
-  const [verifying, setVerifying] = useState(false)
-  const [shots, setShots] = useState(0)
-  const [signature, setSignature] = useState(true)
+  const [photoIds, setPhotoIds] = useState<string[]>([])
   const [receiverName, setReceiverName] = useState(parcel?.receiverName ?? '')
+  const shots = photoIds.length
 
   const cat = categoryById(parcel?.category ?? 'electronics')
-  // Strict: the receiver's code, and nothing else, releases the parcel.
-  const gate = useOtpGate(otpFor((parcel?.id ?? '') + 'recv'))
+  /* The receiver's code, held by the server, and nothing else releases the
+     parcel. Submitting it is the delivery. */
+  const gate = useCustodyGate(parcel?.id, 'deliver', photoIds)
 
-  const verify = (value: string) => {
-    if (value.length < 6 || verifying) return
-    setVerifying(true)
-    setTimeout(() => {
-      setVerifying(false)
-      if (!gate.check(value)) {
-        setCode('')
-        toast.error('Incorrect OTP', 'Do not release the parcel without a matching code.')
-        return
-      }
-      setStep(1)
-      toast.success('Receiver verified', 'Capture evidence to close the delivery.')
-    }, 900)
-  }
-
-  /** Evidence captured — close the loop on the shared ledger. */
-  const complete = () => {
-    if (parcel) {
-      advanceParcel(parcel.id, 'delivered', {
-        actor: receiverName || parcel.receiverName,
-        photos: shots,
-      })
-      earn(HUB_HANDLING_FEE, 'Handling fee credited', `${parcel.id} · collected by receiver`)
+  /** The code and the photographs together close the delivery, server-side. */
+  const verify = async (value: string) => {
+    if (value.length < 6 || gate.submitting || !parcel) return
+    const delivered = await gate.submit(value)
+    if (!delivered) {
+      setCode('')
+      toast.error('Not delivered', gate.error ?? 'Do not release the parcel without a match.')
+      return
     }
+    adoptParcel(delivered)
+    earn(HUB_HANDLING_FEE, 'Handling fee credited', `${parcel.id} · collected by receiver`)
     setStep(2)
   }
 
@@ -89,7 +79,7 @@ export default function ReceiverPickup() {
           <Card className="mt-8">
             <KeyValue label="Parcel" value={parcel?.id ?? '—'} />
             <KeyValue label="Collected by" value={receiverName} />
-            <KeyValue label="Evidence" value={`${shots} photos${signature ? ' + signature' : ''}`} />
+            <KeyValue label="Evidence" value={`${shots} photos on the record`} />
             <KeyValue label="Verification" value="OTP matched" tone="success" />
             <div className="my-2 h-px bg-ink-100" />
             <KeyValue label="Your handling fee" value={inr(HUB_HANDLING_FEE)} strong tone="success" />
@@ -130,13 +120,14 @@ export default function ReceiverPickup() {
       </div>
 
       <ScreenBody>
+        {/* The worker is fetching this parcel off a shelf while a receiver waits
+            at the counter. The drawn object is what they carry in their head to
+            the shelf; a grey outline is not. */}
         <Card className="mb-4">
-          <div className="flex items-center gap-3">
-            <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-ink-700">
-              <CategoryIcon id={cat.id} />
-            </span>
+          <div className="flex min-h-[52px] items-center gap-3.5">
+            <CategoryMark id={cat.id} size={48} />
             <div className="min-w-0 flex-1">
-              <p className="tabular truncate text-[14.5px] font-extrabold text-ink-900">
+              <p className="tabular truncate text-[16px] font-extrabold tracking-title text-ink-900">
                 {parcel?.id ?? 'No parcel waiting'}
               </p>
               <p className="mt-0.5 truncate text-[12px] text-ink-500">
@@ -150,7 +141,12 @@ export default function ReceiverPickup() {
           </div>
           <div className="mt-3.5 border-t border-ink-100 pt-3.5">
             <KeyValue label="Expected receiver" value={parcel?.receiverName ?? '—'} />
-            <KeyValue label="Their mobile" value={fmtPhone(parcel?.receiverPhone ?? '9845567890')} />
+            {/* No stand-in number. A hub worker reading an invented mobile off
+                this screen would ring a stranger. */}
+            <KeyValue
+              label="Their mobile"
+              value={parcel?.receiverPhone ? fmtPhone(parcel.receiverPhone) : 'Not given'}
+            />
           </div>
         </Card>
 
@@ -169,7 +165,7 @@ export default function ReceiverPickup() {
               <OtpInput
                 value={code}
                 onChange={setCode}
-                onComplete={verify}
+                onComplete={(v) => void verify(v)}
                 error={Boolean(gate.error)}
                 disabled={gate.locked}
               />
@@ -194,7 +190,7 @@ export default function ReceiverPickup() {
 
             <Note tone="warn" icon={<ShieldCheck size={15} />} className="mt-2" title="This matters">
               This OTP is what protects against wrong pickup. If the receiver cannot produce it, ask
-              them to check their SMS or contact Stowza support — do not release the parcel.
+              them to check their SMS or contact WayPool support — do not release the parcel.
             </Note>
           </div>
         )}
@@ -207,27 +203,18 @@ export default function ReceiverPickup() {
               enough.
             </p>
             <PhotoCapture
-              shots={shots}
+              photoIds={photoIds}
               required={2}
-              onCapture={() => setShots((s) => s + 1)}
+              onStored={(pid) => setPhotoIds((ids) => [...ids, pid])}
+              parcelId={parcel?.id}
+              checkpoint="deliver"
               className="min-h-[280px] flex-1"
             />
-            <Card className="mt-4">
-              <Switch
-                checked={signature}
-                onChange={setSignature}
-                label="Capture signature"
-                description="Optional, but recommended for high-value parcels"
-              />
-              {signature && (
-                <div className="anim-fade-up mt-3 grid h-24 place-items-center rounded-(--radius-md) border-2 border-dashed border-ink-200 bg-ink-50">
-                  <span className="flex items-center gap-2 text-[12.5px] font-semibold text-ink-400">
-                    <PencilLine size={15} />
-                    Sign here
-                  </span>
-                </div>
-              )}
-            </Card>
+            {/* A "capture signature" switch used to sit here over a dashed box
+                reading "Sign here". It drew nothing, stored nothing and was
+                never shown to anyone. With the photographs now real, leaving a
+                mock beside them would be the one part of this screen that
+                still lies about what goes on the record. */}
           </div>
         )}
       </ScreenBody>
@@ -237,21 +224,21 @@ export default function ReceiverPickup() {
           <Button
             block
             size="lg"
-            loading={verifying}
-            disabled={code.length < 6}
-            onClick={() => verify(code)}
+            disabled={shots < 2}
+            onClick={() => setStep(1)}
+            icon={<Camera size={18} />}
           >
-            {verifying ? 'Verifying…' : 'Verify receiver'}
+            {shots < 2 ? `Capture ${2 - shots} more` : 'Continue to the OTP'}
           </Button>
         ) : (
           <Button
             block
             size="lg"
-            disabled={shots < 2}
-            onClick={complete}
-            icon={<Camera size={18} />}
+            loading={gate.submitting}
+            disabled={code.length < 6 || gate.locked}
+            onClick={() => void verify(code)}
           >
-            {shots < 2 ? `Capture ${2 - shots} more` : 'Mark as delivered'}
+            {gate.submitting ? 'Verifying…' : 'Verify & release parcel'}
           </Button>
         )}
       </ActionBar>

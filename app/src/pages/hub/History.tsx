@@ -13,7 +13,6 @@ import {
   Card,
   Divider,
   IconButton,
-  KeyValue,
   Note,
   Segmented,
   SectionHeader,
@@ -29,13 +28,13 @@ import { cn } from '@/lib/cn'
 type Tab = 'activity' | 'settlement'
 
 const LOG = [
-  { id: 'l1', kind: 'in' as const, parcelId: 'DKC-4869', actor: 'Aditi S.', at: -0.5 },
-  { id: 'l2', kind: 'out' as const, parcelId: 'DKC-4844', actor: 'Arjun Menon', at: -1.2 },
-  { id: 'l3', kind: 'collected' as const, parcelId: 'DKC-4703', actor: 'Nikhil Verma', at: -2.4 },
-  { id: 'l4', kind: 'in' as const, parcelId: 'DKC-4858', actor: 'Priya D.', at: -3.1 },
-  { id: 'l5', kind: 'out' as const, parcelId: 'DKC-4802', actor: 'Sneha Bhat', at: -5.6 },
-  { id: 'l6', kind: 'collected' as const, parcelId: 'DKC-4655', actor: 'Sanjay P.', at: -7.2 },
-  { id: 'l7', kind: 'in' as const, parcelId: 'DKC-4851', actor: 'Meera I.', at: -11 },
+  { id: 'l1', kind: 'in' as const, parcelId: 'WYP-4869', actor: 'Aditi S.', at: -0.5 },
+  { id: 'l2', kind: 'out' as const, parcelId: 'WYP-4844', actor: 'Arjun Menon', at: -1.2 },
+  { id: 'l3', kind: 'collected' as const, parcelId: 'WYP-4703', actor: 'Nikhil Verma', at: -2.4 },
+  { id: 'l4', kind: 'in' as const, parcelId: 'WYP-4858', actor: 'Priya D.', at: -3.1 },
+  { id: 'l5', kind: 'out' as const, parcelId: 'WYP-4802', actor: 'Sneha Bhat', at: -5.6 },
+  { id: 'l6', kind: 'collected' as const, parcelId: 'WYP-4655', actor: 'Sanjay P.', at: -7.2 },
+  { id: 'l7', kind: 'in' as const, parcelId: 'WYP-4851', actor: 'Meera I.', at: -11 },
 ]
 
 const META = {
@@ -110,22 +109,22 @@ export default function HubHistory() {
                     <div
                       key={entry.id}
                       className={cn(
-                        'flex items-center gap-3 px-4 py-3.5',
+                        'flex min-h-[64px] items-center gap-3.5 px-4 py-3.5',
                         i > 0 && 'border-t border-ink-100',
                       )}
                     >
                       <span
                         className={cn(
-                          'grid size-10 shrink-0 place-items-center rounded-(--radius-sm)',
+                          'grid size-11 shrink-0 place-items-center rounded-(--radius-sm)',
                           meta.tone === 'brand' && 'bg-brand-50 text-brand-600',
                           meta.tone === 'accent' && 'bg-accent-50 text-accent-600',
                           meta.tone === 'success' && 'bg-success-50 text-success-600',
                         )}
                       >
-                        <Icon size={18} />
+                        <Icon size={20} />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="tabular truncate text-[13.5px] font-bold text-ink-900">
+                        <p className="tabular truncate text-[14.5px] font-extrabold tracking-title text-ink-900">
                           {entry.parcelId}
                         </p>
                         <p className="mt-0.5 truncate text-[11.5px] text-ink-500">
@@ -186,11 +185,18 @@ export default function HubHistory() {
                         </Badge>
                       </div>
                       <Divider className="my-3" />
-                      <KeyValue
-                        label={`${s.parcels} × ${inr(HUB_HANDLING_FEE)}`}
-                        value={inr(s.amount)}
-                        strong
-                      />
+                      {/* The amount is what anyone opens this screen for, so it
+                          stops sharing a line weight with the multiplication
+                          that produced it. Same two pieces of information, one
+                          of them now readable from arm's length. */}
+                      <div className="flex items-end justify-between gap-3">
+                        <p className="tabular text-[11.5px] font-semibold text-ink-500">
+                          {s.parcels} × {inr(HUB_HANDLING_FEE)}
+                        </p>
+                        <p className="tabular text-display text-[22px] leading-none font-extrabold tracking-title text-ink-900">
+                          {inr(s.amount)}
+                        </p>
+                      </div>
                     </Card>
                   ))
                 )}

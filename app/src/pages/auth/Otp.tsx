@@ -5,6 +5,8 @@ import { Screen, TopBar } from '@/components/layout/Screen'
 import { Button, Note, OtpInput, useToast } from '@/components/ui'
 import { useCountdown } from '@/lib/hooks'
 import { OTP_RESEND_SECONDS, useAuth } from '@/lib/auth'
+import { useApp } from '@/lib/store'
+import { roleHome } from '@/lib/types'
 
 /**
  * Verification.
@@ -20,6 +22,7 @@ export default function Otp() {
   const [params] = useSearchParams()
   const toast = useToast()
   const { requestCode, verifyCode } = useAuth()
+  const { setRole } = useApp()
 
   const identifier = params.get('id') ?? ''
   const sentTo = params.get('to') ?? identifier
@@ -58,7 +61,7 @@ export default function Otp() {
       } else if (result.reason === 'no-api') {
         setError('This build has no sign-in server attached. Reinstall the latest APK.')
       } else if (result.reason === 'offline') {
-        setError('Could not reach Stowza. Check your connection.')
+        setError('Could not reach WayPool. Check your connection.')
       } else {
         setError(
           `That code didn't match. ${result.attemptsLeft} attempt${
@@ -75,7 +78,12 @@ export default function Otp() {
         const qs = new URLSearchParams({ ticket: result.ticket, id: identifier })
         navigate(`/auth/signup?${qs.toString()}`, { replace: true })
       } else {
-        navigate('/auth/role', { replace: true })
+        /* A returning sign-in, not a fresh account: the role was already
+           chosen once, so this goes straight to it rather than back through
+           the picker — the thing that made every login feel like signup
+           again. */
+        setRole(result.account.roles[0])
+        navigate(roleHome(result.account.roles[0]), { replace: true })
       }
     }, 720)
   }
@@ -157,14 +165,17 @@ export default function Otp() {
                 {done ? (
                   <button
                     onClick={resend}
-                    className="pressable-sm inline-flex items-center gap-2 text-[13.5px] font-bold text-brand-600"
+                    className="pressable-sm inline-flex min-h-11 items-center gap-2 px-3 text-[13.5px] font-bold text-brand-600"
                   >
                     <ArrowsClockwise size={14} />
                     Send a new code
                   </button>
                 ) : (
                   <p className="text-[13px] text-ink-400">
-                    New code in <span className="tabular font-bold text-ink-700">{label}</span>
+                    New code in{' '}
+                    <span className="tabular tracking-title text-[15px] font-extrabold text-ink-800">
+                      {label}
+                    </span>
                   </p>
                 )}
               </div>
@@ -173,7 +184,7 @@ export default function Otp() {
         </div>
 
         {!verified && (
-          <Note tone="neutral" className="mt-8" title="Not arrived?">
+          <Note tone="signal" className="mt-8" title="Not arrived?">
             Check spam, and that {sentTo} is right.{' '} The code is valid for 5 minutes, works once,
             and you have {attemptsLeft} attempt{attemptsLeft === 1 ? '' : 's'} left before it locks.
           </Note>

@@ -4,6 +4,7 @@ import { ArrowRight, Check, Pencil, ShieldCheck, Tag, TrendDown } from '@phospho
 import { Screen, ScreenBody, TopBar } from '@/components/layout/Screen'
 import {
   ActionBar,
+  Badge,
   Button,
   Card,
   Divider,
@@ -21,9 +22,11 @@ import { inr, kg } from '@/lib/format'
 import { useApp } from '@/lib/store'
 import { useLoaded } from '@/lib/hooks'
 import { bookSteps } from './BookRoute'
-import { CategoryIcon } from '@/components/domain/CategoryIcon'
+import { CategoryMark } from '@/components/domain/CategoryIcon'
 
-const PROMOS = ['MYSORE20', 'FIRSTDROP', 'DIKKI10']
+/* DIKKI10 was here until the rename. A promo code is typed by a customer
+   and printed on a receipt, so it is brand copy like any other. */
+const PROMOS = ['MYSORE20', 'FIRSTDROP', 'BOOTSPACE10']
 
 /** Step 4 — the quote. This is where the "cheaper than courier" claim lands. */
 export default function BookReview() {
@@ -122,9 +125,7 @@ export default function BookReview() {
         {/* Parcel summary */}
         <Card className="mt-3">
           <div className="flex items-center gap-3">
-            <span className="grid size-11 shrink-0 place-items-center rounded-(--radius-sm) bg-ink-100 text-ink-700">
-              <CategoryIcon id={cat.id} />
-            </span>
+            <CategoryMark id={cat.id} size={44} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[14.5px] font-bold text-ink-900">
                 {cat.label} · {draft.size} · {kg(draft.weightKg)}
@@ -165,9 +166,16 @@ export default function BookReview() {
             <span className="block text-[13.5px] font-bold text-ink-900">
               {draft.promo ? `${draft.promo} applied` : 'Apply a promo code'}
             </span>
-            <span className="block text-[12px] text-ink-500">
-              {draft.promo ? `You save ${inr(price.discount)}` : 'MYSORE20 is live this week'}
-            </span>
+            {/* Money off is one of the few things the signal yellow is rationed
+                for. As a grey line it was indistinguishable from the hint that
+                replaces it when no code is applied. */}
+            {draft.promo ? (
+              <Badge tone="signal" size="sm" className="mt-1">
+                {inr(price.discount)} off
+              </Badge>
+            ) : (
+              <span className="block text-[12px] text-ink-500">MYSORE20 is live this week</span>
+            )}
           </span>
           <span className="shrink-0 text-[12.5px] font-bold text-brand-600">
             {draft.promo ? 'Remove' : 'Add'}
@@ -201,7 +209,7 @@ export default function BookReview() {
               {price.weight > 0 && <KeyValue label="Weight surcharge" value={inr(price.weight)} />}
               {price.fragile > 0 && <KeyValue label="Fragile handling" value={inr(price.fragile)} />}
               {price.insurance > 0 && (
-                <KeyValue label="Stowza Protect" value={inr(price.insurance)} />
+                <KeyValue label="WayPool Protect" value={inr(price.insurance)} />
               )}
               {price.discount > 0 && (
                 <KeyValue
@@ -224,10 +232,17 @@ export default function BookReview() {
               <TrendDown size={19} />
             </span>
             <div className="min-w-0">
-              <p className="text-[13.5px] font-bold text-success-800">
-                {price.savedPct}% cheaper than courier
+              {/* The percentage is the claim; the courier comparison is the
+                  evidence for it, so it sits under it as supporting text. */}
+              <p className="flex items-baseline gap-1.5">
+                <span className="tabular text-[21px] leading-none font-extrabold tracking-title text-success-800">
+                  {price.savedPct}%
+                </span>
+                <span className="text-[11.5px] font-bold text-success-800/90">
+                  cheaper than courier
+                </span>
               </p>
-              <p className="mt-0.5 text-[12px] text-success-700/85">
+              <p className="mt-1 text-[11.5px] font-semibold text-success-700/85">
                 Standard courier on this route: {inr(price.courierComparison)} · 2–5 days
               </p>
             </div>
